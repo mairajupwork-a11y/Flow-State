@@ -12,7 +12,8 @@ export function authRoutes({ db, signer, production }) {
   const r = Router();
   const limiter = rateLimit({ windowMs: 60_000, max: production ? 10 : 1000 });
 
-  const startSession = (res, userId) => res.cookie(SESSION_COOKIE, signer.issue(userId), sessionCookieOptions(production));
+  // Secure cookies only over HTTPS, so production mode still works on http://localhost.
+  const startSession = (req, res, userId) => res.cookie(SESSION_COOKIE, signer.issue(userId), sessionCookieOptions(production && req.secure));
 
   r.post('/signup', limiter, (req, res) => {
     const body = parse(z.object({ name: z.string().trim().min(1, 'tell us your name').max(80), email, password }), req.body);
@@ -24,7 +25,7 @@ export function authRoutes({ db, signer, production }) {
       'INSERT INTO users (email, name, password_hash, color) VALUES (?, ?, ?, ?)',
       body.email, body.name, hashPassword(body.password), USER_COLORS[count % USER_COLORS.length],
     );
-    startSession(res, Number(lastInsertRowid));
+    startSession(req, res, Number(lastInsertRowid));
     res.status(201).json(session(db, Number(lastInsertRowid)));
   });
 
@@ -34,7 +35,7 @@ export function authRoutes({ db, signer, production }) {
     if (!user || !verifyPassword(body.password, user.password_hash)) {
       throw new HttpError(401, 'That email and password combination did not match. Please try again.');
     }
-    startSession(res, user.id);
+    startSession(req, res, user.id);
     res.json(session(db, user.id));
   });
 

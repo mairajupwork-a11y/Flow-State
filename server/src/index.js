@@ -5,7 +5,7 @@ import { openDatabase } from './db.js';
 import { createApp } from './app.js';
 
 const here = dirname(fileURLToPath(import.meta.url));
-const production = process.env.NODE_ENV === 'production';
+const production = process.env.NODE_ENV === 'production' || process.argv.includes('--production');
 const port = Number(process.env.PORT) || 4000;
 
 let secret = process.env.SESSION_SECRET;

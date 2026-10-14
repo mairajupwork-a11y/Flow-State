@@ -2,15 +2,15 @@
   "name": "flowstate",
   "private": true,
   "version": "1.0.0",
-  "description": "Flowstate — free, unlimited-user project management with boards, sprints, a personal to-do list and a free built-in AI guide.",
+  "description": "Flowstate \u2014 free, unlimited-user project management with boards, sprints, a personal to-do list and a free built-in AI guide.",
   "workspaces": [
     "server",
     "web"
   ],
   "scripts": {
-    "dev": "concurrently -k -n api,web -c magenta,cyan \"npm run dev -w server\" \"npm run dev -w web\"",
+    "dev": "node --disable-warning=ExperimentalWarning scripts/preflight.mjs && concurrently -n api,web -c magenta,cyan \"npm run dev -w server\" \"npm run dev -w web\"",
     "build": "npm run build -w web",
-    "start": "npm run start -w server",
+    "start": "node --disable-warning=ExperimentalWarning scripts/preflight.mjs && npm run start -w server",
     "test": "npm test -w server",
     "typecheck": "npm run typecheck -w web",
     "check": "npm run typecheck && npm test && npm run build"

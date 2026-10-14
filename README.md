@@ -40,6 +40,17 @@ npm install
 npm run dev          # API on :4000, web on http://localhost:5173
 ```
 
+Then open **http://localhost:5173** in your browser *on the same computer* where you ran the commands.
+
+### Not loading?
+
+| Symptom | Fix |
+| --- | --- |
+| "This site can't be reached" | The dev servers aren't running on *this* machine. Run `npm install` then `npm run dev` in the project folder and keep that terminal open. |
+| "Flowstate needs Node.js 22.5 or newer" | Install the current LTS from [nodejs.org](https://nodejs.org), then `npm install` again. Check with `node -v`. |
+| Page loads but sign-up fails / "offline" | The API (port 4000) didn't start — read the `[api]` lines in the terminal. Another app may be using port 4000 or 5173. |
+| `npm` not found | Install Node.js (it includes npm). |
+
 Production:
 
 ```bash
