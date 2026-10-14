@@ -4,7 +4,7 @@ import { Icon } from '../../components/Icon';
 import { Avatar, PageHeader } from '../../components/ui';
 import { api } from '../../lib/api';
 import { useWs } from '../../lib/workspace';
-import { toast, ui } from '../../lib/store';
+import { askConfirm, toast, ui } from '../../lib/store';
 import { fmtDate, timeAgo } from '../../lib/format';
 import type { Role } from '../../lib/types';
 import { copy, inviteUrl } from './InviteModal';
@@ -49,7 +49,7 @@ export default function Team() {
               ) : <span className="status-pill">{p.role}</span>}
               {(isAdmin || p.id === me.id) && (
                 <button className="icon-btn tiny" aria-label={p.id === me.id ? 'Leave workspace' : `Remove ${p.name}`} title={p.id === me.id ? 'Leave workspace' : 'Remove from workspace'}
-                  onClick={() => confirm(p.id === me.id ? `Leave ${workspace.name}?` : `Remove ${p.name} from ${workspace.name}? Their work stays but becomes unassigned.`) && removeMember.mutate(p.id)}>
+                  onClick={async () => (await askConfirm(p.id === me.id ? { title: `Leave ${workspace.name}?`, confirmLabel: 'Leave', danger: true } : { title: `Remove ${p.name}?`, body: `They lose access to ${workspace.name}. Their work stays but becomes unassigned.`, confirmLabel: 'Remove', danger: true })) && removeMember.mutate(p.id)}>
                   <Icon name={p.id === me.id ? 'logout' : 'trash'} size={14} />
                 </button>
               )}

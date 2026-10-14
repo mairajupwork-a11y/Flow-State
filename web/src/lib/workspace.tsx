@@ -1,5 +1,6 @@
 import { createContext, useContext, useEffect, useMemo, type ReactNode } from 'react';
 import { useQueryClient } from '@tanstack/react-query';
+import { IS_DEMO } from './api';
 import type { Me, Member, Project, Workspace, Locale } from './types';
 
 interface WorkspaceCtx {
@@ -41,7 +42,7 @@ export function useWs(): WorkspaceCtx {
 export function useRealtime(slug: string) {
   const qc = useQueryClient();
   useEffect(() => {
-    if (typeof EventSource === 'undefined') return;
+    if (IS_DEMO || typeof EventSource === 'undefined') return;
     const es = new EventSource(`/api/workspaces/${slug}/events`);
     const pending = new Set<string>();
     let timer: ReturnType<typeof setTimeout> | undefined;

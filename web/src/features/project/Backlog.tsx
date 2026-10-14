@@ -9,7 +9,7 @@ import { Avatar, Modal, StatusPill, TypeIcon, PriorityPill } from '../../compone
 import { api } from '../../lib/api';
 import { invalidateWork, useMoveIssue } from '../../lib/queries';
 import { useWs } from '../../lib/workspace';
-import { toast, toastError } from '../../lib/store';
+import { askConfirm, toast, toastError } from '../../lib/store';
 import { fmtDate, daysBetween, todayISO, plural } from '../../lib/format';
 import type { Issue, Sprint } from '../../lib/types';
 import { FilterBar, SectionBar, useProjectCtx } from './ProjectLayout';
@@ -132,7 +132,7 @@ function SprintBox({ sprint, ids, byId, canEdit, locale, onStart, onComplete, ha
           {sprint.state === 'active'
             ? <button className="btn btn-primary btn-sm" onClick={onComplete}><Icon name="checkcircle" size={14} /> Complete sprint</button>
             : <button className="btn btn-soft btn-sm" onClick={onStart} disabled={hasActive || !list.length} title={hasActive ? 'Complete the active sprint first' : !list.length ? 'Add work to start' : undefined}><Icon name="play" size={13} /> Start sprint</button>}
-          {sprint.state === 'planned' && <button className="icon-btn tiny" aria-label={`Delete ${sprint.name}`} title="Delete sprint" onClick={() => confirm(`Delete ${sprint.name}? Its work returns to the backlog.`) && del.mutate()}><Icon name="trash" size={15} /></button>}
+          {sprint.state === 'planned' && <button className="icon-btn tiny" aria-label={`Delete ${sprint.name}`} title="Delete sprint" onClick={async () => (await askConfirm({ title: `Delete ${sprint.name}?`, body: 'Its work returns to the backlog.', confirmLabel: 'Delete sprint', danger: true })) && del.mutate()}><Icon name="trash" size={15} /></button>}
         </>
       )} />
   );

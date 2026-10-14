@@ -55,3 +55,25 @@ export function toast(message: string, opts: { tone?: Toast['tone']; action?: To
 export const toastError = (err: unknown) => toast(err instanceof Error ? err.message : 'Something went wrong.', { tone: 'error' });
 export const dismissToast = (id: number) => toasts.set((s) => ({ list: s.list.filter((t) => t.id !== id) }));
 export const useToasts = () => useSyncExternalStore(toasts.subscribe, () => toasts.get().list);
+
+// ---- In-app confirmations (native confirm/prompt are blocked in embedded frames and look out of place) ----
+export interface ConfirmRequest { title: string; body?: string; confirmLabel?: string; danger?: boolean; typeToConfirm?: string; resolve: (ok: boolean) => void }
+const confirms = createStore<{ current: ConfirmRequest | null }>({ current: null });
+export function askConfirm(opts: Omit<ConfirmRequest, 'resolve'>): Promise<boolean> {
+  return new Promise((resolve) => confirms.set({ current: { ...opts, resolve } }));
+}
+export function settleConfirm(ok: boolean) {
+  confirms.get().current?.resolve(ok);
+  confirms.set({ current: null });
+}
+export const useConfirm = () => useSyncExternalStore(confirms.subscribe, () => confirms.get().current);
+
+/** Copies text, falling back to a helpful message when the clipboard is unavailable. */
+export function copyText(text: string, message = 'Copied.') {
+  const fail = () => toast('Copy isn’t available here — select the text and copy it manually.', { tone: 'error' });
+  try {
+    navigator.clipboard ? navigator.clipboard.writeText(text).then(() => toast(message), fail) : fail();
+  } catch {
+    fail();
+  }
+}

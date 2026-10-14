@@ -6,7 +6,7 @@ import { Avatar, Modal, PriorityPill, RichText, Spinner, StatusPill, TypeIcon } 
 import { api } from '../../lib/api';
 import { invalidateWork, keys, useIssue, useIssues, useProject } from '../../lib/queries';
 import { useWs } from '../../lib/workspace';
-import { openCreate, toast, toastError } from '../../lib/store';
+import { askConfirm, copyText, openCreate, toast, toastError } from '../../lib/store';
 import { PRIORITIES, PRIORITY_LABEL, TYPES, TYPE_LABEL, fmtDate, timeAgo, todayISO } from '../../lib/format';
 import type { Activity, IssueDetail, IssueType, Priority } from '../../lib/types';
 
@@ -96,7 +96,7 @@ function IssueDetailView({ issue, onClose }: { issue: IssueDetail; onClose: () =
           <PriorityPill priority={issue.priority} suffix=" priority" />
           {overdue && <span className="priority urgent"><Icon name="clock" size={11} /> Overdue</span>}
           <span className="detail-actions">
-            <button className="btn btn-light btn-sm" onClick={() => { navigator.clipboard?.writeText(`${location.origin}/w/${workspace.slug}/p/${project?.key}/board?issue=${issue.key}`); toast('Link copied.'); }}><Icon name="link" size={13} /> Copy link</button>
+            <button className="btn btn-light btn-sm" onClick={() => copyText(`${location.origin}/w/${workspace.slug}/p/${project?.key}/board?issue=${issue.key}`, 'Link copied.')}><Icon name="link" size={13} /> Copy link</button>
             <button className="btn btn-light btn-sm" onClick={() => post.mutate({ path: '/watch', body: { watching: !watching } })} aria-pressed={watching}><Icon name="eye" size={13} /> {watching ? 'Watching' : 'Watch'}</button>
             <button className="btn btn-light btn-sm" onClick={() => addToDay.mutate()}><Icon name="sun" size={13} /> Add to My day</button>
           </span>
@@ -214,7 +214,7 @@ function IssueDetailView({ issue, onClose }: { issue: IssueDetail; onClose: () =
         </div>
       </div>
       <div className="modal-footer between">
-        {canEdit ? <button className="btn btn-danger" onClick={() => confirm(`Delete ${issue.key}? This cannot be undone.`) && deleteIssue.mutate()}><Icon name="trash" size={14} /> Delete</button> : <span />}
+        {canEdit ? <button className="btn btn-danger" onClick={async () => (await askConfirm({ title: `Delete ${issue.key}?`, body: 'This cannot be undone.', confirmLabel: 'Delete', danger: true })) && deleteIssue.mutate()}><Icon name="trash" size={14} /> Delete</button> : <span />}
         <button className="btn btn-light" onClick={onClose}>Close</button>
       </div>
     </Modal>
@@ -319,7 +319,7 @@ function Comments({ issue, canEdit, onPost, onEdit, onDelete }: { issue: IssueDe
             {editing?.id !== c.id && (c.authorId === me.id || isAdmin) && (
               <div className="comment-actions">
                 {c.authorId === me.id && <button className="link-btn" onClick={() => setEditing({ id: c.id, body: c.body })}>Edit</button>}
-                <button className="link-btn" onClick={() => confirm('Delete this comment?') && onDelete(c.id)}>Delete</button>
+                <button className="link-btn" onClick={async () => (await askConfirm({ title: 'Delete this comment?', confirmLabel: 'Delete', danger: true })) && onDelete(c.id)}>Delete</button>
               </div>
             )}
           </div>

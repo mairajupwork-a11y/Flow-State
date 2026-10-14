@@ -5,3 +5,4 @@ dist/
 server/data/
 .DS_Store
 coverage/
+dist-demo/

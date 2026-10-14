@@ -1,19 +1,58 @@
-import { defineConfig } from 'vite';
+import { defineConfig, type Plugin } from 'vite';
 import react from '@vitejs/plugin-react';
+const demo = (p: string) => decodeURIComponent(new URL(`./src/demo/${p}`, import.meta.url).pathname);
 
-export default defineConfig({
-  plugins: [react()],
+/**
+ * `vite build --mode demo` bundles the real server routes into the browser.
+ * This plugin swaps the few Node-only modules they touch for browser shims.
+ */
+function browserBackend(): Plugin {
+  const serverAuth = decodeURIComponent(new URL('../server/src/auth.js', import.meta.url).pathname);
+  const swaps: Record<string, string> = {
+    express: demo('shims/express.js'),
+    'node:crypto': demo('shims/crypto.js'),
+    'node:sqlite': demo('shims/node.js'),
+    'node:fs': demo('shims/node.js'),
+    'node:path': demo('shims/node.js'),
+  };
+  return {
+    name: 'flowstate-browser-backend',
+    enforce: 'pre',
+    async resolveId(source, importer) {
+      if (swaps[source]) return swaps[source];
+      if (importer && source.endsWith('/auth.js') && importer.includes('/server/src/')) {
+        const r = await this.resolve(source, importer, { skipSelf: true });
+        if (r?.id === serverAuth) return demo('auth.js');
+      }
+      return null;
+    },
+  };
+}
+
+/** Normal builds talk to the real API, so the demo backend is replaced by a stub. */
+function stubDemoBackend(): Plugin {
+  return {
+    name: 'flowstate-stub-demo-backend',
+    enforce: 'pre',
+    resolveId: (source) => (source.endsWith('/demo/backend.js') ? demo('stub.js') : null),
+  };
+}
+
+export default defineConfig(({ mode }) => ({
+  plugins: [react(), mode === 'demo' ? browserBackend() : stubDemoBackend()],
+  base: mode === 'demo' ? './' : '/',
   server: {
     port: 5173,
     proxy: { '/api': { target: 'http://localhost:4000', changeOrigin: false } },
   },
   build: {
     target: 'es2022',
-    sourcemap: true,
+    outDir: mode === 'demo' ? 'dist-demo' : 'dist',
+    sourcemap: mode !== 'demo',
     rollupOptions: {
       output: {
         manualChunks: { react: ['react', 'react-dom', 'react-router-dom'], data: ['@tanstack/react-query'], dnd: ['@dnd-kit/core', '@dnd-kit/sortable'] },
       },
     },
   },
-});
+}));

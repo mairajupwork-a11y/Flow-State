@@ -4,14 +4,14 @@ import { Modal } from '../../components/ui';
 import { Icon } from '../../components/Icon';
 import { api } from '../../lib/api';
 import { useWs } from '../../lib/workspace';
-import { toast } from '../../lib/store';
+import { copyText } from '../../lib/store';
 import type { Role } from '../../lib/types';
 
 interface Invite { token: string; email: string; role: Role }
 export const inviteUrl = (token: string) => `${location.origin}/invite/${token}`;
 
 export function copy(text: string, message = 'Link copied.') {
-  navigator.clipboard?.writeText(text).then(() => toast(message), () => toast('Copy failed — select the link and copy it manually.', { tone: 'error' }));
+  copyText(text, message);
 }
 
 export function InviteModal({ onClose }: { onClose: () => void }) {

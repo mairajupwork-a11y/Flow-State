@@ -5,7 +5,7 @@ import { Icon } from '../../components/Icon';
 import { api } from '../../lib/api';
 import { invalidateWork } from '../../lib/queries';
 import { useWs } from '../../lib/workspace';
-import { toast } from '../../lib/store';
+import { askConfirm, toast } from '../../lib/store';
 import type { Status, StatusCategory } from '../../lib/types';
 import { SectionBar, useProjectCtx } from './ProjectLayout';
 
@@ -90,11 +90,11 @@ export default function ProjectSettings() {
           <h3>Housekeeping</h3>
           <div className="setting-row">
             <div><strong>Archive project</strong><small>Hide it from the sidebar. Work is kept and can be restored by an admin.</small></div>
-            <button className="btn btn-light" onClick={() => confirm(`Archive ${project.name}?`) && archive.mutate()}>Archive</button>
+            <button className="btn btn-light" onClick={async () => (await askConfirm({ title: `Archive ${project.name}?`, body: 'It will be hidden from the sidebar. Work is kept.', confirmLabel: 'Archive' })) && archive.mutate()}>Archive</button>
           </div>
           <div className="setting-row">
             <div><strong>Delete project</strong><small>Permanently removes {project.name} and all {issues.length} work items. This cannot be undone.</small></div>
-            <button className="btn btn-danger" onClick={() => prompt(`Type ${project.key} to permanently delete this project.`)?.trim().toUpperCase() === project.key && destroy.mutate()}>Delete project</button>
+            <button className="btn btn-danger" onClick={async () => (await askConfirm({ title: `Delete ${project.name}?`, body: `This permanently removes the project and all ${issues.length} work items. It cannot be undone.`, confirmLabel: 'Delete project', danger: true, typeToConfirm: project.key })) && destroy.mutate()}>Delete project</button>
           </div>
         </div>
       )}
@@ -129,10 +129,10 @@ function StatusRow({ status, index, total, count, canEdit, others, onSave, onRem
       <input className="text-input slim wip" inputMode="numeric" value={wip} disabled={!canEdit} placeholder="WIP" onChange={(e) => setWip(e.target.value.replace(/\D/g, ''))} onBlur={commitWip} aria-label="WIP limit" title="Work-in-progress limit (blank for none)" />
       <span className="col-count" title="Work items">{count}</span>
       {canEdit && (
-        <button className="icon-btn tiny" disabled={total <= 1} aria-label={`Delete ${status.name}`} onClick={() => {
-          if (!count) return confirm(`Delete the ${status.name} column?`) && onRemove();
+        <button className="icon-btn tiny" disabled={total <= 1} aria-label={`Delete ${status.name}`} onClick={async () => {
+          if (!count) return (await askConfirm({ title: `Delete the ${status.name} column?`, confirmLabel: 'Delete column', danger: true })) && onRemove();
           const target = others.find((o) => o.category === status.category) ?? others[0];
-          if (confirm(`${count} work item${count === 1 ? '' : 's'} will move to “${target.name}”. Delete ${status.name}?`)) onRemove(target.id);
+          if (await askConfirm({ title: `Delete the ${status.name} column?`, body: `${count} work item${count === 1 ? '' : 's'} will move to “${target.name}”.`, confirmLabel: 'Delete column', danger: true })) onRemove(target.id);
         }}><Icon name="trash" size={14} /></button>
       )}
     </div>

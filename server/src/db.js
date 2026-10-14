@@ -6,7 +6,7 @@ import { dirname } from 'node:path';
  * Schema is applied idempotently on boot. Each entry in MIGRATIONS runs once,
  * tracked by PRAGMA user_version, so existing databases upgrade in place.
  */
-const MIGRATIONS = [
+export const MIGRATIONS = [
   `
   CREATE TABLE users (
     id INTEGER PRIMARY KEY,
@@ -214,7 +214,7 @@ export function openDatabase(file = process.env.DATABASE_FILE || 'data/flowstate
 }
 
 /** Small ergonomic layer over node:sqlite with a statement cache and nested-safe transactions. */
-function wrap(raw) {
+export function wrap(raw) {
   const cache = new Map();
   const stmt = (sql) => {
     let s = cache.get(sql);

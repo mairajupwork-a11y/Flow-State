@@ -58,6 +58,14 @@ npm run build
 SESSION_SECRET=$(openssl rand -hex 32) npm start   # serves app + API on :4000
 ```
 
+Shareable demo (no server needed):
+
+```bash
+npm run build:demo -w web   # outputs web/dist-demo — a static site
+```
+
+The demo runs the real API route code inside the browser against SQLite compiled to JavaScript, and keeps data in that browser's local storage. Host `web/dist-demo` on any static host to let people try Flowstate instantly.
+
 Docker:
 
 ```bash

@@ -7,7 +7,7 @@ import { RichText } from '../../components/ui';
 import { api } from '../../lib/api';
 import { invalidateWork } from '../../lib/queries';
 import { useWs, useCurrentProject } from '../../lib/workspace';
-import { toast, toastError, ui, useUi } from '../../lib/store';
+import { copyText, toast, toastError, ui, useUi } from '../../lib/store';
 import { todayISO } from '../../lib/format';
 import type { GuideAction, GuideAnswer, Issue } from '../../lib/types';
 
@@ -142,7 +142,7 @@ export function GuideDrawer({ routeKey, onClose }: { routeKey?: string; onClose:
                       {m.done?.has(i) ? <><Icon name="check" size={13} /> Done</> : a.label}
                     </button>
                   ))}
-                  {m.answer.copyable && <button className="btn btn-sm btn-light" onClick={() => { navigator.clipboard?.writeText(m.text.replace(/\*\*/g, '')); toast('Copied to clipboard.'); }}><Icon name="copy" size={13} /> Copy</button>}
+                  {m.answer.copyable && <button className="btn btn-sm btn-light" onClick={() => copyText(m.text.replace(/\*\*/g, ''), 'Copied to clipboard.')}><Icon name="copy" size={13} /> Copy</button>}
                 </div>
               )}
               {!!m.answer?.suggestions.length && m.id === messages.at(-1)?.id && (

@@ -4,7 +4,16 @@ export class ApiError extends Error {
   }
 }
 
+export const IS_DEMO = import.meta.env.MODE === 'demo';
+
 async function request<T>(method: string, path: string, body?: unknown): Promise<T> {
+  if (IS_DEMO) {
+    // The shareable demo runs the real API in this browser (see src/demo/backend.js).
+    const { demoFetch } = await import('../demo/backend.js');
+    const out = await demoFetch(method, path, body);
+    if (out.status >= 400) throw new ApiError(out.status, out.data?.error ?? `Request failed (${out.status}).`);
+    return out.data as T;
+  }
   let res: Response;
   try {
     res = await fetch(`/api${path}`, {
