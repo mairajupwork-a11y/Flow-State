@@ -45,7 +45,7 @@ export function issueRoutes({ db, events }) {
 
   r.post('/:ref/move', (req, res) => {
     const { issue, project } = loadIssue(db, req.user, req.params.ref, 'member');
-    const body = parse(z.object({ statusId: z.number().int().positive(), beforeId: nullableId.optional(), afterId: nullableId.optional() }), req.body);
+    const body = parse(z.object({ statusId: z.number().int().positive().optional(), sprintId: nullableId.optional(), beforeId: nullableId.optional(), afterId: nullableId.optional() }), req.body);
     const row = moveIssue(db, { issueRow: issue, project, actor: req.user, ...body, events });
     res.json(serializeIssue(row));
   });

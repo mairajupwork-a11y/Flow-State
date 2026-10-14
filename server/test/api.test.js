@@ -166,6 +166,20 @@ test('sprints: start requires work, complete records velocity and moves leftover
   assert.ok(reports.burndown.points.length >= 14);
 });
 
+test('move: drag between sprint and backlog with project-wide ranking', async () => {
+  const api = client();
+  const { ws } = await onboard(api);
+  const pid = ws.projects[0].id;
+  const issues = (await api('GET', `/projects/${pid}/issues`)).data;
+  const inSprint = issues.find((i) => i.sprintId && i.type !== 'epic');
+  const backlog = issues.filter((i) => !i.sprintId && i.type !== 'epic');
+  const moved = (await api('POST', `/issues/${inSprint.key}/move`, { sprintId: null, beforeId: backlog[0].id, afterId: backlog[1].id })).data;
+  assert.equal(moved.sprintId, null);
+  assert.ok(moved.rank > Math.min(backlog[0].rank, backlog[1].rank) && moved.rank < Math.max(backlog[0].rank, backlog[1].rank));
+  const detail = (await api('GET', `/issues/${inSprint.key}`)).data;
+  assert.ok(detail.activity.some((a) => a.data.field === 'sprintId'));
+});
+
 test('workflow columns: add, reorder, delete moves work', async () => {
   const api = client();
   const { ws } = await onboard(api);

@@ -1,0 +1,80 @@
+export type Role = 'admin' | 'member' | 'viewer';
+export type Priority = 'urgent' | 'high' | 'medium' | 'low';
+export type IssueType = 'epic' | 'feature' | 'story' | 'task' | 'bug' | 'subtask';
+export type StatusCategory = 'todo' | 'progress' | 'done';
+export type Template = 'scrum' | 'kanban' | 'business';
+export type Locale = 'en-GB' | 'en-US' | 'en-IN' | 'en-SG' | 'en-AU';
+export type Theme = 'light' | 'dark' | 'system';
+export type TimeBlock = 'morning' | 'afternoon' | 'evening' | 'anytime';
+
+export interface User { id: number; name: string; email: string; initials: string; color: string; jobTitle: string }
+export interface Me extends User { locale: Locale; theme: Theme }
+export interface Member extends User { role: Role; joinedAt: string }
+
+export interface Workspace {
+  id: number; name: string; slug: string; region: 'uk' | 'us' | 'asia' | 'other'; locale: Locale; weekStart: 0 | 1;
+  teamSize: string; useCase: string; role: Role; createdAt: string;
+}
+
+export interface Session { user: Me | null; workspaces: Workspace[] }
+
+export interface Project {
+  id: number; workspaceId: number; key: string; name: string; description: string; color: string; template: Template;
+  leadId: number | null; archived: boolean; createdAt: string; issueCount?: number; doneCount?: number;
+}
+export interface Status { id: number; name: string; category: StatusCategory; color: string; position: number; wipLimit: number | null }
+export interface Sprint {
+  id: number; projectId: number; name: string; goal: string; state: 'planned' | 'active' | 'closed';
+  startDate: string | null; endDate: string | null; completedAt: string | null; committedPoints: number | null; completedPoints: number | null;
+}
+export interface ProjectDetail extends Project { statuses: Status[]; sprints: Sprint[] }
+
+export interface WorkspaceDetail { workspace: Workspace; members: Member[]; projects: Project[] }
+
+export interface Issue {
+  id: number; key: string; number: number; projectId: number; type: IssueType; title: string; description: string;
+  statusId: number; statusName: string; statusCategory: StatusCategory; priority: Priority;
+  assigneeId: number | null; reporterId: number | null; sprintId: number | null; epicId: number | null; parentId: number | null;
+  storyPoints: number | null; startDate: string | null; dueDate: string | null; labels: string[]; rank: number;
+  createdAt: string; updatedAt: string; resolvedAt: string | null;
+  checklistTotal: number; checklistDone: number; commentCount: number; subtaskCount: number;
+}
+
+export interface Comment { id: number; body: string; createdAt: string; editedAt: string | null; authorId: number | null; author: User | null }
+export interface Activity { id: number; verb: string; data: Record<string, unknown>; createdAt: string; actorId: number | null; issueId: number | null; issueKey: string | null; issueTitle: string | null }
+export interface IssueLink { id: number; kind: 'blocks' | 'relates' | 'duplicates'; direction: 'inward' | 'outward'; issue: Issue }
+export interface IssueDetail extends Issue {
+  checklist: { id: number; text: string; done: boolean }[];
+  comments: Comment[]; subtasks: Issue[]; children: Issue[]; links: IssueLink[]; activity: Activity[]; watchers: number[];
+}
+
+export interface Todo {
+  id: number; text: string; note: string; done: boolean; important: boolean; day: string; timeBlock: TimeBlock;
+  issueId: number | null; issueKey: string | null; position: number; createdAt: string; completedAt: string | null;
+}
+export interface TodoDay { day: string; items: Todo[]; history: { day: string; total: number; done: number }[] }
+
+export interface Notification {
+  id: number; kind: string; text: string; read: boolean; createdAt: string; issueId: number | null; issueKey: string | null;
+  actor: { name: string; color: string; initials: string } | null;
+}
+
+export interface Reports {
+  totals: { total: number; done: number; inProgress: number; overdue: number; cycleTimeDays: number | null };
+  byStatus: { id: number; name: string; color: string; category: StatusCategory; count: number; points: number }[];
+  byPriority: { priority: Priority; count: number }[];
+  byType: { type: IssueType; count: number }[];
+  workload: { userId: number | null; name: string; open: number; points: number; overdue: number }[];
+  flow: { day: string; created: number; resolved: number }[];
+  burndown: null | { sprint: Sprint; unit: 'points' | 'items'; total: number; points: { day: string; ideal: number; remaining: number | null }[] };
+  velocity: { name: string; committed: number; completed: number }[];
+}
+
+export type GuideAction =
+  | { type: 'create_issue'; label: string; payload: { projectId: number; title: string; type: IssueType; priority: Priority; assigneeId: number | null; dueDate: string | null; labels: string[] } }
+  | { type: 'add_todo'; label: string; payload: { text: string } }
+  | { type: 'plan_day'; label: string; payload: { items: { text: string; issueRef: string }[] } }
+  | { type: 'open_issue'; label: string; payload: { key: string } }
+  | { type: 'navigate'; label: string; payload: { to: string } };
+
+export interface GuideAnswer { text: string; suggestions: string[]; actions: GuideAction[]; source: 'builtin' | 'local-model'; copyable?: boolean }

@@ -152,22 +152,28 @@ function logChanges(db, { project, actor, current, patch, events }) {
   events.changed(project.workspace_id, ['issues', `project:${project.id}`, `issue:${current.id}`], actor.id);
 }
 
-/** Moves an issue to a status and positions it between two neighbours (board drag & drop). */
-export function moveIssue(db, { issueRow, project, actor, statusId, beforeId, afterId, events }) {
+/**
+ * Moves an issue (board column and/or sprint) and positions it between two
+ * neighbours. Ranks are project-wide, so any two issues can be neighbours.
+ */
+export function moveIssue(db, { issueRow, project, actor, statusId, sprintId, beforeId, afterId, events }) {
   return db.tx(() => {
-    let updated = issueRow;
-    if (statusId !== issueRow.status_id) updated = updateIssue(db, { issueRow, project, actor, input: { statusId }, events });
-    const before = beforeId ? db.get('SELECT rank FROM issues WHERE id = ? AND status_id = ?', beforeId, statusId)?.rank : null;
-    const after = afterId ? db.get('SELECT rank FROM issues WHERE id = ? AND status_id = ?', afterId, statusId)?.rank : null;
+    const patch = {};
+    if (statusId != null && statusId !== issueRow.status_id) patch.statusId = statusId;
+    if (sprintId !== undefined && sprintId !== issueRow.sprint_id) patch.sprintId = sprintId;
+    if (Object.keys(patch).length) updateIssue(db, { issueRow, project, actor, input: patch, events });
+    const rankOf = (id) => (id ? db.get('SELECT rank FROM issues WHERE id = ? AND project_id = ?', id, project.id)?.rank ?? null : null);
+    const before = rankOf(beforeId);
+    const after = rankOf(afterId);
     let rank;
     if (before != null && after != null) rank = (before + after) / 2;
     else if (before != null) rank = before + 1024;
     else if (after != null) rank = after - 1024;
     if (rank != null) {
       db.run('UPDATE issues SET rank = ? WHERE id = ?', rank, issueRow.id);
-      if (events && statusId === issueRow.status_id) events.changed(project.workspace_id, ['issues', `project:${project.id}`], actor.id);
+      if (events && !Object.keys(patch).length) events.changed(project.workspace_id, ['issues', `project:${project.id}`], actor.id);
     }
-    return getIssueRow(db, updated.id);
+    return getIssueRow(db, issueRow.id);
   });
 }
 
