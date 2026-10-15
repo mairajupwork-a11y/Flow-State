@@ -22,8 +22,28 @@ export function workspace(w, role) {
 export function project(p, extra = {}) {
   return {
     id: p.id, workspaceId: p.workspace_id, key: p.key, name: p.name, description: p.description, color: p.color,
-    template: p.template, leadId: p.lead_id, archived: !!p.archived, createdAt: p.created_at, ...extra,
+    template: p.template, methodology: p.methodology ?? p.template, settings: parseJson(p.settings, {}), leadId: p.lead_id, archived: !!p.archived, createdAt: p.created_at, ...extra,
   };
+}
+
+const parseJson = (v, fallback) => { try { return v ? JSON.parse(v) : fallback; } catch { return fallback; } };
+
+export function phase(ph) {
+  return {
+    id: ph.id, projectId: ph.project_id, name: ph.name, position: ph.position, state: ph.state, gate: ph.gate, decision: ph.decision,
+    startDate: ph.start_date, endDate: ph.end_date, startedAt: ph.started_at, completedAt: ph.completed_at, approvedBy: ph.approved_by,
+  };
+}
+
+export function entry(e) {
+  return {
+    id: e.id, projectId: e.project_id, kind: e.kind, title: e.title, status: e.status, ownerId: e.owner_id,
+    data: parseJson(e.data, {}), createdBy: e.created_by, createdAt: e.created_at, updatedAt: e.updated_at,
+  };
+}
+
+export function measurement(m) {
+  return { id: m.id, projectId: m.project_id, day: m.day, value: m.value, note: m.note, createdAt: m.created_at };
 }
 
 export function status(s) {
@@ -43,7 +63,7 @@ export function issue(i) {
     id: i.id, key: `${i.project_key}-${i.number}`, number: i.number, projectId: i.project_id, type: i.type, title: i.title,
     description: i.description, statusId: i.status_id, statusName: i.status_name, statusCategory: i.status_category,
     priority: i.priority, assigneeId: i.assignee_id, reporterId: i.reporter_id, sprintId: i.sprint_id, epicId: i.epic_id,
-    parentId: i.parent_id, storyPoints: i.story_points, startDate: i.start_date, dueDate: i.due_date,
+    parentId: i.parent_id, phaseId: i.phase_id ?? null, storyPoints: i.story_points, startDate: i.start_date, dueDate: i.due_date,
     labels: JSON.parse(i.labels || '[]'), rank: i.rank, createdAt: i.created_at, updatedAt: i.updated_at, resolvedAt: i.resolved_at,
     checklistTotal: i.checklist_total ?? 0, checklistDone: i.checklist_done ?? 0, commentCount: i.comment_count ?? 0,
     subtaskCount: i.subtask_count ?? 0,

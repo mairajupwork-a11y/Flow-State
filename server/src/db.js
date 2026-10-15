@@ -191,6 +191,111 @@ export const MIGRATIONS = [
   );
   CREATE INDEX todos_user_day ON todos(user_id, day);
   `,
+  // v2 — methodologies: phases/stages with gates, governance registers,
+  // measurements, and relaxed CHECKs on project template and issue type
+  // (now validated by the methodology engine). Tables are rebuilt with
+  // foreign keys switched off, the standard SQLite procedure.
+  {
+    fkOff: true,
+    sql: `
+  CREATE TABLE projects_v2 (
+    id INTEGER PRIMARY KEY,
+    workspace_id INTEGER NOT NULL REFERENCES workspaces(id) ON DELETE CASCADE,
+    key TEXT NOT NULL,
+    name TEXT NOT NULL,
+    description TEXT NOT NULL DEFAULT '',
+    color TEXT NOT NULL,
+    template TEXT NOT NULL,
+    methodology TEXT NOT NULL DEFAULT 'scrum',
+    settings TEXT NOT NULL DEFAULT '{}',
+    lead_id INTEGER REFERENCES users(id) ON DELETE SET NULL,
+    issue_seq INTEGER NOT NULL DEFAULT 100,
+    archived INTEGER NOT NULL DEFAULT 0,
+    created_at TEXT NOT NULL DEFAULT (datetime('now')),
+    UNIQUE (workspace_id, key)
+  );
+  INSERT INTO projects_v2 (id, workspace_id, key, name, description, color, template, methodology, lead_id, issue_seq, archived, created_at)
+    SELECT id, workspace_id, key, name, description, color, template, template, lead_id, issue_seq, archived, created_at FROM projects;
+  DROP TABLE projects;
+  ALTER TABLE projects_v2 RENAME TO projects;
+
+  CREATE TABLE phases (
+    id INTEGER PRIMARY KEY,
+    project_id INTEGER NOT NULL REFERENCES projects(id) ON DELETE CASCADE,
+    name TEXT NOT NULL,
+    position INTEGER NOT NULL,
+    state TEXT NOT NULL DEFAULT 'pending' CHECK (state IN ('pending','active','review','complete')),
+    gate TEXT NOT NULL DEFAULT '',
+    decision TEXT NOT NULL DEFAULT '',
+    start_date TEXT,
+    end_date TEXT,
+    started_at TEXT,
+    completed_at TEXT,
+    approved_by INTEGER REFERENCES users(id) ON DELETE SET NULL
+  );
+  CREATE INDEX phases_project ON phases(project_id, position);
+
+  CREATE TABLE issues_v2 (
+    id INTEGER PRIMARY KEY,
+    project_id INTEGER NOT NULL REFERENCES projects(id) ON DELETE CASCADE,
+    number INTEGER NOT NULL,
+    type TEXT NOT NULL,
+    title TEXT NOT NULL,
+    description TEXT NOT NULL DEFAULT '',
+    status_id INTEGER NOT NULL REFERENCES statuses(id),
+    priority TEXT NOT NULL CHECK (priority IN ('urgent','high','medium','low')) DEFAULT 'medium',
+    assignee_id INTEGER REFERENCES users(id) ON DELETE SET NULL,
+    reporter_id INTEGER REFERENCES users(id) ON DELETE SET NULL,
+    sprint_id INTEGER REFERENCES sprints(id) ON DELETE SET NULL,
+    phase_id INTEGER REFERENCES phases(id) ON DELETE SET NULL,
+    epic_id INTEGER REFERENCES issues(id) ON DELETE SET NULL,
+    parent_id INTEGER REFERENCES issues(id) ON DELETE CASCADE,
+    story_points INTEGER,
+    start_date TEXT,
+    due_date TEXT,
+    labels TEXT NOT NULL DEFAULT '[]',
+    rank REAL NOT NULL,
+    created_at TEXT NOT NULL DEFAULT (datetime('now')),
+    updated_at TEXT NOT NULL DEFAULT (datetime('now')),
+    resolved_at TEXT,
+    UNIQUE (project_id, number)
+  );
+  INSERT INTO issues_v2 (id, project_id, number, type, title, description, status_id, priority, assignee_id, reporter_id, sprint_id,
+      epic_id, parent_id, story_points, start_date, due_date, labels, rank, created_at, updated_at, resolved_at)
+    SELECT id, project_id, number, type, title, description, status_id, priority, assignee_id, reporter_id, sprint_id,
+      epic_id, parent_id, story_points, start_date, due_date, labels, rank, created_at, updated_at, resolved_at FROM issues;
+  DROP TABLE issues;
+  ALTER TABLE issues_v2 RENAME TO issues;
+  CREATE INDEX issues_project ON issues(project_id, status_id, rank);
+  CREATE INDEX issues_assignee ON issues(assignee_id);
+  CREATE INDEX issues_sprint ON issues(sprint_id);
+  CREATE INDEX issues_phase ON issues(phase_id);
+
+  CREATE TABLE entries (
+    id INTEGER PRIMARY KEY,
+    project_id INTEGER NOT NULL REFERENCES projects(id) ON DELETE CASCADE,
+    kind TEXT NOT NULL,
+    title TEXT NOT NULL,
+    status TEXT NOT NULL,
+    owner_id INTEGER REFERENCES users(id) ON DELETE SET NULL,
+    data TEXT NOT NULL DEFAULT '{}',
+    created_by INTEGER REFERENCES users(id) ON DELETE SET NULL,
+    created_at TEXT NOT NULL DEFAULT (datetime('now')),
+    updated_at TEXT NOT NULL DEFAULT (datetime('now'))
+  );
+  CREATE INDEX entries_project ON entries(project_id, kind);
+
+  CREATE TABLE measurements (
+    id INTEGER PRIMARY KEY,
+    project_id INTEGER NOT NULL REFERENCES projects(id) ON DELETE CASCADE,
+    day TEXT NOT NULL,
+    value REAL NOT NULL,
+    note TEXT NOT NULL DEFAULT '',
+    created_at TEXT NOT NULL DEFAULT (datetime('now'))
+  );
+  CREATE INDEX measurements_project ON measurements(project_id, day);
+  `,
+  },
 ];
 
 export function openDatabase(file = process.env.DATABASE_FILE || 'data/flowstate.db') {
@@ -198,19 +303,35 @@ export function openDatabase(file = process.env.DATABASE_FILE || 'data/flowstate
   const raw = new DatabaseSync(file);
   raw.exec('PRAGMA journal_mode = WAL; PRAGMA foreign_keys = ON; PRAGMA busy_timeout = 5000;');
 
+  runMigrations(raw);
+  return wrap(raw);
+}
+
+/**
+ * Applies pending migrations. Works with any DatabaseSync-like object
+ * (node:sqlite, or the sql.js adapter used by the browser demo).
+ * Migrations marked `fkOff` rebuild tables, so foreign keys are disabled
+ * around them (PRAGMA foreign_keys cannot change inside a transaction)
+ * and integrity is verified before committing.
+ */
+export function runMigrations(raw) {
   const version = raw.prepare('PRAGMA user_version').get().user_version;
   for (let v = version; v < MIGRATIONS.length; v++) {
+    const m = typeof MIGRATIONS[v] === 'string' ? { sql: MIGRATIONS[v] } : MIGRATIONS[v];
+    if (m.fkOff) raw.exec('PRAGMA foreign_keys = OFF');
     raw.exec('BEGIN');
     try {
-      raw.exec(MIGRATIONS[v]);
+      raw.exec(m.sql);
+      if (m.fkOff && raw.prepare('PRAGMA foreign_key_check').all().length) throw new Error(`Migration ${v + 1} left broken references.`);
       raw.exec(`PRAGMA user_version = ${v + 1}`);
       raw.exec('COMMIT');
     } catch (err) {
       raw.exec('ROLLBACK');
       throw err;
+    } finally {
+      if (m.fkOff) raw.exec('PRAGMA foreign_keys = ON');
     }
   }
-  return wrap(raw);
 }
 
 /** Small ergonomic layer over node:sqlite with a statement cache and nested-safe transactions. */

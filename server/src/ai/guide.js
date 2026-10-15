@@ -3,6 +3,7 @@ import { parseIssueDraft } from './parse.js';
 import { ISSUE_SELECT, issue as serializeIssue } from '../serialize.js';
 import { PRIORITY_ORDER } from '../services/issues.js';
 import { isoDay, daysBetween } from '../dates.js';
+import { METHODOLOGIES, PRIMARY_METHODOLOGIES, REGISTERS, methodology, recommend, term } from '../../../shared/methodologies.js';
 
 const STOP = new Set('a an the to do i my me is are how can what where why when of in on for and or with it this that you your we our please should could would will'.split(' '));
 const words = (s) => s.toLowerCase().replace(/[^a-z0-9@\s-]/g, ' ').split(/\s+/).filter((w) => w && !STOP.has(w));
@@ -33,6 +34,7 @@ export function createGuide({ db, llm = null }) {
     { test: /\b(remind me|add to (my day|my list|today)|to-?do:?|put .* on my (day|list))\b/i, run: addTodo },
     { test: /^\s*(please\s+)?(can you\s+)?(create|add|new|log|raise|make|open|file)\b(?!.*\b(project|column|sprint|workspace)\b)/i, run: createDraft },
     { test: /\b(stand-?up|daily update|status update|what did i do|yesterday)\b/i, run: standup },
+    { test: /\b(methodolog\w*|which (framework|approach|method)|framework should|(scrum|kanban|waterfall|lean|six sigma|sixsigma|prince ?2|scrumban|hybrid)\b.*\b(vs|versus|or|compare|difference|what is|explain|when)|(what is|explain|how does|when to use) (scrum|kanban|waterfall|lean|six sigma|prince ?2|scrumban|hybrid|dmaic))/i, run: methodologyAdvice },
     { test: /\b(block|blocker|risk|stuck|overdue|late|behind|problem|attention|slipping)\w*/i, run: risks },
     { test: /\b(workload|overload|busy|capacity of|who (is|has)|free to|balance|too much)\b/i, run: workload },
     { test: /\b(sprint plan|plan (a|the|my|next) sprint|plan sprint|next sprint|sprint capacity|what should go in)\b/i, run: sprintPlan },
@@ -121,6 +123,19 @@ export function createGuide({ db, llm = null }) {
     if (urgentUnowned.length) sections.push(`**High priority with no owner (${urgentUnowned.length})**\n${list(urgentUnowned)}`);
     if (dueSoon.length) sections.push(`**Due within 2 days but not started (${dueSoon.length})**\n${list(dueSoon)}`);
     if (wip.length) sections.push(`**Columns over their WIP limit**\n${wip.map((w) => `• ${w.name}: ${w.n} / ${w.wip_limit}`).join('\n')}`);
+    if (c.project) {
+      const m = methodology(c.project.methodology);
+      const latePhase = db.get("SELECT name, end_date, state FROM phases WHERE project_id = ? AND state IN ('active','review') AND end_date < ? ORDER BY position LIMIT 1", c.project.id, c.today);
+      if (latePhase) sections.push(`**${term(m.id, 'phase')} running late**\n• ${latePhase.name} was due to pass its ${m.features.phases === 'dmaic' ? 'tollgate' : 'gate'} on ${fmt(latePhase.end_date, c.locale)}${latePhase.state === 'review' ? ' — it is waiting for approval' : ''}.`);
+      const entries = db.all('SELECT kind, title, status, data FROM entries WHERE project_id = ?', c.project.id);
+      const hot = entries.filter((e) => {
+        const def = REGISTERS[e.kind];
+        if (!def?.score || e.status === def.statuses[def.statuses.length - 1]) return false;
+        const d = JSON.parse(e.data || '{}');
+        return def.score === 'pxi' ? (d.probability ?? 0) * (d.impact ?? 0) >= 15 : (d.severity ?? 0) * (d.occurrence ?? 0) * (d.detection ?? 0) >= 200;
+      });
+      if (hot.length) sections.push(`**High-scoring risks (${hot.length})**\n${hot.slice(0, 4).map((e) => `• ${e.title} (${REGISTERS[e.kind].label})`).join('\n')}`);
+    }
     if (c.sprint?.end_date) {
       const left = daysBetween(c.today, c.sprint.end_date);
       const inSprint = c.open.filter((i) => i.sprintId === c.sprint.id);
@@ -132,6 +147,47 @@ export function createGuide({ db, llm = null }) {
       text: `Here’s what needs attention:\n\n${sections.join('\n\n')}\n\nSuggested next step: agree owners and new dates for the top items before taking on anything new.`,
       actions: first ? [{ type: 'open_issue', label: `Open ${first.key}`, payload: { key: first.key } }] : [],
       suggestions: ['Who has too much on?', 'Prioritise my day'],
+    };
+  }
+
+  function methodologyAdvice(c, q) {
+    const lower = q.toLowerCase();
+    // "scrumban" contains both "scrum" and "kanban", so match those on the remaining text.
+    const rest = lower.replace(/scrumban|hybrid/g, ' ');
+    const MATCH = {
+      waterfall: /waterfall/.test(lower), scrum: /\bscrum\b/.test(rest), kanban: /\bkanban\b/.test(rest), lean: /\blean\b/.test(lower),
+      sixsigma: /six ?sigma|dmaic/.test(lower), prince2: /prince ?2/.test(lower), scrumban: /scrumban|hybrid/.test(lower),
+    };
+    const named = PRIMARY_METHODOLOGIES.filter((id) => MATCH[id]);
+    const describe = (id) => {
+      const m = METHODOLOGIES[id];
+      return `**${m.name}** (${m.family}) — ${m.description}\n• Best for: ${m.bestFor.join(', ')}\n• Scale: ${m.scale} · Cadence: ${m.cadence}\n• Rhythm: ${m.ceremonies.join(' · ')}`;
+    };
+    if (named.length) {
+      return {
+        text: `${named.map(describe).join('\n\n')}${named.length > 1 ? '\n\n**In short:** pick the one whose “best for” matches your work — you can switch any project later in **Project settings → Methodology** without losing data.' : ''}`,
+        actions: c.project ? [{ type: 'navigate', label: 'Project settings', payload: { to: `p/${c.project.key}/settings` } }] : [],
+        suggestions: ['Which methodology should I use?', 'Scrum vs Kanban', 'What is PRINCE2?'],
+      };
+    }
+    // Infer answers from the question; default to a product-team profile.
+    const a = {
+      requirements: /fixed|contract|regulat|compliance|construction|hardware/.test(lower) ? 'fixed' : /experiment|start-?up|unknown|validate|mvp/.test(lower) ? 'unknown' : 'evolving',
+      work: /defect|quality|process|reduce|variation/.test(lower) ? 'improve' : /support|ops|operations|requests|tickets|service/.test(lower) ? 'stream' : /app|product|software|mobile|web/.test(lower) ? 'product' : /project|launch|migration|build/.test(lower) ? 'project' : undefined,
+      governance: /board|governance|public sector|government|formal|audit/.test(lower) ? 'formal' : undefined,
+      size: /large|enterprise|multi|programme|program/.test(lower) ? 'large' : /small|tiny|solo|startup|start-up/.test(lower) ? 'small' : undefined,
+    };
+    const ranked = recommend(a).slice(0, 3);
+    const current = c.project ? methodology(c.project.methodology) : null;
+    return {
+      text: [
+        current ? `${c.project.name} currently runs **${current.name}**.\n` : '',
+        '**My recommendation**',
+        ...ranked.map((r, k) => `${k + 1}. **${METHODOLOGIES[r.id].name}** — ${METHODOLOGIES[r.id].tagline}${r.reasons.length ? ` (${[...new Set(r.reasons)].slice(0, 2).join('; ')})` : ''}`),
+        '\nQuick guide: fixed scope & sign-offs → **Waterfall**; formal board & business case → **PRINCE2**; evolving product in sprints → **Scrum**; steady stream of requests → **Kanban**; app/product build mixing planned and reactive work → **Scrumban**; experiments & waste removal → **Lean**; measurable defect reduction → **Six Sigma**.',
+        '\nTell me more (team size, fixed or changing requirements, need for approvals) and I’ll refine this. The **Help me choose** button when creating a project asks the same questions.',
+      ].filter(Boolean).join('\n'),
+      suggestions: ['Scrum vs Kanban', 'What is Scrumban?', 'What is PRINCE2?', 'Explain Six Sigma DMAIC'],
     };
   }
 
@@ -157,7 +213,13 @@ export function createGuide({ db, llm = null }) {
 
   function sprintPlan(c) {
     if (!c.project) return { text: 'Open a Scrum project and ask me again — I’ll size the next sprint from your velocity.' };
-    if (c.project.template !== 'scrum') return { text: `${c.project.name} uses continuous flow (${c.project.template}), so there are no sprints. Keep the **To do** column ordered by priority and respect WIP limits instead.` };
+    const m = methodology(c.project.methodology);
+    if (!m.features.sprints) {
+      return { text: m.phases
+        ? `${c.project.name} runs **${m.name}**, which plans by ${term(m.id, 'phases').toLowerCase()} rather than sprints. Focus on the active ${term(m.id, 'phase').toLowerCase()} and its ${m.features.phases === 'dmaic' ? 'tollgate' : 'gate'} criteria — open the **${term(m.id, 'phases')}** view to see what's needed to pass.`
+        : `${c.project.name} runs **${m.name}** — continuous flow, so there are no sprints. Keep the first column ordered by priority, pull work only when a WIP limit allows, and watch cycle time in Reports.`,
+      actions: [{ type: 'navigate', label: m.phases ? `Open ${term(m.id, 'phases')}` : 'Open reports', payload: { to: `p/${c.project.key}/${m.phases ? 'phases' : 'reports'}` } }] };
+    }
     const velocity = db.all("SELECT completed_points FROM sprints WHERE project_id = ? AND state = 'closed' ORDER BY completed_at DESC LIMIT 3", c.project.id).map((s) => s.completed_points ?? 0);
     const capacity = velocity.length ? Math.round(velocity.reduce((a, b) => a + b, 0) / velocity.length) : 20;
     const backlog = c.open.filter((i) => !i.sprintId && !i.parentId).sort((a, b) => byUrgency(a, b) || a.rank - b.rank);
@@ -292,6 +354,7 @@ export function createGuide({ db, llm = null }) {
     return {
       workspace: c.ws.name, project: c.project?.name ?? null, today: c.today,
       open: c.open.slice(0, 40).map((i) => ({ key: i.key, title: i.title, status: i.statusName, priority: i.priority, due: i.dueDate, assignee: c.name(i.assigneeId) })),
+      methodology: c.project ? methodology(c.project.methodology).name : null,
       features: ARTICLES.map((a) => a.title),
     };
   }

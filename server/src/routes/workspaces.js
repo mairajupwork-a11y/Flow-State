@@ -5,6 +5,7 @@ import { requireUser } from '../auth.js';
 import { HttpError, parse, notFound } from '../http.js';
 import { loadWorkspace } from '../access.js';
 import { createProject } from '../services/projects.js';
+import { METHODOLOGY_IDS } from '../../../shared/methodologies.js';
 import { ISSUE_SELECT, issue as serializeIssue, user as serializeUser, workspace as serializeWorkspace, project as serializeProject, activity as serializeActivity } from '../serialize.js';
 import { session } from './auth.js';
 
@@ -14,7 +15,8 @@ const projectInput = z.object({
   name: z.string().trim().min(1, 'give the project a name').max(80),
   key: z.string().trim().toUpperCase().regex(/^[A-Z][A-Z0-9]{1,5}$/, 'use 2–6 letters or numbers, starting with a letter').optional(),
   description: z.string().trim().max(500).optional(),
-  template: z.enum(['scrum', 'kanban', 'business']).default('scrum'),
+  methodology: z.enum(METHODOLOGY_IDS).optional(),
+  template: z.enum(['scrum', 'kanban', 'business']).optional(),
   color: z.string().regex(/^#[0-9a-fA-F]{6}$/).optional(),
   withSamples: z.boolean().default(false),
 });

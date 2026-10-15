@@ -34,7 +34,7 @@ async function onboard(api, email = `user${Math.random()}@example.com`, name = '
   await api('POST', '/auth/signup', { name, email, password: 'correct-horse' });
   const { data } = await api('POST', '/workspaces', {
     name: 'Studio North', region: 'uk', teamSize: '11-50', useCase: 'software',
-    project: { name: 'Website Redesign', key: 'WEB', template: 'scrum', withSamples: true },
+    project: { name: 'Website Redesign', key: 'WEB', methodology: 'scrum', withSamples: true },
   });
   const ws = await api('GET', `/workspaces/${data.workspace.slug}`);
   return { slug: data.workspace.slug, ws: ws.data, email };
@@ -264,4 +264,95 @@ test('Flow guide answers from live data and drafts actions', async () => {
   assert.match((await ask('what needs attention?')).text, /attention|healthy/);
   assert.match((await ask('write my stand-up')).text, /Yesterday/);
   assert.match((await ask('plan the next sprint')).text, /points/);
+});
+
+test('every methodology creates a project with the right structure and samples', async () => {
+  const api = client();
+  const { slug } = await onboard(api);
+  const keys = { waterfall: 'WF', scrum: 'SC', kanban: 'KB', lean: 'LN', sixsigma: 'SS', prince2: 'PR', scrumban: 'SB', business: 'BZ' };
+  for (const [methodology, key] of Object.entries(keys)) {
+    const created = await api('POST', `/workspaces/${slug}/projects`, { name: `${methodology} project`, key, methodology, withSamples: true });
+    assert.equal(created.status, 201, methodology);
+    assert.equal(created.data.methodology, methodology);
+    const p = (await api('GET', `/projects/${created.data.id}`)).data;
+    const issues = (await api('GET', `/projects/${p.id}/issues`)).data;
+    assert.ok(issues.length >= 4, `${methodology} has sample work`);
+    const reports = (await api('GET', `/projects/${p.id}/reports`)).data;
+    assert.equal(reports.cfd.days.length, 30);
+    if (['waterfall', 'sixsigma', 'prince2'].includes(methodology)) {
+      assert.ok(p.phases.length >= 5, `${methodology} has phases`);
+      assert.equal(p.phases[0].state, 'complete');
+      assert.equal(p.phases[1].state, 'active');
+      assert.ok(issues.some((i) => i.phaseId), `${methodology} items are placed in phases`);
+    } else {
+      assert.equal(p.phases.length, 0);
+    }
+    if (methodology === 'scrum') assert.equal(p.sprints[0].state, 'active');
+    if (methodology === 'scrumban') assert.match(p.sprints[0].name, /Iteration/);
+    if (methodology === 'kanban') assert.equal(p.sprints.length, 0);
+    if (methodology === 'sixsigma') {
+      assert.ok(reports.control.points.length > 5);
+      assert.ok(reports.control.ucl > reports.control.mean);
+      assert.equal(typeof p.settings.charter.ctq, 'string');
+    }
+    if (methodology === 'prince2') assert.deepEqual(reports.registers.map((r) => r.kind).sort(), ['issue', 'lesson', 'quality', 'risk']);
+    if (['kanban', 'lean', 'scrumban'].includes(methodology)) assert.ok(reports.cycle.samples.length > 0, `${methodology} cycle time`);
+  }
+});
+
+test('phase gates run in order and record decisions', async () => {
+  const api = client();
+  const { slug } = await onboard(api);
+  const p = (await api('POST', `/workspaces/${slug}/projects`, { name: 'Office move', key: 'MOVE', methodology: 'waterfall' })).data;
+  const phases = (await api('GET', `/projects/${p.id}`)).data.phases;
+  assert.deepEqual(phases.map((ph) => ph.state), ['active', 'pending', 'pending', 'pending', 'pending', 'pending']);
+  const t = (ph, action, decision) => api('POST', `/projects/${p.id}/phases/${ph.id}/transition`, { action, decision });
+
+  assert.equal((await t(phases[2], 'start')).status, 409, 'cannot skip ahead');
+  const item = await api('POST', `/projects/${p.id}/issues`, { title: 'Sign requirements', phaseId: phases[0].id });
+  assert.equal(item.data.phaseId, phases[0].id);
+  assert.equal((await api('POST', `/projects/${p.id}/issues`, { title: 'Nope', type: 'story' })).status, 400, 'waterfall has no stories');
+
+  assert.equal((await t(phases[0], 'submit')).data[0].state, 'review');
+  assert.equal((await t(phases[0], 'approve')).status, 400, 'open work needs a recorded decision');
+  const approved = (await t(phases[0], 'approve', 'Approved with one open action carried into Design')).data;
+  assert.equal(approved[0].state, 'complete');
+  assert.match(approved[0].decision, /carried/);
+  assert.equal(approved[1].state, 'active', 'next phase opens');
+
+  const registers = await api('POST', `/projects/${p.id}/entries`, { kind: 'risk', title: 'Lease delay', data: { probability: 4, impact: 5 } });
+  assert.equal(registers.status, 201);
+  assert.equal(registers.data.status, 'Open');
+  assert.equal((await api('PATCH', `/projects/${p.id}/entries/${registers.data.id}`, { status: 'Bogus' })).status, 400);
+  assert.equal((await api('PATCH', `/projects/${p.id}/entries/${registers.data.id}`, { status: 'Mitigating' })).data.status, 'Mitigating');
+
+  const charter = await api('PATCH', `/projects/${p.id}`, { charter: { objective: 'Move 40 staff by March' } });
+  assert.equal(charter.data.settings.charter.objective, 'Move 40 staff by March');
+});
+
+test('switching methodology keeps work and can adopt new columns', async () => {
+  const api = client();
+  const { ws } = await onboard(api);
+  const p = ws.projects[0];
+  const before = (await api('GET', `/projects/${p.id}/issues`)).data;
+  const switched = (await api('PATCH', `/projects/${p.id}`, { methodology: 'scrumban', resetColumns: true })).data;
+  assert.equal(switched.methodology, 'scrumban');
+  assert.deepEqual(switched.statuses.map((s) => s.name), ['Backlog', 'Ready', 'In progress', 'Review', 'Done']);
+  const after = (await api('GET', `/projects/${p.id}/issues`)).data;
+  assert.equal(after.length, before.length);
+  assert.equal(after.filter((i) => i.statusCategory === 'done').length, before.filter((i) => i.statusCategory === 'done').length);
+  const prince = (await api('PATCH', `/projects/${p.id}`, { methodology: 'prince2' })).data;
+  assert.equal(prince.phases.length, 5, 'stages are added when needed');
+});
+
+test('Flow guide recommends a methodology', async () => {
+  const api = client();
+  const { slug } = await onboard(api);
+  const ask = (question) => api('POST', `/ai/${slug}/ask`, { question }).then((r) => r.data);
+  assert.match((await ask('Which methodology should I use for a mobile app with changing requirements?')).text, /Scrumban/);
+  const compare = (await ask('Scrum vs Kanban')).text;
+  assert.match(compare, /\*\*Scrum\*\*/);
+  assert.match(compare, /\*\*Kanban\*\*/);
+  assert.doesNotMatch(compare, /Scrumban/);
+  assert.match((await ask('what is PRINCE2?')).text, /Project Board/);
 });

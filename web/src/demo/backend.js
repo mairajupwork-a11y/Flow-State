@@ -5,7 +5,7 @@
  */
 // Pure-JavaScript SQLite build: no WebAssembly, so it runs under strict hosting policies.
 import initSqlJs from 'sql.js/dist/sql-asm.js';
-import { MIGRATIONS, wrap } from '../../../server/src/db.js';
+import { runMigrations, wrap } from '../../../server/src/db.js';
 import { errorHandler } from '../../../server/src/http.js';
 import { createHub } from '../../../server/src/realtime.js';
 import { createEvents } from '../../../server/src/events.js';
@@ -66,13 +66,7 @@ async function openBrowserDb() {
     exec: (sql) => sqlite.exec(sql),
     close: () => sqlite.close(),
   };
-  const version = all('PRAGMA user_version', [])[0].user_version;
-  for (let v = version; v < MIGRATIONS.length; v++) {
-    sqlite.exec('BEGIN');
-    sqlite.exec(MIGRATIONS[v]);
-    sqlite.exec(`PRAGMA user_version = ${v + 1}`);
-    sqlite.exec('COMMIT');
-  }
+  runMigrations(raw);
   let timer;
   const save = () => { clearTimeout(timer); timer = setTimeout(() => store.set(DB_KEY, toB64(sqlite.export())), 150); };
   return { db: wrap(raw), save };

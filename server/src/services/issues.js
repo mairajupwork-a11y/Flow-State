@@ -1,11 +1,12 @@
 import { HttpError, notFound } from '../http.js';
+import { methodology, term } from '../../../shared/methodologies.js';
 import { ISSUE_SELECT, issue as serializeIssue, user as serializeUser, activity as serializeActivity } from '../serialize.js';
 
 export const PRIORITY_ORDER = { urgent: 0, high: 1, medium: 2, low: 3 };
-const TRACKED = ['title', 'description', 'type', 'statusId', 'priority', 'assigneeId', 'sprintId', 'epicId', 'parentId', 'storyPoints', 'startDate', 'dueDate', 'labels'];
+const TRACKED = ['title', 'description', 'type', 'statusId', 'priority', 'assigneeId', 'sprintId', 'epicId', 'parentId', 'phaseId', 'storyPoints', 'startDate', 'dueDate', 'labels'];
 const COLUMN = {
   title: 'title', description: 'description', type: 'type', statusId: 'status_id', priority: 'priority', assigneeId: 'assignee_id',
-  sprintId: 'sprint_id', epicId: 'epic_id', parentId: 'parent_id', storyPoints: 'story_points', startDate: 'start_date', dueDate: 'due_date', labels: 'labels',
+  sprintId: 'sprint_id', epicId: 'epic_id', parentId: 'parent_id', phaseId: 'phase_id', storyPoints: 'story_points', startDate: 'start_date', dueDate: 'due_date', labels: 'labels',
 };
 
 export function getIssueRow(db, id) {
@@ -33,6 +34,12 @@ function validateRefs(db, project, input) {
   if (input.epicId != null && !db.get("SELECT 1 FROM issues WHERE id = ? AND project_id = ? AND type = 'epic'", input.epicId, project.id)) {
     throw new HttpError(400, 'The parent epic must be an epic in this project.');
   }
+  if (input.phaseId != null && !db.get('SELECT 1 FROM phases WHERE id = ? AND project_id = ?', input.phaseId, project.id)) {
+    throw new HttpError(400, `That ${term(project.methodology, 'phase').toLowerCase()} does not belong to this project.`);
+  }
+  if (input.type != null && !methodology(project.methodology).types.includes(input.type)) {
+    throw new HttpError(400, `${methodology(project.methodology).name} projects don't use the “${input.type}” type. Choose one of: ${methodology(project.methodology).types.map((t) => term(project.methodology, t)).join(', ')}.`);
+  }
   if (input.parentId != null && !db.get("SELECT 1 FROM issues WHERE id = ? AND project_id = ? AND type <> 'subtask'", input.parentId, project.id)) {
     throw new HttpError(400, 'Sub-tasks need a parent work item in the same project.');
   }
@@ -48,6 +55,7 @@ export function createIssue(db, { projectId, actor, input, events, silent = fals
     if (!project) throw notFound('Project');
     const statusId = input.statusId ?? db.get('SELECT id FROM statuses WHERE project_id = ? ORDER BY position LIMIT 1', projectId).id;
     const data = { ...input, statusId };
+    if (!data.type) data.type = methodology(project.methodology).types.includes('task') ? 'task' : methodology(project.methodology).types[0];
     if (data.type === 'subtask' && !data.parentId) throw new HttpError(400, 'Choose the parent work item for this sub-task.');
     if (data.type === 'epic') data.epicId = null;
     validateRefs(db, project, data);
@@ -57,10 +65,10 @@ export function createIssue(db, { projectId, actor, input, events, silent = fals
     const category = db.get('SELECT category FROM statuses WHERE id = ?', statusId).category;
     const { lastInsertRowid } = db.run(
       `INSERT INTO issues (project_id, number, type, title, description, status_id, priority, assignee_id, reporter_id, sprint_id,
-         epic_id, parent_id, story_points, start_date, due_date, labels, rank, resolved_at)
-       VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?)`,
-      projectId, number, data.type ?? 'task', data.title, data.description ?? '', statusId, data.priority ?? 'medium',
-      data.assigneeId ?? null, actor.id, data.sprintId ?? null, data.epicId ?? null, data.parentId ?? null,
+         epic_id, parent_id, phase_id, story_points, start_date, due_date, labels, rank, resolved_at)
+       VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?)`,
+      projectId, number, data.type, data.title, data.description ?? '', statusId, data.priority ?? 'medium',
+      data.assigneeId ?? null, actor.id, data.sprintId ?? null, data.epicId ?? null, data.parentId ?? null, data.phaseId ?? null,
       data.storyPoints ?? null, data.startDate ?? null, data.dueDate ?? null, JSON.stringify(cleanLabels(data.labels)),
       nextRank(db, statusId), category === 'done' ? new Date().toISOString() : null,
     );
@@ -133,6 +141,9 @@ function logChanges(db, { project, actor, current, patch, events }) {
     } else if (field === 'sprintId') {
       from = from ? db.get('SELECT name FROM sprints WHERE id = ?', from)?.name : null;
       to = value ? db.get('SELECT name FROM sprints WHERE id = ?', value)?.name : null;
+    } else if (field === 'phaseId') {
+      from = from ? db.get('SELECT name FROM phases WHERE id = ?', from)?.name : null;
+      to = value ? db.get('SELECT name FROM phases WHERE id = ?', value)?.name : null;
     } else if (field === 'description') {
       from = undefined;
       to = undefined;
