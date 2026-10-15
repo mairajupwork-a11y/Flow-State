@@ -10,10 +10,11 @@ import { api } from '../lib/api';
 import { useTheme } from '../lib/theme';
 import { timeAgo } from '../lib/format';
 import { useOutsideClose } from './Sidebar';
+import { methodologyOf, viewMeta } from '../lib/methodology';
 
 const VIEW_LABEL: Record<string, string> = {
   board: 'Board', backlog: 'Backlog', list: 'List', timeline: 'Timeline', calendar: 'Calendar', reports: 'Reports', settings: 'Settings',
-  'my-tasks': 'My tasks', 'my-day': 'My day', team: 'Team',
+  phases: 'Phases', registers: 'Registers', charter: 'Charter', 'my-tasks': 'My tasks', 'my-day': 'My day', team: 'Team',
 };
 
 export function Topbar({ activeKey }: { activeKey?: string }) {
@@ -22,7 +23,7 @@ export function Topbar({ activeKey }: { activeKey?: string }) {
   const [, setTheme, dark] = useTheme();
   const project = projects.find((p) => p.key === activeKey);
   const last = location.pathname.split('/').filter(Boolean).pop() ?? '';
-  const view = VIEW_LABEL[last];
+  const view = project && VIEW_LABEL[last] && !['my-tasks', 'my-day', 'team'].includes(last) ? viewMeta(methodologyOf(project), last).label : VIEW_LABEL[last];
   const isMac = typeof navigator !== 'undefined' && /Mac|iPhone|iPad/.test(navigator.platform);
 
   return (
@@ -32,7 +33,7 @@ export function Topbar({ activeKey }: { activeKey?: string }) {
         <nav className="breadcrumbs" aria-label="Breadcrumb">
           <Link to={base} className="hide-mobile crumb">{workspace.name}</Link>
           <span className="hide-mobile"><Icon name="right" size={13} /></span>
-          {project && <Link to={`${base}/p/${project.key}/board`} className={view ? 'crumb hide-mobile' : 'current crumb'}>{project.name}</Link>}
+          {project && <Link to={`${base}/p/${project.key}`} className={view ? 'crumb hide-mobile' : 'current crumb'}>{project.name}</Link>}
           {project && view && <span className="hide-mobile"><Icon name="right" size={13} /></span>}
           {view ? <span className="current">{view}</span> : !project && <span className="current">Overview</span>}
         </nav>

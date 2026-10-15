@@ -9,42 +9,89 @@ import { CSS } from '@dnd-kit/utilities';
 import { useQueryClient } from '@tanstack/react-query';
 import { Icon } from '../../components/Icon';
 import { Avatar, Empty, PriorityPill } from '../../components/ui';
-import { useMoveIssue, invalidateWork } from '../../lib/queries';
+import { useMoveIssue, useUpdateIssue, invalidateWork } from '../../lib/queries';
 import { useWs } from '../../lib/workspace';
 import { toast, toastError } from '../../lib/store';
 import { api } from '../../lib/api';
-import { fmtDate, todayISO, TYPE_LABEL } from '../../lib/format';
+import { fmtDate, todayISO } from '../../lib/format';
+import { estimateLabel, methodologyOf, term, typeLabel, lower } from '../../lib/methodology';
 import type { Issue, Status } from '../../lib/types';
 import { FilterBar, SectionBar, useProjectCtx } from './ProjectLayout';
 
-type Columns = Record<number, number[]>;
+type Columns = Record<string, number[]>;
+type Lane = { key: string; label: string; color?: string; patch: Partial<Pick<Issue, 'priority' | 'assigneeId' | 'epicId'>>; expedite?: boolean };
+type LaneMode = 'none' | 'priority' | 'assignee' | 'epic';
 
-function buildColumns(statuses: Status[], issues: Issue[]): Columns {
-  const cols: Columns = Object.fromEntries(statuses.map((s) => [s.id, [] as number[]]));
-  [...issues].sort((a, b) => a.rank - b.rank).forEach((i) => cols[i.statusId]?.push(i.id));
+const colKey = (lane: string, statusId: number) => `${lane}|${statusId}`;
+const parseKey = (k: string) => { const i = k.lastIndexOf('|'); return { lane: k.slice(0, i), statusId: Number(k.slice(i + 1)) }; };
+
+function laneOf(mode: LaneMode, i: Issue): string {
+  if (mode === 'priority') return i.priority;
+  if (mode === 'assignee') return String(i.assigneeId ?? 'none');
+  if (mode === 'epic') return String(i.epicId ?? 'none');
+  return 'all';
+}
+
+function buildColumns(statuses: Status[], lanes: Lane[], mode: LaneMode, issues: Issue[]): Columns {
+  const cols: Columns = {};
+  for (const l of lanes) for (const s of statuses) cols[colKey(l.key, s.id)] = [];
+  [...issues].sort((a, b) => a.rank - b.rank).forEach((i) => cols[colKey(laneOf(mode, i), i.statusId)]?.push(i.id));
   return cols;
 }
 
 export function Board() {
-  const { project, filtered } = useProjectCtx();
-  const { canEdit } = useWs();
-  const activeSprint = project.sprints.find((s) => s.state === 'active');
-  const [scope, setScope] = useState<'sprint' | 'all'>('sprint');
-  const sprintOnly = project.template === 'scrum' && scope === 'sprint' && !!activeSprint;
+  const { project, filtered, issues: allIssues } = useProjectCtx();
+  const m = methodologyOf(project);
+  const { canEdit, members } = useWs();
+  const activeSprint = m.features.sprints ? project.sprints.find((s) => s.state === 'active') : undefined;
+  const activePhase = project.phases.find((p) => p.state === 'active' || p.state === 'review');
+  const [scope, setScope] = useState<string>(m.features.sprints === 'required' ? 'sprint' : m.phases && activePhase ? `phase-${activePhase.id}` : 'all');
+  const sprintOnly = scope === 'sprint' && !!activeSprint;
+  const phaseScope = scope.startsWith('phase-') ? Number(scope.slice(6)) : null;
+  const [laneMode, setLaneModeState] = useState<LaneMode>((project.settings.swimlane ?? m.features.swimlane) as LaneMode);
+  const qc = useQueryClient();
+  const update = useUpdateIssue();
+  const setLaneMode = (mode: LaneMode) => {
+    setLaneModeState(mode);
+    if (canEdit) api.patch(`/projects/${project.id}`, { swimlane: mode }).then(() => qc.invalidateQueries({ queryKey: ['project', project.id] })).catch(() => {});
+  };
 
   const cards = useMemo(
-    () => filtered.filter((i) => i.type !== 'epic' && i.type !== 'subtask' && (!sprintOnly || i.sprintId === activeSprint!.id)),
-    [filtered, sprintOnly, activeSprint],
+    () => filtered.filter((i) => i.type !== 'epic' && i.type !== 'subtask' && (!sprintOnly || i.sprintId === activeSprint!.id) && (phaseScope == null || i.phaseId === phaseScope)),
+    [filtered, sprintOnly, activeSprint, phaseScope],
   );
+  const lanes = useMemo<Lane[]>(() => {
+    if (laneMode === 'priority') {
+      const flow = m.features.wip;
+      return [
+        { key: 'urgent', label: flow ? 'Expedite' : 'Urgent', color: '#e35d73', patch: { priority: 'urgent' as const }, expedite: flow },
+        { key: 'high', label: 'High priority', color: '#e8875f', patch: { priority: 'high' as const } },
+        { key: 'medium', label: flow ? 'Standard' : 'Medium priority', color: '#d6943e', patch: { priority: 'medium' as const } },
+        { key: 'low', label: 'Low priority', color: '#229e80', patch: { priority: 'low' as const } },
+      ].filter((l) => l.expedite || cards.some((c) => c.priority === l.key));
+    }
+    if (laneMode === 'assignee') {
+      return [...members.filter((u) => cards.some((c) => c.assigneeId === u.id)).map((u) => ({ key: String(u.id), label: u.name, color: u.color, patch: { assigneeId: u.id } })),
+        ...(cards.some((c) => !c.assigneeId) ? [{ key: 'none', label: 'Unassigned', patch: { assigneeId: null } }] : [])];
+    }
+    if (laneMode === 'epic') {
+      const epics = allIssues.filter((i) => i.type === 'epic' && cards.some((c) => c.epicId === i.id));
+      return [...epics.map((e) => ({ key: String(e.id), label: `${typeLabel(m, 'epic')}: ${e.title}`, patch: { epicId: e.id } })),
+        ...(cards.some((c) => !c.epicId) ? [{ key: 'none', label: `No ${typeLabel(m, 'epic').toLowerCase()}`, patch: { epicId: null } }] : [])];
+    }
+    return [{ key: 'all', label: '', patch: {} }];
+  }, [laneMode, cards, members, allIssues, m]);
+
   const byId = useMemo(() => new Map(cards.map((i) => [i.id, i])), [cards]);
-  const [columns, setColumns] = useState<Columns>(() => buildColumns(project.statuses, cards));
+  const [columns, setColumns] = useState<Columns>(() => buildColumns(project.statuses, lanes, laneMode, cards));
   const [dragging, setDragging] = useState<number | null>(null);
+  const [origin, setOrigin] = useState<{ key: string; index: number } | null>(null);
   const move = useMoveIssue();
 
   // Server data is the source of truth whenever we're not mid-drag.
   useEffect(() => {
-    if (dragging == null) setColumns(buildColumns(project.statuses, cards));
-  }, [cards, project.statuses, dragging]);
+    if (dragging == null) setColumns(buildColumns(project.statuses, lanes, laneMode, cards));
+  }, [cards, project.statuses, lanes, laneMode, dragging]);
 
   const sensors = useSensors(
     useSensor(PointerSensor, { activationConstraint: { distance: 6 } }),
@@ -52,13 +99,16 @@ export function Board() {
     useSensor(KeyboardSensor, { coordinateGetter: sortableKeyboardCoordinates }),
   );
 
-  const findColumn = (id: string | number): number | undefined => {
-    if (typeof id === 'string' && id.startsWith('col-')) return Number(id.slice(4));
-    return Number(Object.keys(columns).find((k) => columns[Number(k)].includes(Number(id))));
+  const findColumn = (id: string | number): string | undefined => {
+    if (typeof id === 'string' && id.startsWith('col-')) return id.slice(4);
+    return Object.keys(columns).find((k) => columns[k].includes(Number(id)));
   };
 
   function onDragStart(e: DragStartEvent) {
-    setDragging(Number(e.active.id));
+    const id = Number(e.active.id);
+    const key = findColumn(id);
+    setDragging(id);
+    setOrigin(key ? { key, index: columns[key].indexOf(id) } : null);
   }
 
   function onDragOver(e: DragOverEvent) {
@@ -81,7 +131,7 @@ export function Board() {
     setDragging(null);
     const issue = byId.get(id);
     const over = e.over;
-    if (!issue || !over) return setColumns(buildColumns(project.statuses, cards));
+    if (!issue || !over) return setColumns(buildColumns(project.statuses, lanes, laneMode, cards));
     const to = findColumn(over.id);
     if (to == null) return;
     let list = columns[to];
@@ -94,87 +144,145 @@ export function Board() {
       setColumns((c) => ({ ...c, [to]: list }));
     }
     const idx = list.indexOf(id);
+    if (origin && origin.key === to && origin.index === idx) return;
+    const { lane, statusId } = parseKey(to);
     const before = list[idx - 1];
     const after = list[idx + 1];
-    if (to === issue.statusId && before === prevNeighbour(issue, cards, -1) && after === prevNeighbour(issue, cards, 1)) return;
     const rb = before ? byId.get(before)!.rank : null;
     const ra = after ? byId.get(after)!.rank : null;
     const rank = rb != null && ra != null ? (rb + ra) / 2 : rb != null ? rb + 1024 : ra != null ? ra - 1024 : issue.rank;
-    const status = project.statuses.find((s) => s.id === to)!;
-    move.mutate({ issue, statusId: to, beforeId: before ?? null, afterId: after ?? null, rank });
-    if (to !== issue.statusId) toast(`${issue.key} moved to ${status.name}.`);
+    const status = project.statuses.find((s) => s.id === statusId)!;
+    const targetLane = lanes.find((l) => l.key === lane);
+    if (targetLane && lane !== laneOf(laneMode, issue)) {
+      update.mutate({ issue, patch: targetLane.patch });
+      toast(`${issue.key} moved to ${targetLane.label}.`);
+    }
+    move.mutate({ issue, statusId, beforeId: before ?? null, afterId: after ?? null, rank });
+    if (statusId !== issue.statusId) toast(`${issue.key} moved to ${status.name}.`);
   }
 
   const draggingIssue = dragging != null ? byId.get(dragging) : undefined;
+  const statusCount = (s: Status) => lanes.reduce((a, l) => a + (columns[colKey(l.key, s.id)]?.length ?? 0), 0);
+  const sprintName = term(m.id, 'sprint');
 
   return (
     <>
-      <SectionBar title="Project workspace" sub="Everything in motion, at a glance" />
+      <SectionBar title={m.phases ? `${term(m.id, 'phase')} board` : m.features.wip ? 'Flow board' : 'Project workspace'} sub={`${m.name} · ${m.tagline}`} />
       <FilterBar count={cards.length} />
-      {project.template === 'scrum' && (
-        <div className="board-scope">
-          {activeSprint ? (
-            <>
-              <div className="tabs" role="group" aria-label="Board scope">
-                <button className={`tab ${scope === 'sprint' ? 'active' : ''}`} aria-pressed={scope === 'sprint'} onClick={() => setScope('sprint')}><Icon name="bolt" size={13} />{activeSprint.name}</button>
-                <button className={`tab ${scope === 'all' ? 'active' : ''}`} aria-pressed={scope === 'all'} onClick={() => setScope('all')}>All work</button>
-              </div>
-              {activeSprint.goal && <span className="tiny-note"><b>Goal:</b> {activeSprint.goal}</span>}
-            </>
-          ) : (
-            <div className="tip-box" style={{ flex: 1 }}><Icon name="lightbulb" size={17} /><span>No sprint is running, so you’re seeing all work. <Link to="../backlog" relative="path">Plan and start a sprint</Link> to focus the board.</span></div>
-          )}
-        </div>
-      )}
+      <div className="board-scope">
+        {m.features.sprints && activeSprint && (
+          <div className="tabs" role="group" aria-label="Board scope">
+            <button className={`tab ${scope === 'sprint' ? 'active' : ''}`} aria-pressed={scope === 'sprint'} onClick={() => setScope('sprint')}><Icon name="bolt" size={13} />{activeSprint.name}</button>
+            <button className={`tab ${scope === 'all' ? 'active' : ''}`} aria-pressed={scope === 'all'} onClick={() => setScope('all')}>All work</button>
+          </div>
+        )}
+        {sprintOnly && activeSprint.goal && <span className="tiny-note"><b>Goal:</b> {activeSprint.goal}</span>}
+        {m.features.sprints === 'required' && !activeSprint && (
+          <div className="tip-box" style={{ flex: 1 }}><Icon name="lightbulb" size={17} /><span>No {sprintName.toLowerCase()} is running, so you’re seeing all work. <Link to="../backlog" relative="path">Plan and start a {sprintName.toLowerCase()}</Link> to focus the board.</span></div>
+        )}
+        {m.phases && project.phases.length > 0 && (
+          <label className="row-8 scope-select"><Icon name="layers" size={14} />
+            <select className="filter-select" value={scope} onChange={(e) => setScope(e.target.value)} aria-label={`${term(m.id, 'phase')} scope`}>
+              <option value="all">All {lower(term(m.id, 'phases'))}</option>
+              {project.phases.map((p) => <option key={p.id} value={`phase-${p.id}`}>{p.name}{p.state === 'active' || p.state === 'review' ? ' (current)' : p.state === 'complete' ? ' ✓' : ''}</option>)}
+            </select>
+          </label>
+        )}
+        {m.id === 'scrumban' && <ScrumbanTrigger statuses={project.statuses} issues={allIssues} />}
+        <label className="row-8 scope-select lane-select"><span className="tiny-note">Swimlanes</span>
+          <select className="filter-select" value={laneMode} onChange={(e) => setLaneMode(e.target.value as LaneMode)} aria-label="Swimlanes">
+            <option value="none">None</option>
+            <option value="priority">{m.features.wip ? 'Class of service' : 'Priority'}</option>
+            <option value="assignee">Assignee</option>
+            <option value="epic">{typeLabel(m, 'epic')}</option>
+          </select>
+        </label>
+      </div>
       <DndContext sensors={sensors} collisionDetection={closestCorners} onDragStart={onDragStart} onDragOver={onDragOver} onDragEnd={onDragEnd} onDragCancel={() => setDragging(null)}
         accessibility={{ screenReaderInstructions: { draggable: 'To pick up a card, press Space. Use the arrow keys to move it between columns, then press Space again to drop it, or Escape to cancel.' } }}>
-        <div className="kanban" aria-label="Kanban board">
-          {project.statuses.map((s) => (
-            <Column key={s.id} status={s} ids={columns[s.id] ?? []} byId={byId} canEdit={canEdit} sprintId={sprintOnly ? activeSprint!.id : null} projectId={project.id} />
+        <div className={laneMode === 'none' ? '' : 'swimlanes'}>
+          {lanes.map((lane, li) => (
+            <div key={lane.key} className={laneMode === 'none' ? '' : `swimlane ${lane.expedite ? 'expedite' : ''}`}>
+              {laneMode !== 'none' && (
+                <div className="swimlane-head">
+                  <span className="col-dot" style={{ background: lane.color ?? 'var(--muted)' }} />
+                  <b>{lane.label}</b>
+                  <span className="col-count">{project.statuses.reduce((a, s) => a + (columns[colKey(lane.key, s.id)]?.length ?? 0), 0)}</span>
+                  {lane.expedite && (() => {
+                    const n = project.statuses.filter((s) => s.category === 'progress').reduce((a, s) => a + (columns[colKey(lane.key, s.id)]?.length ?? 0), 0);
+                    return <span className={`tiny-note ${n > 1 ? 'overdue' : ''}`}>{n > 1 ? `${n} expedite items in progress — the policy is 1 at a time. Finish one before starting another.` : 'Urgent work jumps the queue — limit 1 in progress at a time.'}</span>;
+                  })()}
+                </div>
+              )}
+              <div className={`kanban ${laneMode !== 'none' ? 'in-lane' : ''}`} aria-label={lane.label ? `${lane.label} lane` : 'Kanban board'}>
+                {project.statuses.map((s) => (
+                  <Column key={s.id} laneKey={lane.key} status={s} ids={columns[colKey(lane.key, s.id)] ?? []} total={statusCount(s)} showTitle={laneMode === 'none' || li === 0}
+                    byId={byId} canEdit={canEdit} sprintId={sprintOnly ? activeSprint!.id : null} phaseId={phaseScope} lanePatch={lane.patch} projectId={project.id} compact={laneMode !== 'none'} />
+                ))}
+              </div>
+            </div>
           ))}
+          {!lanes.length && <BoardEmpty />}
         </div>
         <DragOverlay dropAnimation={{ duration: 180, easing: 'cubic-bezier(.2,.8,.2,1)' }}>
           {draggingIssue ? <CardBody issue={draggingIssue} overlay /> : null}
         </DragOverlay>
       </DndContext>
-      <p className="hint-line"><Icon name="lightbulb" size={14} /> Drag cards between columns — or focus a card, press Space and use the arrow keys. On mobile, long-press to drag.</p>
+      <p className="hint-line"><Icon name="lightbulb" size={14} /> {m.features.wip ? 'Pull work only when the next column is under its WIP limit. ' : ''}Drag cards between columns{laneMode !== 'none' ? ' and lanes' : ''} — or focus a card, press Space and use the arrow keys. On mobile, long-press to drag.</p>
     </>
   );
 }
 
-function prevNeighbour(issue: Issue, all: Issue[], dir: -1 | 1): number | undefined {
-  const list = all.filter((i) => i.statusId === issue.statusId).sort((a, b) => a.rank - b.rank);
-  return list[list.indexOf(issue) + dir]?.id;
+/** Scrumban's planning trigger: when Ready falls below its threshold, it's time to plan. */
+function ScrumbanTrigger({ statuses, issues }: { statuses: Status[]; issues: Issue[] }) {
+  const ready = statuses.find((s) => /ready/i.test(s.name));
+  if (!ready) return null;
+  const count = issues.filter((i) => i.statusId === ready.id && i.type !== 'epic' && !i.parentId).length;
+  const threshold = Math.max(2, Math.ceil((ready.wipLimit ?? 10) / 3));
+  const low = count < threshold;
+  return (
+    <span className={`trigger-chip ${low ? 'low' : ''}`} title={`Plan when ${ready.name} drops below ${threshold}`}>
+      <Icon name={low ? 'flag' : 'checkcircle'} size={13} /> {ready.name}: {count}{ready.wipLimit ? ` / ${ready.wipLimit}` : ''}
+      {low ? <> · <Link to="../backlog" relative="path">time to plan</Link></> : ' · healthy buffer'}
+    </span>
+  );
 }
 
-function Column({ status, ids, byId, canEdit, sprintId, projectId }: { status: Status; ids: number[]; byId: Map<number, Issue>; canEdit: boolean; sprintId: number | null; projectId: number }) {
-  const { setNodeRef, isOver } = useDroppable({ id: `col-${status.id}` });
+function Column({ laneKey, status, ids, total, showTitle, byId, canEdit, sprintId, phaseId, lanePatch, projectId, compact }: {
+  laneKey: string; status: Status; ids: number[]; total: number; showTitle: boolean; byId: Map<number, Issue>; canEdit: boolean;
+  sprintId: number | null; phaseId: number | null; lanePatch: Lane['patch']; projectId: number; compact: boolean;
+}) {
+  const { setNodeRef, isOver } = useDroppable({ id: `col-${colKey(laneKey, status.id)}` });
   const [adding, setAdding] = useState(false);
   const wip = status.wipLimit;
-  const wipState = wip == null ? '' : ids.length > wip ? 'over' : ids.length === wip ? 'at' : '';
+  const wipState = wip == null ? '' : total > wip ? 'over' : total === wip ? 'at' : '';
   return (
-    <section ref={setNodeRef} className={`kanban-col ${isOver ? 'drag-over' : ''} ${wipState ? `wip-${wipState}` : ''}`} aria-label={`${status.name}: ${ids.length} work items`}>
-      <div className="col-title">
-        <span className="col-dot" style={{ background: status.color }} />
-        <b>{status.name}</b>
-        <span className="col-count" title={wip ? `WIP limit ${wip}` : undefined}>{ids.length}{wip ? ` / ${wip}` : ''}</span>
-        <Link to="../settings" relative="path" className="col-more icon-btn tiny" title="Edit columns" aria-label={`Edit ${status.name} column`}><Icon name="ellipsis" size={16} /></Link>
-      </div>
+    <section ref={setNodeRef} className={`kanban-col ${compact ? 'compact' : ''} ${isOver ? 'drag-over' : ''} ${wipState ? `wip-${wipState}` : ''}`} aria-label={`${status.name}: ${ids.length} work items`}>
+      {showTitle ? (
+        <div className="col-title">
+          <span className="col-dot" style={{ background: status.color }} />
+          <b>{status.name}</b>
+          <span className="col-count" title={wip ? `WIP limit ${wip}` : undefined}>{total}{wip ? ` / ${wip}` : ''}</span>
+          <Link to="../settings" relative="path" className="col-more icon-btn tiny" title="Edit columns" aria-label={`Edit ${status.name} column`}><Icon name="ellipsis" size={16} /></Link>
+        </div>
+      ) : <span className="sr-only">{status.name}</span>}
       <SortableContext items={ids} strategy={verticalListSortingStrategy}>
         {ids.map((id) => {
           const issue = byId.get(id);
           return issue ? <SortableCard key={id} issue={issue} disabled={!canEdit} /> : null;
         })}
       </SortableContext>
-      {!ids.length && !adding && <div className="col-empty">{status.category === 'done' ? 'Finished work lands here.' : 'Drop work here.'}</div>}
+      {!ids.length && !adding && !compact && <div className="col-empty">{status.category === 'done' ? 'Finished work lands here.' : 'Drop work here.'}</div>}
       {canEdit && (adding
-        ? <QuickAdd statusId={status.id} sprintId={sprintId} projectId={projectId} onDone={() => setAdding(false)} />
-        : <button className="add-card" onClick={() => setAdding(true)}><Icon name="plus" size={15} /> Add a task</button>)}
+        ? <QuickAdd statusId={status.id} sprintId={sprintId} phaseId={phaseId} lanePatch={lanePatch} projectId={projectId} onDone={() => setAdding(false)} />
+        : <button className="add-card" onClick={() => setAdding(true)}><Icon name="plus" size={15} /> {compact ? 'Add' : 'Add a card'}</button>)}
     </section>
   );
 }
 
-function QuickAdd({ statusId, sprintId, projectId, onDone }: { statusId: number; sprintId: number | null; projectId: number; onDone: () => void }) {
+function QuickAdd({ statusId, sprintId, phaseId, lanePatch, projectId, onDone }: {
+  statusId: number; sprintId: number | null; phaseId: number | null; lanePatch: Lane['patch']; projectId: number; onDone: () => void;
+}) {
   const [title, setTitle] = useState('');
   const [busy, setBusy] = useState(false);
   const qc = useQueryClient();
@@ -183,7 +291,7 @@ function QuickAdd({ statusId, sprintId, projectId, onDone }: { statusId: number;
     if (!title.trim()) return onDone();
     setBusy(true);
     try {
-      const created = await api.post<Issue>(`/projects/${projectId}/issues`, { title: title.trim(), statusId, sprintId });
+      const created = await api.post<Issue>(`/projects/${projectId}/issues`, { title: title.trim(), statusId, sprintId, phaseId, ...lanePatch });
       invalidateWork(qc);
       toast(`${created.key} created.`);
       setTitle('');
@@ -216,12 +324,13 @@ function SortableCard({ issue, disabled }: { issue: Issue; disabled: boolean }) 
 }
 
 export const CardBody = memo(function CardBody({ issue, overlay = false }: { issue: Issue; overlay?: boolean }) {
-  const { member, locale } = useWs();
+  const { member, locale, projects } = useWs();
+  const m = methodologyOf(projects.find((p) => p.id === issue.projectId));
   const overdue = issue.dueDate && issue.dueDate < todayISO() && issue.statusCategory !== 'done';
   return (
     <article className={`task-card ${overlay ? 'overlay' : ''} ${issue.statusCategory === 'done' ? 'is-done' : ''}`}>
       <div className="card-top">
-        <span className="issue-id">{issue.key} · {TYPE_LABEL[issue.type]}</span>
+        <span className="issue-id">{issue.key} · {typeLabel(m, issue.type)}</span>
         <PriorityPill priority={issue.priority} />
       </div>
       <div className="task-title">{issue.title}</div>
@@ -232,7 +341,7 @@ export const CardBody = memo(function CardBody({ issue, overlay = false }: { iss
           {issue.checklistTotal > 0 && <span title="Checklist progress"><Icon name="checkcircle" size={13} /> {issue.checklistDone}/{issue.checklistTotal}</span>}
           {issue.commentCount > 0 && <span title="Comments"><Icon name="message" size={13} />{issue.commentCount}</span>}
           {issue.subtaskCount > 0 && <span title="Sub-tasks"><Icon name="list" size={13} />{issue.subtaskCount}</span>}
-          {issue.storyPoints != null && <span className="points" title="Story points">{issue.storyPoints}</span>}
+          {issue.storyPoints != null && <span className="points" title={estimateLabel(m)}>{issue.storyPoints}{m.features.estimation === 'hours' ? 'h' : ''}</span>}
         </div>
         <Avatar user={member(issue.assigneeId)} size="card-avatar" />
       </div>

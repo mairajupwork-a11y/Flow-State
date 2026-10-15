@@ -82,7 +82,7 @@ function ProjectsCard() {
       {projects.map((p) => {
         const pct = p.issueCount ? Math.round(((p.doneCount ?? 0) / p.issueCount) * 100) : 0;
         return (
-          <Link key={p.id} to={`${base}/p/${p.key}/board`} className="project-row">
+          <Link key={p.id} to={`${base}/p/${p.key}`} className="project-row">
             <span className="project-glyph" style={{ background: p.color }}>{p.name[0]}</span>
             <span style={{ flex: 1, minWidth: 0 }}>
               <span className="row-between"><b className="ellipsis">{p.name}</b><small>{pct}%</small></span>

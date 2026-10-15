@@ -1,11 +1,12 @@
 import { useMemo, useState } from 'react';
-import { NavLink, Outlet, useLocation, useOutletContext, useParams } from 'react-router-dom';
+import { Navigate, NavLink, Outlet, useLocation, useOutletContext, useParams } from 'react-router-dom';
 import { useIssues, useProject } from '../../lib/queries';
 import { useWs } from '../../lib/workspace';
 import { openCreate, openGuide } from '../../lib/store';
 import { Icon } from '../../components/Icon';
 import { AvatarGroup, ErrorState, PageHeader, PageLoader } from '../../components/ui';
-import { PRIORITIES, PRIORITY_LABEL, TYPES, TYPE_LABEL, todayISO, daysBetween, fmtDate } from '../../lib/format';
+import { PRIORITIES, PRIORITY_LABEL, todayISO, daysBetween, fmtDate } from '../../lib/format';
+import { methodologyOf, typeLabel, viewMeta, gateWord, term } from '../../lib/methodology';
 import type { Issue, IssueType, Priority, ProjectDetail } from '../../lib/types';
 import { NotFound } from '../home/NotFound';
 
@@ -22,7 +23,20 @@ const HEADERS: Record<string, [string, string, string]> = {
   timeline: ['Planning / Timeline', 'See the road ahead.', 'Connect milestones to the work that moves them forward.'],
   calendar: ['Schedule / Calendar', 'Your time, thoughtfully organised.', 'See upcoming due dates and plan around what matters.'],
   reports: ['Insights / Reports', 'Progress worth seeing.', 'Understand work distribution and make confident decisions.'],
-  settings: ['Project / Settings', 'Shape how this project works.', 'Workflow columns, details and housekeeping — all in one place.'],
+  settings: ['Project / Settings', 'Shape how this project works.', 'Methodology, workflow columns, details and housekeeping — all in one place.'],
+  phases: ['Lifecycle / Phases', 'One phase at a time, signed off.', 'Work through each phase in order and pass its gate before the next begins.'],
+  registers: ['Governance / Registers', 'Know your risks before they know you.', 'Keep the logs your methodology relies on — scored, owned and up to date.'],
+  charter: ['Definition / Charter', 'Agree why, what and how much.', 'The project definition everyone signs up to, in one place.'],
+};
+
+/** Header copy tuned to each practice's vocabulary. */
+const HEADER_OVERRIDES: Record<string, Record<string, [string, string, string]>> = {
+  scrumban: { board: ['Hybrid / Flow board', 'Pull, don’t push.', 'Work flows through WIP limits; plan an iteration whenever Ready runs low.'], backlog: ['Planning / Backlog', 'Keep Ready topped up.', 'Order the backlog, then pull items into the next iteration or straight to Ready.'] },
+  kanban: { board: ['Flow / Kanban board', 'Stop starting, start finishing.', 'Pull work only when a column has capacity. Urgent items take the expedite lane.'] },
+  lean: { board: ['Value stream / Board', 'Build, measure, learn.', 'Validate value with small experiments and remove waste along the way.'], charter: ['Lean / Value', 'Start with what customers value.', 'Define the customer, the value and the stream of steps that deliver it.'], registers: ['Lean / Waste & kaizen', 'See waste. Remove it.', 'Log the eight wastes and the small improvements that eliminate them.'] },
+  waterfall: { phases: ['Waterfall / Phases', 'Sequential, gated delivery.', 'Requirements through to maintenance — each phase signed off before the next.'], timeline: ['Waterfall / Gantt', 'The whole plan at a glance.', 'Phases, deliverables and milestones laid out across the calendar.'], charter: ['Waterfall / Project definition', 'Fix the scope, then deliver it.', 'Objective, scope, budget and acceptance criteria agreed up front.'] },
+  sixsigma: { phases: ['Six Sigma / DMAIC', 'Define, Measure, Analyse, Improve, Control.', 'Prove each step with data and pass every tollgate.'], charter: ['Six Sigma / Charter', 'A problem worth solving, defined precisely.', 'Problem, goal, CTQ and specification limits — the basis for every tollgate.'], registers: ['Six Sigma / FMEA & lessons', 'Rank failure modes by risk.', 'Severity × occurrence × detection gives each failure mode its RPN.'] },
+  prince2: { phases: ['PRINCE2 / Management stages', 'Manage by stages. Manage by exception.', 'The Project Board authorises each stage at its boundary, within agreed tolerances.'], charter: ['PRINCE2 / Business case & PID', 'Continued business justification.', 'Reasons, benefits, costs, tolerances and the Project Board in one place.'], registers: ['PRINCE2 / Registers & logs', 'Risks, issues, quality and lessons.', 'The four PRINCE2 logs, owned and reviewed at every stage boundary.'] },
 };
 
 export function ProjectLayout() {
@@ -52,7 +66,8 @@ export function ProjectLayout() {
   if (!project.data || !issues.data) return <PageLoader />;
 
   const ctx: ProjectCtx = { project: project.data, issues: issues.data, filtered, filters, setFilters: (f) => setFiltersByProject((s) => ({ ...s, [summary.id]: f })) };
-  const [eyebrow, title, subtitle] = HEADERS[view] ?? HEADERS.board;
+  const m = methodologyOf(project.data);
+  const [eyebrow, title, subtitle] = HEADER_OVERRIDES[m.id]?.[view] ?? HEADERS[view] ?? HEADERS.board;
 
   return (
     <>
@@ -62,7 +77,7 @@ export function ProjectLayout() {
           {canEdit && <button className="btn btn-primary" onClick={() => openCreate()}><Icon name="plus" size={16} /> Create task</button>}
         </>
       } />
-      {view === 'board' && <><ProjectHero project={project.data} issues={issues.data} /><Metrics issues={issues.data} /></>}
+      {(view === 'board' || view === m.views[0]) && view !== 'phases' && <><ProjectHero project={project.data} issues={issues.data} /><Metrics issues={issues.data} /></>}
       <Outlet context={ctx} />
     </>
   );
@@ -73,10 +88,13 @@ export function ProjectHero({ project, issues }: { project: ProjectDetail; issue
   const work = issues.filter((i) => i.type !== 'epic');
   const done = work.filter((i) => i.statusCategory === 'done').length;
   const sprint = project.sprints.find((s) => s.state === 'active');
-  let phase = project.template === 'scrum' ? 'No active sprint · Plan one in the backlog' : project.template === 'kanban' ? 'Continuous flow' : 'Requests & approvals';
+  const m = methodologyOf(project);
+  const activePhase = project.phases.find((ph) => ph.state === 'active' || ph.state === 'review');
+  let phase = `${m.name} · ${m.features.sprints === 'required' ? `No active ${term(m.id, 'sprint').toLowerCase()} · Plan one in the backlog` : m.cadence}`;
+  if (activePhase) phase = `${m.name} · ${term(m.id, 'phase')} ${activePhase.position + 1} of ${project.phases.length}: ${activePhase.name}${activePhase.state === 'review' ? ` · awaiting ${gateWord(m)} approval` : ''}`;
   if (sprint) {
     const left = sprint.endDate ? daysBetween(todayISO(), sprint.endDate) : null;
-    phase = `${sprint.name} · ${left == null ? 'In progress' : left > 0 ? `${left} day${left === 1 ? '' : 's'} remaining` : left === 0 ? 'Ends today' : `Ended ${fmtDate(sprint.endDate, locale)}`}`;
+    phase = `${m.name} · ${sprint.name} · ${left == null ? 'In progress' : left > 0 ? `${left} day${left === 1 ? '' : 's'} remaining` : left === 0 ? 'Ends today' : `Ended ${fmtDate(sprint.endDate, locale)}`}`;
   }
   const people = members.filter((m) => issues.some((i) => i.assigneeId === m.id));
   return (
@@ -129,7 +147,8 @@ export function Metrics({ issues }: { issues: Issue[] }) {
 
 export function ViewTabs() {
   const { project } = useProjectCtx();
-  const tabs: [string, string, string][] = [['board', 'board', 'Board'], ...(project.template === 'scrum' ? [['backlog', 'inbox', 'Backlog'] as [string, string, string]] : []), ['list', 'list', 'List'], ['timeline', 'timeline', 'Timeline'], ['calendar', 'calendar', 'Calendar'], ['reports', 'chart', 'Reports'], ['settings', 'settings', 'Settings']];
+  const m = methodologyOf(project);
+  const tabs = m.views.map((v) => [v, viewMeta(m, v).icon, viewMeta(m, v).label] as const);
   return (
     <nav className="tabs" aria-label="Project views">
       {tabs.map(([to, icon, label]) => (
@@ -151,7 +170,8 @@ export function SectionBar({ title, sub }: { title: string; sub?: string }) {
 }
 
 export function FilterBar({ count }: { count: number }) {
-  const { filters, setFilters, issues } = useProjectCtx();
+  const { filters, setFilters, issues, project } = useProjectCtx();
+  const m = methodologyOf(project);
   const { members, me } = useWs();
   const labels = useMemo(() => [...new Set(issues.flatMap((i) => i.labels))].sort(), [issues]);
   const active = Object.values(filters).some(Boolean);
@@ -176,7 +196,7 @@ export function FilterBar({ count }: { count: number }) {
         </select>
         <select className="filter-select hide-narrow" value={filters.type} onChange={(e) => set({ type: e.target.value as IssueType | '' })} aria-label="Filter by type">
           <option value="">All types</option>
-          {TYPES.map((t) => <option key={t} value={t}>{TYPE_LABEL[t]}</option>)}
+          {(m.types as IssueType[]).map((t) => <option key={t} value={t}>{typeLabel(m, t)}</option>)}
         </select>
         {labels.length > 0 && (
           <select className="filter-select hide-narrow" value={filters.label} onChange={(e) => set({ label: e.target.value })} aria-label="Filter by label">
@@ -192,4 +212,18 @@ export function FilterBar({ count }: { count: number }) {
       </div>
     </div>
   );
+}
+
+/** Index route: land on the methodology's primary view (e.g. Phases for Waterfall). */
+export function ProjectIndex() {
+  const { project } = useProjectCtx();
+  return <Navigate to={methodologyOf(project).views[0]} replace />;
+}
+
+/** Redirects views a methodology doesn't use (e.g. Backlog in Kanban) to its primary view. */
+export function RequireView({ view, children }: { view: string; children: React.ReactNode }) {
+  const { project } = useProjectCtx();
+  const m = methodologyOf(project);
+  if (!(m.views as string[]).includes(view)) return <Navigate to={`../${m.views[0]}`} relative="path" replace />;
+  return <>{children}</>;
 }

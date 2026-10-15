@@ -12,6 +12,7 @@ import './lib/theme';
 import './styles/prototype.css';
 import './styles/app.css';
 import './styles/wurk.css';
+import './styles/methodology.css';
 
 // The demo lives inside a hosted frame with no server routes, so it keeps the URL in memory.
 const Router = IS_DEMO ? MemoryRouter : BrowserRouter;

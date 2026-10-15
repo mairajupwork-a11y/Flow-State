@@ -8,7 +8,7 @@ import { AcceptInvite } from './features/auth/AcceptInvite';
 import { Onboarding } from './features/onboarding/Onboarding';
 import { AppShell } from './layout/AppShell';
 import { Overview } from './features/home/Overview';
-import { ProjectLayout } from './features/project/ProjectLayout';
+import { ProjectLayout, ProjectIndex, RequireView } from './features/project/ProjectLayout';
 import { Board } from './features/project/Board';
 import { Backlog } from './features/project/Backlog';
 import { ListView } from './features/project/ListView';
@@ -21,6 +21,9 @@ const Timeline = lazy(() => import('./features/project/Timeline'));
 const CalendarView = lazy(() => import('./features/project/CalendarView'));
 const Reports = lazy(() => import('./features/project/Reports'));
 const ProjectSettings = lazy(() => import('./features/project/ProjectSettings'));
+const Phases = lazy(() => import('./features/project/Phases'));
+const Registers = lazy(() => import('./features/project/Registers'));
+const Charter = lazy(() => import('./features/project/Charter'));
 const Team = lazy(() => import('./features/team/Team'));
 const Settings = lazy(() => import('./features/settings/Settings'));
 
@@ -61,9 +64,12 @@ export function App() {
       <Route path="/w/:slug" element={<RequireAuth><AppShell /></RequireAuth>}>
         <Route index element={<Overview />} />
         <Route path="p/:key" element={<ProjectLayout />}>
-          <Route index element={<Navigate to="board" replace />} />
+          <Route index element={<ProjectIndex />} />
           <Route path="board" element={<Board />} />
-          <Route path="backlog" element={<Backlog />} />
+          <Route path="backlog" element={<RequireView view="backlog"><Backlog /></RequireView>} />
+          <Route path="phases" element={<RequireView view="phases">{lazyEl(<Phases />)}</RequireView>} />
+          <Route path="registers" element={<RequireView view="registers">{lazyEl(<Registers />)}</RequireView>} />
+          <Route path="charter" element={<RequireView view="charter">{lazyEl(<Charter />)}</RequireView>} />
           <Route path="list" element={<ListView />} />
           <Route path="timeline" element={lazyEl(<Timeline />)} />
           <Route path="calendar" element={lazyEl(<CalendarView />)} />

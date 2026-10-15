@@ -6,7 +6,9 @@ import { api } from '../../lib/api';
 import { invalidateWork } from '../../lib/queries';
 import { useWs } from '../../lib/workspace';
 import { askConfirm, toast } from '../../lib/store';
-import type { Status, StatusCategory } from '../../lib/types';
+import type { MethodologyId, Status, StatusCategory } from '../../lib/types';
+import { MethodologyPicker } from '../../components/MethodologyPicker';
+import { METHODOLOGIES, methodologyOf } from '../../lib/methodology';
 import { SectionBar, useProjectCtx } from './ProjectLayout';
 
 const COLORS = ['#7770e7', '#30adab', '#f09d75', '#9e8bb6', '#e5789a', '#5b9be0', '#d6a347', '#4fb38a'];
@@ -40,7 +42,8 @@ export default function ProjectSettings() {
 
   return (
     <>
-      <SectionBar title="Project settings" sub={`${project.key} · ${project.template} template`} />
+      <SectionBar title="Project settings" sub={`${project.key} · ${methodologyOf(project).name}`} />
+      <MethodologyCard />
       <div className="two-col">
         <form className="content-card" onSubmit={submitDetails}>
           <h3>Details</h3>
@@ -134,6 +137,49 @@ function StatusRow({ status, index, total, count, canEdit, others, onSave, onRem
           const target = others.find((o) => o.category === status.category) ?? others[0];
           if (await askConfirm({ title: `Delete the ${status.name} column?`, body: `${count} work item${count === 1 ? '' : 's'} will move to “${target.name}”.`, confirmLabel: 'Delete column', danger: true })) onRemove(target.id);
         }}><Icon name="trash" size={14} /></button>
+      )}
+    </div>
+  );
+}
+
+/** Shows the current methodology and lets admins/members switch without losing work. */
+function MethodologyCard() {
+  const { project } = useProjectCtx();
+  const { canEdit } = useWs();
+  const qc = useQueryClient();
+  const current = methodologyOf(project);
+  const [open, setOpen] = useState(false);
+  const [next, setNext] = useState<MethodologyId>(current.id);
+  const [resetColumns, setResetColumns] = useState(true);
+  const change = useMutation({
+    mutationFn: () => api.patch(`/projects/${project.id}`, { methodology: next, resetColumns }),
+    onSuccess: () => { invalidateWork(qc); qc.invalidateQueries({ queryKey: ['ws'] }); setOpen(false); toast(`${project.name} now runs ${METHODOLOGIES[next].name}.`); },
+  });
+  const target = METHODOLOGIES[next];
+  return (
+    <div className="content-card" style={{ marginBottom: 16 }}>
+      <div className="row-between wrap" style={{ gap: 10 }}>
+        <div>
+          <h3>Methodology · {current.name}</h3>
+          <p className="muted">{current.tagline} {current.description}</p>
+        </div>
+        {canEdit && <button className="btn btn-light btn-sm" onClick={() => { setOpen(!open); setNext(current.id); }} aria-expanded={open}>{open ? 'Cancel' : 'Change methodology'}</button>}
+      </div>
+      {open && (
+        <div style={{ marginTop: 14 }}>
+          <MethodologyPicker compact value={next} onChange={setNext} />
+          {next !== current.id && (
+            <div className="method-switch">
+              <label className="check-row"><input type="checkbox" checked={resetColumns} onChange={(e) => setResetColumns(e.target.checked)} />
+                <span>Adopt {target.name}’s board columns ({target.statuses.map((x) => x[0]).join(' → ')}). Work moves to the matching column by category.</span>
+              </label>
+              <p className="tiny-note">Nothing is deleted: work items, sprints, registers and {current.phases ? 'phases' : 'history'} are kept.{target.phases && !project.phases.length ? ` ${target.name}’s ${target.phases.length} phases will be added.` : ''}</p>
+              <button className="btn btn-primary" disabled={change.isPending} onClick={async () => (await askConfirm({ title: `Switch to ${target.name}?`, body: `Views, terms and reports will change to suit ${target.name}.`, confirmLabel: `Switch to ${target.name}` })) && change.mutate()}>
+                Switch to {target.name}
+              </button>
+            </div>
+          )}
+        </div>
       )}
     </div>
   );

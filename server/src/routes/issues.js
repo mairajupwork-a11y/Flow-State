@@ -21,7 +21,7 @@ export const issueInput = z.object({
   epicId: nullableId,
   parentId: nullableId,
   phaseId: nullableId,
-  storyPoints: z.number().int().min(0).max(100).nullable(),
+  storyPoints: z.number().int().min(0).max(999).nullable(),
   startDate: nullableDate,
   dueDate: nullableDate,
   labels: z.array(z.string().max(30)).max(12),

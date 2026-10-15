@@ -7,7 +7,7 @@ export function MobileNav({ activeKey }: { activeKey?: string }) {
   const project = useCurrentProject(activeKey);
   const items: [string, string, string, boolean?][] = [
     [base, 'grid', 'Home', true],
-    [project ? `${base}/p/${project.key}/board` : base, 'board', 'Board'],
+    [project ? `${base}/p/${project.key}` : base, 'board', project ? 'Project' : 'Board'],
     [`${base}/my-tasks`, 'checkcircle', 'My tasks'],
     [`${base}/my-day`, 'sun', 'My day'],
     [`${base}/team`, 'people', 'Team'],

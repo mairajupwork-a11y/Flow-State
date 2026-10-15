@@ -1,8 +1,10 @@
 export type Role = 'admin' | 'member' | 'viewer';
 export type Priority = 'urgent' | 'high' | 'medium' | 'low';
-export type IssueType = 'epic' | 'feature' | 'story' | 'task' | 'bug' | 'subtask';
+export type IssueType = 'epic' | 'feature' | 'story' | 'task' | 'bug' | 'subtask' | 'milestone';
 export type StatusCategory = 'todo' | 'progress' | 'done';
 export type Template = 'scrum' | 'kanban' | 'business';
+export type { MethodologyId } from '../../../shared/methodologies.js';
+import type { MethodologyId } from '../../../shared/methodologies.js';
 export type Locale = 'en-GB' | 'en-US' | 'en-IN' | 'en-SG' | 'en-AU';
 export type Theme = 'light' | 'dark' | 'system';
 export type TimeBlock = 'morning' | 'afternoon' | 'evening' | 'anytime';
@@ -20,6 +22,7 @@ export interface Session { user: Me | null; workspaces: Workspace[] }
 
 export interface Project {
   id: number; workspaceId: number; key: string; name: string; description: string; color: string; template: Template;
+  methodology: MethodologyId; settings: ProjectSettings;
   leadId: number | null; archived: boolean; createdAt: string; issueCount?: number; doneCount?: number;
 }
 export interface Status { id: number; name: string; category: StatusCategory; color: string; position: number; wipLimit: number | null }
@@ -27,7 +30,18 @@ export interface Sprint {
   id: number; projectId: number; name: string; goal: string; state: 'planned' | 'active' | 'closed';
   startDate: string | null; endDate: string | null; completedAt: string | null; committedPoints: number | null; completedPoints: number | null;
 }
-export interface ProjectDetail extends Project { statuses: Status[]; sprints: Sprint[] }
+export type FieldValues = Record<string, string | number | null>;
+export interface ProjectSettings { charter?: FieldValues; swimlane?: 'none' | 'priority' | 'assignee' | 'epic' }
+export type PhaseState = 'pending' | 'active' | 'review' | 'complete';
+export interface Phase {
+  id: number; projectId: number; name: string; position: number; state: PhaseState; gate: string; decision: string;
+  startDate: string | null; endDate: string | null; startedAt: string | null; completedAt: string | null; approvedBy: number | null;
+}
+export interface Entry {
+  id: number; projectId: number; kind: string; title: string; status: string; ownerId: number | null; data: FieldValues;
+  createdBy: number | null; createdAt: string; updatedAt: string;
+}
+export interface ProjectDetail extends Project { statuses: Status[]; sprints: Sprint[]; phases: Phase[] }
 
 export interface WorkspaceDetail { workspace: Workspace; members: Member[]; projects: Project[] }
 
@@ -35,7 +49,7 @@ export interface Issue {
   id: number; key: string; number: number; projectId: number; type: IssueType; title: string; description: string;
   statusId: number; statusName: string; statusCategory: StatusCategory; priority: Priority;
   assigneeId: number | null; reporterId: number | null; sprintId: number | null; epicId: number | null; parentId: number | null;
-  storyPoints: number | null; startDate: string | null; dueDate: string | null; labels: string[]; rank: number;
+  phaseId: number | null; storyPoints: number | null; startDate: string | null; dueDate: string | null; labels: string[]; rank: number;
   createdAt: string; updatedAt: string; resolvedAt: string | null;
   checklistTotal: number; checklistDone: number; commentCount: number; subtaskCount: number;
 }
@@ -68,6 +82,14 @@ export interface Reports {
   flow: { day: string; created: number; resolved: number }[];
   burndown: null | { sprint: Sprint; unit: 'points' | 'items'; total: number; points: { day: string; ideal: number; remaining: number | null }[] };
   velocity: { name: string; committed: number; completed: number }[];
+  cfd: { statuses: { name: string; color: string; category: StatusCategory }[]; days: { day: string; counts: Record<string, number> }[] };
+  cycle: { samples: { key: string; title: string; resolved: string; cycle: number; lead: number; efficiency: number | null }[]; avgCycle: number | null; p50: number | null; p85: number | null; avgLead: number | null };
+  throughput: { week: string; count: number }[];
+  efficiency: { average: number | null; wip: number; littleLeadDays: number | null; byStatus: { name: string; waiting: boolean; count: number }[] };
+  phases: { id: number; name: string; state: PhaseState; startDate: string | null; endDate: string | null; total: number; done: number; percent: number; late: boolean }[];
+  control: { points: { id: number; day: string; value: number; note: string }[]; mean: number | null; ucl: number | null; lcl: number | null; sigma: number | null;
+    lsl?: number | null; usl?: number | null; cp: number | null; cpk: number | null; sigmaLevel: number | null; signals: { index: number; rule: string }[] };
+  registers: { kind: string; label: string; total: number; open: number; high: number }[];
 }
 
 export type GuideAction =

@@ -8,7 +8,8 @@ Built UK-first (en-GB dates, Monday weeks, British English), with US and Asia-Pa
 
 | Area | Features |
 | --- | --- |
-| **Onboarding** | Landing page → sign-up → 5-step setup (role, workspace & region, workflow template, invite team, ready) with optional example work |
+| **Onboarding** | Landing page → sign-up → 5-step setup (role, workspace & region, methodology with "Help me choose", invite team, ready) with optional example work |
+| **Methodologies** | Waterfall, Scrum, Kanban, Lean, Six Sigma, PRINCE2 and Scrumban (hybrid), plus a simple workflow. Each one sets its own board columns and WIP limits, work item types and terms, views, reports and rhythm. Switch at any time without losing data. See the table below |
 | **Boards** | Drag & drop with mouse, touch (long-press) and keyboard; inline quick-add; WIP limits; sprint/all-work scope; filters (text, assignee, priority, type, label, "only mine") |
 | **Planning** | Backlog with sprints: create, drag to plan, reorder, start (goal + length), complete (move leftovers to backlog / next / new sprint) |
 | **Work items** | Epic, feature, story, task, bug, sub-task; status, priority, assignee, reporter, sprint, epic, story points, start/due dates, labels, checklist, sub-tasks, links (blocks / is blocked by / relates / duplicates), comments with @mentions, full history, watching |
@@ -18,6 +19,22 @@ Built UK-first (en-GB dates, Monday weeks, British English), with US and Asia-Pa
 | **Flow guide (free AI)** | Plans your day, spots blockers/overdue/WIP breaches, sizes the next sprint from velocity, writes your stand-up, summarises projects, shows workload, answers how-to questions with "Take me there", and turns sentences into work items or to-dos |
 | **Team** | Unlimited members, admin/member/viewer roles, email invite links and reusable team links |
 | **Everywhere** | ⌘K command palette, keyboard shortcuts (`?`), notifications, realtime updates (SSE), light/dark/system themes, compact mode, reduced motion, responsive down to phones |
+
+## Methodologies
+
+All methodology behaviour is defined in one shared config, [`shared/methodologies.js`](shared/methodologies.js). The API and the web app both read from it.
+
+| Methodology | Structure | Governance | Metrics |
+| --- | --- | --- | --- |
+| **Waterfall** | 6 sequential phases (Requirements → Maintenance), each with a sign-off gate. Gantt timeline. Deliverables and milestones | Project definition (scope, budget, acceptance), risk register (P×I heat map), change log | Phase progress, created vs resolved, workload |
+| **Scrum** | Backlog and required sprints (goal, length, completion), story points | Impediments | Burndown, velocity |
+| **Kanban** | Continuous flow, WIP limits on every active column, class-of-service swimlanes with an expedite lane | — | Cumulative flow, cycle time (50th/85th percentile), throughput |
+| **Lean** | Ideas → Define value → Build → Measure → Learned. Value streams and experiments | Value definition, waste log (8 wastes), kaizen ideas | Cumulative flow, cycle time, flow efficiency, Little's law |
+| **Six Sigma** | DMAIC phases with tollgates | Charter (problem, goal, CTQ, LSL/USL), FMEA with RPN, lessons log | Individuals control chart (±3σ, Western Electric signals), Cp/Cpk, sigma level, DPMO calculator |
+| **PRINCE2** | Management stages with stage-boundary approval. Products, work packages and activities | Business case and PID (tolerances, Project Board roles), risk, issue, quality and lessons logs | Stage progress, workload |
+| **Scrumban** | Kanban flow with a WIP-limited "Ready" buffer, optional iterations, and an on-demand planning trigger | Impediments | Cumulative flow, cycle time, throughput, burndown |
+
+Phase gates run strictly in order: start → submit for review → approve (with a recorded decision) → the next phase opens. Approving while items are still open requires a written decision, and every decision goes into the gate log.
 
 ## The AI is free — how
 

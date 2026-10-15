@@ -1,5 +1,5 @@
 import { useEffect, useMemo, useState, type FormEvent } from 'react';
-import { Navigate, useSearchParams } from 'react-router-dom';
+import { useSearchParams } from 'react-router-dom';
 import { DndContext, DragOverlay, KeyboardSensor, PointerSensor, TouchSensor, closestCenter, useDroppable, useSensor, useSensors, type DragEndEvent, type DragOverEvent } from '@dnd-kit/core';
 import { SortableContext, sortableKeyboardCoordinates, useSortable, verticalListSortingStrategy } from '@dnd-kit/sortable';
 import { CSS } from '@dnd-kit/utilities';
@@ -12,6 +12,7 @@ import { useWs } from '../../lib/workspace';
 import { askConfirm, toast, toastError } from '../../lib/store';
 import { fmtDate, daysBetween, todayISO, plural } from '../../lib/format';
 import type { Issue, Sprint } from '../../lib/types';
+import { estimateLabel, methodologyOf, term } from '../../lib/methodology';
 import { FilterBar, SectionBar, useProjectCtx } from './ProjectLayout';
 
 const BACKLOG = 'backlog';
@@ -81,16 +82,15 @@ export function Backlog() {
     if (sprintId !== issue.sprintId) toast(`${issue.key} moved to ${sprintId ? project.sprints.find((s) => s.id === sprintId)?.name : 'the backlog'}.`);
   }
 
+  const W = term(methodologyOf(project).id, 'sprint');
   const createSprint = useMutation({
     mutationFn: () => api.post<Sprint>(`/projects/${project.id}/sprints`, {}),
     onSuccess: (s) => { invalidateWork(qc); toast(`${s.name} created — drag work into it.`); },
   });
 
-  if (project.template !== 'scrum') return <Navigate to="../board" relative="path" replace />;
-
   return (
     <>
-      <SectionBar title="Backlog & sprints" sub="Drag work to plan, reorder to prioritise" />
+      <SectionBar title={`Backlog & ${W.toLowerCase()}s`} sub={methodologyOf(project).features.sprints === 'optional' ? `${W}s are optional in ${methodologyOf(project).name} — pull straight to Ready, or plan an ${W.toLowerCase()} for rhythm` : 'Drag work to plan, reorder to prioritise'} />
       <FilterBar count={items.length} />
       <DndContext sensors={sensors} collisionDetection={closestCenter} onDragStart={(e) => setDragging(Number(e.active.id))} onDragOver={onDragOver} onDragEnd={onDragEnd} onDragCancel={() => setDragging(null)}>
         {openSprints.map((s) => (
@@ -98,7 +98,7 @@ export function Backlog() {
             onStart={() => setStarting(s)} onComplete={() => setCompleting(s)} hasActive={openSprints.some((x) => x.state === 'active')} />
         ))}
         <Container id={BACKLOG} title="Backlog" ids={containers[BACKLOG]} byId={byId} canEdit={canEdit} sprintId={null}
-          actions={canEdit && <button className="btn btn-light btn-sm" onClick={() => createSprint.mutate()} disabled={createSprint.isPending}><Icon name="plus" size={14} /> Create sprint</button>} />
+          actions={canEdit && <button className="btn btn-light btn-sm" onClick={() => createSprint.mutate()} disabled={createSprint.isPending}><Icon name="plus" size={14} /> Create {W.toLowerCase()}</button>} />
         <DragOverlay>{dragging != null && byId.get(dragging) ? <Row issue={byId.get(dragging)!} overlay /> : null}</DragOverlay>
       </DndContext>
       <ClosedSprints sprints={project.sprints.filter((s) => s.state === 'closed')} />
@@ -114,6 +114,7 @@ function SprintBox({ sprint, ids, byId, canEdit, locale, onStart, onComplete, ha
   sprint: Sprint; ids: number[]; byId: Map<number, Issue>; canEdit: boolean; locale: string; onStart: () => void; onComplete: () => void; hasActive: boolean;
 }) {
   const qc = useQueryClient();
+  const W = useSprintWord();
   const del = useMutation({ mutationFn: () => api.del(`/projects/${sprint.projectId}/sprints/${sprint.id}`), onSuccess: () => { invalidateWork(qc); toast(`${sprint.name} deleted. Its work is back in the backlog.`); } });
   const list = ids.map((id) => byId.get(id)!).filter(Boolean);
   const done = list.filter((i) => i.statusCategory === 'done').length;
@@ -130,9 +131,9 @@ function SprintBox({ sprint, ids, byId, canEdit, locale, onStart, onComplete, ha
       actions={canEdit && (
         <>
           {sprint.state === 'active'
-            ? <button className="btn btn-primary btn-sm" onClick={onComplete}><Icon name="checkcircle" size={14} /> Complete sprint</button>
-            : <button className="btn btn-soft btn-sm" onClick={onStart} disabled={hasActive || !list.length} title={hasActive ? 'Complete the active sprint first' : !list.length ? 'Add work to start' : undefined}><Icon name="play" size={13} /> Start sprint</button>}
-          {sprint.state === 'planned' && <button className="icon-btn tiny" aria-label={`Delete ${sprint.name}`} title="Delete sprint" onClick={async () => (await askConfirm({ title: `Delete ${sprint.name}?`, body: 'Its work returns to the backlog.', confirmLabel: 'Delete sprint', danger: true })) && del.mutate()}><Icon name="trash" size={15} /></button>}
+            ? <button className="btn btn-primary btn-sm" onClick={onComplete}><Icon name="checkcircle" size={14} /> Complete {W.toLowerCase()}</button>
+            : <button className="btn btn-soft btn-sm" onClick={onStart} disabled={hasActive || !list.length} title={hasActive ? `Complete the active ${W.toLowerCase()} first` : !list.length ? 'Add work to start' : undefined}><Icon name="play" size={13} /> Start {W.toLowerCase()}</button>}
+          {sprint.state === 'planned' && <button className="icon-btn tiny" aria-label={`Delete ${sprint.name}`} title={`Delete ${W.toLowerCase()}`} onClick={async () => (await askConfirm({ title: `Delete ${sprint.name}?`, body: 'Its work returns to the backlog.', confirmLabel: `Delete ${W.toLowerCase()}`, danger: true })) && del.mutate()}><Icon name="trash" size={15} /></button>}
         </>
       )} />
   );
@@ -143,6 +144,7 @@ function Container({ id, title, subtitle, ids, byId, canEdit, sprintId, actions,
   actions?: React.ReactNode; highlight?: boolean; progress?: { done: number; progress: number };
 }) {
   const { setNodeRef, isOver } = useDroppable({ id });
+  const W = useSprintWord();
   const [collapsed, setCollapsed] = useState(false);
   return (
     <section className={`content-card backlog-box ${highlight ? 'active-sprint' : ''} ${isOver ? 'drag-over' : ''}`} ref={setNodeRef} aria-label={title}>
@@ -159,7 +161,7 @@ function Container({ id, title, subtitle, ids, byId, canEdit, sprintId, actions,
           <SortableContext items={ids} strategy={verticalListSortingStrategy}>
             <div className="backlog-list">
               {ids.map((iid) => byId.get(iid) && <SortableRow key={iid} issue={byId.get(iid)!} disabled={!canEdit} />)}
-              {!ids.length && <div className="backlog-empty">{id === BACKLOG ? 'Your backlog is clear. Capture ideas below.' : 'Drag work items here to plan this sprint.'}</div>}
+              {!ids.length && <div className="backlog-empty">{id === BACKLOG ? 'Your backlog is clear. Capture ideas below.' : `Drag work items here to plan this ${W.toLowerCase()}.`}</div>}
             </div>
           </SortableContext>
           {canEdit && <InlineCreate sprintId={sprintId} />}
@@ -182,7 +184,8 @@ function SortableRow({ issue, disabled }: { issue: Issue; disabled: boolean }) {
 }
 
 function Row({ issue, overlay }: { issue: Issue; overlay?: boolean }) {
-  const { member } = useWs();
+  const { member, projects } = useWs();
+  const m = methodologyOf(projects.find((p) => p.id === issue.projectId));
   return (
     <div className={`backlog-row ${overlay ? 'overlay' : ''}`}>
       <span className="grip" aria-hidden="true"><Icon name="grip" size={14} /></span>
@@ -192,7 +195,7 @@ function Row({ issue, overlay }: { issue: Issue; overlay?: boolean }) {
       <span className="backlog-tags">{issue.labels.slice(0, 2).map((l) => <span className="task-tag" key={l}>{l}</span>)}</span>
       <PriorityPill priority={issue.priority} />
       <StatusPill name={issue.statusName} category={issue.statusCategory} />
-      <span className="points" title="Story points">{issue.storyPoints ?? '–'}</span>
+      <span className="points" title={estimateLabel(m)}>{issue.storyPoints ?? '–'}</span>
       <Avatar user={member(issue.assigneeId)} size="sm" />
     </div>
   );
@@ -229,15 +232,16 @@ function InlineCreate({ sprintId }: { sprintId: number | null }) {
 function StartSprintModal({ sprint, points, onClose }: { sprint: Sprint; points: number; onClose: () => void }) {
   const qc = useQueryClient();
   const [form, setForm] = useState({ goal: sprint.goal, weeks: 2 });
+  const W = useSprintWord();
   const start = useMutation({
     mutationFn: () => api.post(`/projects/${sprint.projectId}/sprints/${sprint.id}/start`, form),
     onSuccess: () => { invalidateWork(qc); toast(`${sprint.name} has started. Good luck! 🚀`); onClose(); },
   });
   return (
     <Modal title={`Start ${sprint.name}`} subtitle={`${points} story points planned`} onClose={onClose}
-      footer={<><button className="btn btn-light" onClick={onClose}>Cancel</button><button className="btn btn-primary" onClick={() => start.mutate()} disabled={start.isPending}><Icon name="play" size={13} /> Start sprint</button></>}>
+      footer={<><button className="btn btn-light" onClick={onClose}>Cancel</button><button className="btn btn-primary" onClick={() => start.mutate()} disabled={start.isPending}><Icon name="play" size={13} /> Start {W.toLowerCase()}</button></>}>
       <div className="modal-body">
-        <label className="form-field"><span>Sprint goal</span><input className="text-input" value={form.goal} maxLength={240} onChange={(e) => setForm({ ...form, goal: e.target.value })} placeholder="What will this sprint achieve?" /></label>
+        <label className="form-field"><span>{W} goal</span><input className="text-input" value={form.goal} maxLength={240} onChange={(e) => setForm({ ...form, goal: e.target.value })} placeholder={`What will this ${W.toLowerCase()} achieve?`} /></label>
         <label className="form-field" style={{ marginTop: 14 }}><span>Duration</span>
           <select className="field-select" value={form.weeks} onChange={(e) => setForm({ ...form, weeks: Number(e.target.value) })}>
             {[1, 2, 3, 4].map((w) => <option key={w} value={w}>{plural(w, 'week')}</option>)}
@@ -252,6 +256,7 @@ function StartSprintModal({ sprint, points, onClose }: { sprint: Sprint; points:
 function CompleteSprintModal({ sprint, sprints, items, onClose }: { sprint: Sprint; sprints: Sprint[]; items: Issue[]; onClose: () => void }) {
   const qc = useQueryClient();
   const open = items.filter((i) => i.statusCategory !== 'done');
+  const W = useSprintWord();
   const planned = sprints.filter((s) => s.state === 'planned');
   const [moveTo, setMoveTo] = useState<string>(planned[0] ? String(planned[0].id) : 'backlog');
   const complete = useMutation({
@@ -260,14 +265,14 @@ function CompleteSprintModal({ sprint, sprints, items, onClose }: { sprint: Spri
   });
   return (
     <Modal title={`Complete ${sprint.name}`} subtitle={`${items.length - open.length} of ${items.length} work items done`} onClose={onClose}
-      footer={<><button className="btn btn-light" onClick={onClose}>Cancel</button><button className="btn btn-primary" onClick={() => complete.mutate()} disabled={complete.isPending}>Complete sprint</button></>}>
+      footer={<><button className="btn btn-light" onClick={onClose}>Cancel</button><button className="btn btn-primary" onClick={() => complete.mutate()} disabled={complete.isPending}>Complete {W.toLowerCase()}</button></>}>
       <div className="modal-body">
         {open.length ? (
           <>
             <p className="page-subtitle" style={{ marginTop: 0 }}>{plural(open.length, 'item')} {open.length === 1 ? 'is' : 'are'} unfinished. Where should {open.length === 1 ? 'it' : 'they'} go?</p>
             <select className="field-select" value={moveTo} onChange={(e) => setMoveTo(e.target.value)} aria-label="Move unfinished work to">
               {planned.map((s) => <option key={s.id} value={s.id}>{s.name}</option>)}
-              <option value="new">A new sprint</option>
+              <option value="new">A new {W.toLowerCase()}</option>
               <option value="backlog">The backlog</option>
             </select>
           </>
@@ -280,10 +285,11 @@ function CompleteSprintModal({ sprint, sprints, items, onClose }: { sprint: Spri
 
 function ClosedSprints({ sprints }: { sprints: Sprint[] }) {
   const { locale } = useWs();
+  const W = useSprintWord();
   if (!sprints.length) return null;
   return (
     <details className="content-card closed-sprints">
-      <summary><b>Completed sprints</b> <span className="muted-inline">· {sprints.length}</span></summary>
+      <summary><b>Completed {W.toLowerCase()}s</b> <span className="muted-inline">· {sprints.length}</span></summary>
       {sprints.map((s) => (
         <div className="setting-row" key={s.id}>
           <div><strong>{s.name}</strong><small>Completed {fmtDate(s.completedAt?.slice(0, 10), locale, true)}{s.goal ? ` · “${s.goal}”` : ''}</small></div>
@@ -292,4 +298,9 @@ function ClosedSprints({ sprints }: { sprints: Sprint[] }) {
       ))}
     </details>
   );
+}
+
+function useSprintWord() {
+  const { project } = useProjectCtx();
+  return term(methodologyOf(project).id, 'sprint');
 }

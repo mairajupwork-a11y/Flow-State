@@ -8,6 +8,7 @@ import { useSession, useTodos } from '../lib/queries';
 import { ui, useUi } from '../lib/store';
 import { api } from '../lib/api';
 import { todayISO } from '../lib/format';
+import { methodologyOf, viewMeta } from '../lib/methodology';
 
 function NavItem({ to, icon, label, end, counter }: { to: string; icon: string; label: string; end?: boolean; counter?: number }) {
   return (
@@ -44,12 +45,11 @@ export function Sidebar({ activeKey }: { activeKey?: string }) {
       <div className="side-section-label">Workspace</div>
       <nav className="side-nav" aria-label="Primary navigation">
         <NavItem to={base} end icon="grid" label="Overview" />
-        {p && <NavItem to={`${p}/board`} icon="board" label="Board" />}
-        {p && current.template === 'scrum' && <NavItem to={`${p}/backlog`} icon="inbox" label="Backlog" />}
+        {p && methodologyOf(current).views.filter((v) => v !== 'settings' && v !== 'list').map((v) => {
+          const meta = viewMeta(methodologyOf(current), v);
+          return <NavItem key={v} to={`${p}/${v}`} icon={meta.icon} label={meta.label} />;
+        })}
         <NavItem to={`${base}/my-tasks`} icon="checkcircle" label="My tasks" />
-        {p && <NavItem to={`${p}/timeline`} icon="timeline" label="Timeline" />}
-        {p && <NavItem to={`${p}/calendar`} icon="calendar" label="Calendar" />}
-        {p && <NavItem to={`${p}/reports`} icon="chart" label="Reports" />}
       </nav>
 
       <div className="side-section-label side-label-row">
@@ -62,7 +62,7 @@ export function Sidebar({ activeKey }: { activeKey?: string }) {
       </div>
       <div>
         {projects.map((proj) => (
-          <NavLink key={proj.id} to={`${base}/p/${proj.key}/board`} className={() => `side-project ${current?.id === proj.id ? 'selected' : ''}`} onClick={() => ui.set({ sidebarOpen: false })}>
+          <NavLink key={proj.id} to={`${base}/p/${proj.key}`} className={() => `side-project ${current?.id === proj.id ? 'selected' : ''}`} onClick={() => ui.set({ sidebarOpen: false })}>
             <span className="project-glyph" style={{ background: proj.color }}>{proj.name[0]?.toUpperCase()}</span>
             <span className="ellipsis" style={{ flex: 1 }}>{proj.name}</span>
             {current?.id === proj.id && <Icon name="right" size={13} />}

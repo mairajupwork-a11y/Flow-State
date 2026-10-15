@@ -6,13 +6,8 @@ import { Icon } from '../../components/Icon';
 import { api } from '../../lib/api';
 import { useWs } from '../../lib/workspace';
 import { toast } from '../../lib/store';
-import type { Project, Template } from '../../lib/types';
-
-const TEMPLATES: [Template, string, string, string][] = [
-  ['scrum', 'Scrum', 'Sprints, backlog, velocity', 'inbox'],
-  ['kanban', 'Kanban', 'Continuous flow, WIP limits', 'board'],
-  ['business', 'Business', 'Requests & approvals', 'checkcircle'],
-];
+import type { MethodologyId, Project } from '../../lib/types';
+import { MethodologyPicker } from '../../components/MethodologyPicker';
 
 function suggestKey(name: string) {
   const words = name.toUpperCase().replace(/[^A-Z0-9 ]/g, ' ').split(/\s+/).filter(Boolean);
@@ -24,7 +19,7 @@ export function CreateProjectModal({ onClose }: { onClose: () => void }) {
   const { workspace, base } = useWs();
   const qc = useQueryClient();
   const navigate = useNavigate();
-  const [form, setForm] = useState({ name: '', key: '', keyTouched: false, description: '', template: 'scrum' as Template, withSamples: false });
+  const [form, setForm] = useState({ name: '', key: '', keyTouched: false, description: '', methodology: 'scrum' as MethodologyId, withSamples: false });
   const [error, setError] = useState('');
   const [busy, setBusy] = useState(false);
   const key = form.keyTouched ? form.key : suggestKey(form.name);
@@ -36,11 +31,11 @@ export function CreateProjectModal({ onClose }: { onClose: () => void }) {
     setBusy(true);
     setError('');
     try {
-      const p = await api.post<Project>(`/workspaces/${workspace.slug}/projects`, { name: form.name.trim(), key, description: form.description.trim(), template: form.template, withSamples: form.withSamples });
+      const p = await api.post<Project>(`/workspaces/${workspace.slug}/projects`, { name: form.name.trim(), key, description: form.description.trim(), methodology: form.methodology, withSamples: form.withSamples });
       await qc.invalidateQueries({ queryKey: ['ws'] });
       toast(`${p.name} is ready.`);
       onClose();
-      navigate(`${base}/p/${p.key}/board`);
+      navigate(`${base}/p/${p.key}`);
     } catch (err) {
       setError(err instanceof Error ? err.message : 'Could not create the project.');
       setBusy(false);
@@ -48,7 +43,7 @@ export function CreateProjectModal({ onClose }: { onClose: () => void }) {
   }
 
   return (
-    <Modal title="Create a project" subtitle={`In ${workspace.name} · free, unlimited`} onClose={onClose}>
+    <Modal wide title="Create a project" subtitle={`In ${workspace.name} · free, unlimited`} onClose={onClose}>
       <form onSubmit={submit}>
         <div className="modal-body stack-14">
           {error && <div className="form-error" role="alert">{error}</div>}
@@ -57,14 +52,8 @@ export function CreateProjectModal({ onClose }: { onClose: () => void }) {
             <label className="form-field"><span>Key</span><input className="text-input mono" maxLength={6} value={key} aria-invalid={!!key && !keyValid} onChange={(e) => setForm({ ...form, key: e.target.value.toUpperCase().replace(/[^A-Z0-9]/g, ''), keyTouched: true })} placeholder="MBA" /></label>
             <div className="form-field"><span>Preview</span><div className="key-preview">{key || 'KEY'}-101</div></div>
           </div>
-          <div className="form-field"><span>Template</span>
-            <div className="template-grid compact" role="radiogroup" aria-label="Template">
-              {TEMPLATES.map(([id, title, body, icon]) => (
-                <button type="button" key={id} role="radio" aria-checked={form.template === id} className={`template-card ${form.template === id ? 'selected' : ''}`} onClick={() => setForm({ ...form, template: id })}>
-                  <span className="metric-symbol"><Icon name={icon} size={16} /></span><b>{title}</b><p>{body}</p>
-                </button>
-              ))}
-            </div>
+          <div className="form-field"><span>Methodology</span>
+            <MethodologyPicker compact value={form.methodology} onChange={(methodology) => setForm({ ...form, methodology })} />
           </div>
           <label className="form-field"><span>Description</span><textarea className="text-input field-textarea" rows={3} maxLength={500} value={form.description} onChange={(e) => setForm({ ...form, description: e.target.value })} placeholder="Optional — what’s this project for?" /></label>
           <label className="check-row"><input type="checkbox" checked={form.withSamples} onChange={(e) => setForm({ ...form, withSamples: e.target.checked })} /> Add example work to explore</label>

@@ -153,6 +153,6 @@ export function controlChart(db, p, charter = {}) {
   return {
     points: points.map((m) => ({ id: m.id, day: m.day, value: m.value, note: m.note })),
     mean: round(mean, 2), ucl: round(ucl, 2), lcl: round(lcl, 2), sigma: round(sigma, 3), lsl, usl,
-    cp: round(cp, 2), cpk: round(cpk, 2), sigmaLevel: cpk != null ? round(cpk * 3 + 1.5, 1) : null, signals,
+    cp: round(cp, 2), cpk: round(cpk, 2), sigmaLevel: cpk != null ? round(Math.max(0, cpk * 3 + 1.5), 1) : null, signals,
   };
 }

@@ -7,7 +7,8 @@ import { api } from '../../lib/api';
 import { invalidateWork, keys, useIssue, useIssues, useProject } from '../../lib/queries';
 import { useWs } from '../../lib/workspace';
 import { askConfirm, copyText, openCreate, toast, toastError } from '../../lib/store';
-import { PRIORITIES, PRIORITY_LABEL, TYPES, TYPE_LABEL, fmtDate, timeAgo, todayISO } from '../../lib/format';
+import { PRIORITIES, PRIORITY_LABEL, fmtDate, timeAgo, todayISO } from '../../lib/format';
+import { estimateLabel, methodologyOf, term, typeLabel } from '../../lib/methodology';
 import type { Activity, IssueDetail, IssueType, Priority } from '../../lib/types';
 
 export function IssueModal({ issueRef, onClose }: { issueRef: string; onClose: () => void }) {
@@ -59,6 +60,7 @@ function IssueDetailView({ issue, onClose }: { issue: IssueDetail; onClose: () =
     onSuccess: () => { qc.invalidateQueries({ queryKey: ['todos'] }); toast('Pinned to My day.'); },
   });
 
+  const m = methodologyOf(project);
   const epic = siblings.find((s) => s.id === issue.epicId);
   const parent = siblings.find((s) => s.id === issue.parentId);
   const epics = siblings.filter((s) => s.type === 'epic' && s.id !== issue.id);
@@ -91,7 +93,7 @@ function IssueDetailView({ issue, onClose }: { issue: IssueDetail; onClose: () =
       <div className="modal-body">
         <div className="detail-meta">
           <TypeIcon type={issue.type} />
-          <span className="issue-id">{issue.key} · {TYPE_LABEL[issue.type]}</span>
+          <span className="issue-id">{issue.key} · {typeLabel(m, issue.type)}</span>
           <StatusPill name={issue.statusName} category={issue.statusCategory} />
           <PriorityPill priority={issue.priority} suffix=" priority" />
           {overdue && <span className="priority urgent"><Icon name="clock" size={11} /> Overdue</span>}
@@ -133,10 +135,10 @@ function IssueDetailView({ issue, onClose }: { issue: IssueDetail; onClose: () =
 
             {issue.type === 'epic' && (
               <div className="detail-section">
-                <h4>Work in this epic <span className="muted-inline">· {issue.children.filter((s) => s.statusCategory === 'done').length}/{issue.children.length} done</span></h4>
+                <h4>Work in this {typeLabel(m, 'epic').toLowerCase()} <span className="muted-inline">· {issue.children.filter((s) => s.statusCategory === 'done').length}/{issue.children.length} done</span></h4>
                 {issue.children.length > 0 && <div className="dist-track" style={{ marginBottom: 10 }}><div className="dist-fill" style={{ width: `${(issue.children.filter((s) => s.statusCategory === 'done').length / issue.children.length) * 100}%`, background: 'var(--teal)' }} /></div>}
                 {issue.children.map((s) => <MiniRow key={s.id} issue={s} onOpen={() => openOther(s.key)} />)}
-                {canEdit && <button className="link-btn" onClick={() => openCreate({ epicId: issue.id, projectId: issue.projectId })}><Icon name="plus" size={13} /> Add work to this epic</button>}
+                {canEdit && <button className="link-btn" onClick={() => openCreate({ epicId: issue.id, projectId: issue.projectId })}><Icon name="plus" size={13} /> Add work to this {typeLabel(m, 'epic').toLowerCase()}</button>}
               </div>
             )}
 
@@ -175,11 +177,19 @@ function IssueDetailView({ issue, onClose }: { issue: IssueDetail; onClose: () =
               </label>
               <label className="form-field"><span>Type</span>
                 <select className="field-select" value={issue.type} onChange={(e) => patch.mutate({ type: e.target.value as IssueType })}>
-                  {TYPES.filter((t) => (t === 'subtask') === (issue.type === 'subtask')).map((t) => <option key={t} value={t}>{TYPE_LABEL[t]}</option>)}
+                  {[...new Set([...(m.types as IssueType[]), issue.type])].filter((t) => (t === 'subtask') === (issue.type === 'subtask')).map((t) => <option key={t} value={t} disabled={!(m.types as IssueType[]).includes(t)}>{typeLabel(m, t)}</option>)}
                 </select>
               </label>
-              {project?.template === 'scrum' && issue.type !== 'epic' && (
-                <label className="form-field"><span>Sprint</span>
+              {project && project.phases.length > 0 && issue.type !== 'epic' && (
+                <label className="form-field"><span>{term(m.id, 'phase')}</span>
+                  <select className="field-select" value={issue.phaseId ?? ''} onChange={(e) => patch.mutate({ phaseId: e.target.value ? Number(e.target.value) : null })}>
+                    <option value="">None</option>
+                    {project.phases.map((ph) => <option key={ph.id} value={ph.id}>{ph.name}{ph.state === 'complete' ? ' ✓' : ''}</option>)}
+                  </select>
+                </label>
+              )}
+              {project && m.features.sprints && issue.type !== 'epic' && (
+                <label className="form-field"><span>{term(m.id, 'sprint')}</span>
                   <select className="field-select" value={issue.sprintId ?? ''} onChange={(e) => patch.mutate({ sprintId: e.target.value ? Number(e.target.value) : null })}>
                     <option value="">Backlog</option>
                     {project.sprints.filter((s) => s.state !== 'closed' || s.id === issue.sprintId).map((s) => <option key={s.id} value={s.id} disabled={s.state === 'closed'}>{s.name}</option>)}
@@ -187,7 +197,7 @@ function IssueDetailView({ issue, onClose }: { issue: IssueDetail; onClose: () =
                 </label>
               )}
               {issue.type !== 'epic' && issue.type !== 'subtask' && (
-                <label className="form-field"><span>Epic</span>
+                <label className="form-field"><span>{typeLabel(m, 'epic')}</span>
                   <select className="field-select" value={issue.epicId ?? ''} onChange={(e) => patch.mutate({ epicId: e.target.value ? Number(e.target.value) : null })}>
                     <option value="">None</option>
                     {epics.map((ep) => <option key={ep.id} value={ep.id}>{ep.title}</option>)}
@@ -198,9 +208,9 @@ function IssueDetailView({ issue, onClose }: { issue: IssueDetail; onClose: () =
                 <label className="form-field"><span>Start</span><input className="text-input" type="date" value={issue.startDate ?? ''} onChange={(e) => patch.mutate({ startDate: e.target.value || null })} /></label>
                 <label className="form-field"><span>Due</span><input className={`text-input ${overdue ? 'is-overdue' : ''}`} type="date" value={issue.dueDate ?? ''} onChange={(e) => patch.mutate({ dueDate: e.target.value || null })} /></label>
               </div>
-              <label className="form-field"><span>Story points</span>
+              <label className="form-field"><span>{estimateLabel(m)}</span>
                 <input className="text-input" inputMode="numeric" defaultValue={issue.storyPoints ?? ''} key={issue.storyPoints ?? 'none'} placeholder="—"
-                  onBlur={(e) => { const v = e.target.value.trim() === '' ? null : Math.min(100, Number(e.target.value.replace(/\D/g, ''))); if (v !== issue.storyPoints) patch.mutate({ storyPoints: v }); }} />
+                  onBlur={(e) => { const v = e.target.value.trim() === '' ? null : Math.min(999, Number(e.target.value.replace(/\D/g, ''))); if (v !== issue.storyPoints) patch.mutate({ storyPoints: v }); }} />
               </label>
               <Labels labels={issue.labels} onChange={(labels) => patch.mutate({ labels })} canEdit={canEdit} />
             </fieldset>

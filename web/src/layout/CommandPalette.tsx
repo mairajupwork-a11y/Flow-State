@@ -9,6 +9,7 @@ import { useWs, useCurrentProject } from '../lib/workspace';
 import { openCreate, openGuide, ui } from '../lib/store';
 import { setTheme } from '../lib/theme';
 import type { Issue, Project, User } from '../lib/types';
+import { methodologyOf, viewMeta } from '../lib/methodology';
 
 interface Item { id: string; icon: React.ReactNode; label: string; hint?: string; group: string; run: () => void }
 
@@ -46,12 +47,11 @@ export function CommandPalette({ routeKey, onClose }: { routeKey?: string; onClo
       ...(canEdit ? [{ id: 'create', icon: <Icon name="plus" size={16} />, label: q.trim() ? `Create work item “${q.trim()}”` : 'Create work item', hint: 'C', group: 'Actions', run: () => { onClose(); openCreate({ title: q.trim() || undefined }); } }] : []),
       { id: 'guide', icon: <Icon name="sparkles" size={16} />, label: q.trim() ? `Ask the Flow guide: “${q.trim()}”` : 'Ask the Flow guide', group: 'Actions', run: () => { onClose(); openGuide(q.trim() || null); } },
       ...(p ? [
-        { id: 'board', icon: <Icon name="board" size={16} />, label: `${project!.name} · Board`, hint: 'G B', group: 'Go to', run: go(`${p}/board`) },
-        ...(project!.template === 'scrum' ? [{ id: 'backlog', icon: <Icon name="inbox" size={16} />, label: `${project!.name} · Backlog`, hint: 'G L', group: 'Go to', run: go(`${p}/backlog`) }] : []),
-        { id: 'list', icon: <Icon name="list" size={16} />, label: `${project!.name} · List`, group: 'Go to', run: go(`${p}/list`) },
-        { id: 'timeline', icon: <Icon name="timeline" size={16} />, label: `${project!.name} · Timeline`, group: 'Go to', run: go(`${p}/timeline`) },
-        { id: 'calendar', icon: <Icon name="calendar" size={16} />, label: `${project!.name} · Calendar`, group: 'Go to', run: go(`${p}/calendar`) },
-        { id: 'reports', icon: <Icon name="chart" size={16} />, label: `${project!.name} · Reports`, hint: 'G R', group: 'Go to', run: go(`${p}/reports`) },
+        ...methodologyOf(project).views.map((v) => {
+          const meta = viewMeta(methodologyOf(project), v);
+          const hint = ({ board: 'G B', backlog: 'G L', reports: 'G R' } as Record<string, string>)[v];
+          return { id: v, icon: <Icon name={meta.icon} size={16} />, label: `${project!.name} · ${meta.label}`, hint, group: 'Go to', run: go(`${p}/${v}`) };
+        }),
       ] : []),
       { id: 'home', icon: <Icon name="grid" size={16} />, label: 'Overview', hint: 'G H', group: 'Go to', run: go(base) },
       { id: 'mytasks', icon: <Icon name="checkcircle" size={16} />, label: 'My tasks', hint: 'G T', group: 'Go to', run: go(`${base}/my-tasks`) },
@@ -66,7 +66,7 @@ export function CommandPalette({ routeKey, onClose }: { routeKey?: string; onClo
       { id: 'light', icon: <Icon name="sun" size={16} />, label: 'Switch to light theme', group: 'Preferences', run: () => { setTheme('light'); onClose(); } },
       { id: 'keys', icon: <Icon name="keyboard" size={16} />, label: 'Keyboard shortcuts', hint: '?', group: 'Preferences', run: () => { onClose(); ui.set({ shortcutsOpen: true }); } },
     ];
-    const projectItems: Item[] = projects.map((pr) => ({ id: `p${pr.id}`, icon: <span className="project-glyph sm" style={{ background: pr.color }}>{pr.name[0]}</span>, label: pr.name, hint: pr.key, group: 'Projects', run: go(`${base}/p/${pr.key}/board`) }));
+    const projectItems: Item[] = projects.map((pr) => ({ id: `p${pr.id}`, icon: <span className="project-glyph sm" style={{ background: pr.color }}>{pr.name[0]}</span>, label: pr.name, hint: pr.key, group: 'Projects', run: go(`${base}/p/${pr.key}`) }));
     const matches = (s: string) => !ql || s.toLowerCase().includes(ql);
     const issues: Item[] = (debounced ? search.data?.issues ?? [] : []).map((i) => ({
       id: `i${i.id}`, icon: <TypeIcon type={i.type} size={13} />, label: i.title, hint: i.key, group: 'Work items',

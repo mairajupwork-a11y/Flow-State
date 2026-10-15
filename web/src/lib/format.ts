@@ -49,9 +49,9 @@ export function greeting(): string {
 export const PRIORITIES: Priority[] = ['urgent', 'high', 'medium', 'low'];
 export const PRIORITY_LABEL: Record<Priority, string> = { urgent: 'Urgent', high: 'High', medium: 'Medium', low: 'Low' };
 export const PRIORITY_RANK: Record<Priority, number> = { urgent: 0, high: 1, medium: 2, low: 3 };
-export const TYPES: IssueType[] = ['task', 'story', 'bug', 'feature', 'epic', 'subtask'];
-export const TYPE_LABEL: Record<IssueType, string> = { epic: 'Epic', feature: 'Feature', story: 'Story', task: 'Task', bug: 'Bug', subtask: 'Sub-task' };
-export const TYPE_ICON: Record<IssueType, string> = { epic: 'bolt', feature: 'target', story: 'sparkles', task: 'checkcircle', bug: 'flag', subtask: 'list' };
+export const TYPES: IssueType[] = ['task', 'story', 'bug', 'feature', 'epic', 'milestone', 'subtask'];
+export const TYPE_LABEL: Record<IssueType, string> = { epic: 'Epic', feature: 'Feature', story: 'Story', task: 'Task', bug: 'Bug', subtask: 'Sub-task', milestone: 'Milestone' };
+export const TYPE_ICON: Record<IssueType, string> = { epic: 'bolt', feature: 'target', story: 'sparkles', task: 'checkcircle', bug: 'flag', subtask: 'list', milestone: 'diamond' };
 
 export const capitalise = (s: string) => s.charAt(0).toUpperCase() + s.slice(1);
 export const plural = (n: number, word: string, many = word + 's') => `${n} ${n === 1 ? word : many}`;

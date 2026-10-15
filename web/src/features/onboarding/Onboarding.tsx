@@ -5,7 +5,9 @@ import { api } from '../../lib/api';
 import { keys, useSession } from '../../lib/queries';
 import { Icon } from '../../components/Icon';
 import { Brand } from '../auth/Welcome';
-import type { Session, Template, Workspace } from '../../lib/types';
+import type { MethodologyId, Session, Workspace } from '../../lib/types';
+import { MethodologyPicker } from '../../components/MethodologyPicker';
+import { METHODOLOGIES } from '../../lib/methodology';
 
 const ROLES = [
   ['Engineering', 'bolt'], ['Product', 'target'], ['Design', 'sparkles'], ['Marketing', 'trend'],
@@ -18,12 +20,10 @@ const REGIONS = [
   { id: 'asia', label: 'Asia-Pacific', sample: '14 Oct 2026 · weeks start Monday', flag: '🌏' },
   { id: 'other', label: 'Somewhere else', sample: '14 Oct 2026 · weeks start Monday', flag: '🌍' },
 ] as const;
-const TEMPLATES: { id: Template; title: string; body: string; points: string[]; icon: string }[] = [
-  { id: 'scrum', title: 'Scrum', icon: 'inbox', body: 'Plan work in sprints, track velocity and burndown.', points: ['Backlog & sprints', 'Story points', 'Burndown & velocity'] },
-  { id: 'kanban', title: 'Kanban', icon: 'board', body: 'A continuous flow of work with WIP limits.', points: ['Always-on board', 'WIP limits', 'Cycle time'] },
-  { id: 'business', title: 'Business', icon: 'checkcircle', body: 'Simple requests and approvals for any team.', points: ['Requested → Complete', 'Approvals', 'No jargon'] },
-];
-const RECOMMENDED: Record<string, Template> = { Engineering: 'scrum', Product: 'scrum', Design: 'kanban', Operations: 'kanban' };
+/** A sensible starting point per role; the picker's questions refine it. */
+const RECOMMENDED: Record<string, MethodologyId> = {
+  Engineering: 'scrumban', Product: 'scrum', Design: 'kanban', Operations: 'kanban', Marketing: 'kanban', 'People & HR': 'business', Finance: 'waterfall', 'Founder / Leadership': 'lean',
+};
 
 function suggestKey(name: string) {
   const words = name.toUpperCase().replace(/[^A-Z0-9 ]/g, ' ').split(/\s+/).filter(Boolean);
@@ -41,14 +41,14 @@ export function Onboarding() {
   const [step, setStep] = useState(0);
   const [role, setRole] = useState('');
   const [ws, setWs] = useState({ name: '', region: 'uk', teamSize: '' });
-  const [project, setProject] = useState({ name: '', key: '', keyTouched: false, template: '' as Template | '', withSamples: true });
+  const [project, setProject] = useState({ name: '', key: '', keyTouched: false, methodology: '' as MethodologyId | '', withSamples: true });
   const [emails, setEmails] = useState<string[]>([]);
   const [draft, setDraft] = useState('');
   const [error, setError] = useState('');
   const [busy, setBusy] = useState(false);
   const [created, setCreated] = useState<Workspace | null>(null);
 
-  const template: Template = project.template || RECOMMENDED[role] || 'business';
+  const methodology: MethodologyId = project.methodology || RECOMMENDED[role] || 'scrum';
   const key = project.keyTouched ? project.key : suggestKey(project.name || 'Project');
   const first = user.name.split(' ')[0];
 
@@ -77,7 +77,7 @@ export function Onboarding() {
     try {
       const res = await api.post<Session & { workspace: Workspace }>('/workspaces', {
         name: ws.name.trim(), region: ws.region, teamSize: ws.teamSize, useCase: role, jobTitle: role === 'Something else' ? undefined : role,
-        project: { name: project.name.trim(), key, template, withSamples: project.withSamples },
+        project: { name: project.name.trim(), key, methodology, withSamples: project.withSamples },
         invites: draft.trim() ? [...emails, ...draft.split(/[\s,;]+/).filter((s) => s.includes('@'))] : emails,
       });
       qc.setQueryData(keys.session, { user: res.user, workspaces: res.workspaces });
@@ -165,19 +165,9 @@ export function Onboarding() {
         {step === 2 && (
           <section className="onboard-step" key="s2">
             <div className="eyebrow"><span className="line" />Your first project</div>
-            <h1 className="page-title">How does your team like to work?</h1>
-            <p className="page-subtitle">Pick a starting workflow. Columns, fields and everything else stay fully customisable.</p>
-            <div className="template-grid" role="radiogroup" aria-label="Workflow template">
-              {TEMPLATES.map((t) => (
-                <button type="button" key={t.id} role="radio" aria-checked={template === t.id} className={`template-card ${template === t.id ? 'selected' : ''}`} onClick={() => setProject({ ...project, template: t.id })}>
-                  {RECOMMENDED[role] === t.id || (!RECOMMENDED[role] && t.id === 'business') ? <span className="rec-badge">Recommended</span> : null}
-                  <span className="metric-symbol"><Icon name={t.icon} size={18} /></span>
-                  <b>{t.title}</b>
-                  <p>{t.body}</p>
-                  <ul>{t.points.map((p) => <li key={p}><Icon name="check" size={13} /> {p}</li>)}</ul>
-                </button>
-              ))}
-            </div>
+            <h1 className="page-title">How will this project be run?</h1>
+            <p className="page-subtitle">Choose the methodology that fits its scale and requirements — not sure? Use <b>Help me choose</b>. You can switch later without losing anything.</p>
+            <MethodologyPicker value={methodology} onChange={(m) => setProject({ ...project, methodology: m })} />
             <div className="form-grid" style={{ marginTop: 18 }}>
               <label className="form-field">
                 <span>Project name</span>
@@ -219,14 +209,14 @@ export function Onboarding() {
           <section className="onboard-step ready" key="s4">
             <div className="ready-burst" aria-hidden="true"><Icon name="sparkles" size={34} /></div>
             <h1 className="page-title">You’re all set, {first}.</h1>
-            <p className="page-subtitle"><b>{created.name}</b> is ready with your <b>{project.name}</b> {TEMPLATES.find((t) => t.id === template)!.title.toLowerCase()} project{emails.length ? ` and ${emails.length} invitation${emails.length === 1 ? '' : 's'}` : ''}.</p>
+            <p className="page-subtitle"><b>{created.name}</b> is ready with your <b>{project.name}</b> {METHODOLOGIES[methodology].name} project{emails.length ? ` and ${emails.length} invitation${emails.length === 1 ? '' : 's'}` : ''}.</p>
             <div className="ready-grid">
-              <div><Icon name="board" size={18} /><b>Your board</b><span>Drag cards to move work forward</span></div>
+              <div><Icon name={METHODOLOGIES[methodology].icon} size={18} /><b>{METHODOLOGIES[methodology].name}, set up properly</b><span>{METHODOLOGIES[methodology].tagline}</span></div>
               <div><Icon name="sun" size={18} /><b>My day</b><span>A private to-do list, just for you</span></div>
               <div><Icon name="sparkles" size={18} /><b>Flow guide</b><span>Free AI help in the corner, any time</span></div>
             </div>
-            <button type="button" className="btn btn-primary btn-xl" autoFocus onClick={() => navigate(`/w/${created.slug}/p/${key}/board`, { replace: true })}>
-              Open my board <Icon name="right" size={16} />
+            <button type="button" className="btn btn-primary btn-xl" autoFocus onClick={() => navigate(`/w/${created.slug}/p/${key}`, { replace: true })}>
+              Open my project <Icon name="right" size={16} />
             </button>
           </section>
         )}

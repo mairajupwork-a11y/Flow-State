@@ -18,7 +18,7 @@ function createStore<T extends object>(initial: T) {
   };
 }
 
-export interface CreateDraft { statusId?: number; sprintId?: number | null; dueDate?: string; type?: IssueType; parentId?: number; epicId?: number; title?: string; projectId?: number }
+export interface CreateDraft { statusId?: number; sprintId?: number | null; phaseId?: number | null; dueDate?: string; type?: IssueType; parentId?: number; epicId?: number; title?: string; projectId?: number }
 
 interface UiState {
   guideOpen: boolean;

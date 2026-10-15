@@ -110,7 +110,7 @@ export const SAMPLE_GOVERNANCE = {
     ],
   },
   sixsigma: {
-    charter: { problem: '4.2% of orders contain at least one defect, causing returns and rework.', goal: 'Reduce order defects from 4.2% to below 1% by end of Q2.', scope: 'Order received → order dispatched', ctq: 'Order defect rate', unit: '%', direction: 'Lower', baseline: 4.2, target: 1, usl: 2, benefit: 240000 },
+    charter: { problem: '4.2% of orders contain at least one defect, causing returns and rework.', goal: 'Reduce order defects from 4.2% to below 1% by end of Q2.', scope: 'Order received → order dispatched', ctq: 'Order defect rate', unit: '%', direction: 'Lower', baseline: 4.2, target: 1, lsl: 0, usl: 5, benefit: 240000 },
     measurements: [4.4, 4.1, 4.6, 3.9, 4.3, 4.2, 4.5, 4.0, 3.8, 4.1, 3.6, 3.4],
     entries: [
       ['fmea', 'Wrong SKU keyed at order entry', 'Action planned', { failureMode: 'Manual SKU entry', effect: 'Wrong item shipped', severity: 8, occurrence: 6, detection: 5, action: 'Barcode scanning at entry' }],
