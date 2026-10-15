@@ -1,13 +1,16 @@
 import { defineConfig, type Plugin } from 'vite';
 import react from '@vitejs/plugin-react';
-const demo = (p: string) => decodeURIComponent(new URL(`./src/demo/${p}`, import.meta.url).pathname);
+import { fileURLToPath } from 'node:url';
+
+// fileURLToPath gives a real path on every OS (URL.pathname yields "/C:/..." on Windows).
+const demo = (p: string) => fileURLToPath(new URL(`./src/demo/${p}`, import.meta.url));
 
 /**
  * `vite build --mode demo` bundles the real server routes into the browser.
  * This plugin swaps the few Node-only modules they touch for browser shims.
  */
 function browserBackend(): Plugin {
-  const serverAuth = decodeURIComponent(new URL('../server/src/auth.js', import.meta.url).pathname);
+  const serverAuth = fileURLToPath(new URL('../server/src/auth.js', import.meta.url));
   const swaps: Record<string, string> = {
     express: demo('shims/express.js'),
     'node:crypto': demo('shims/crypto.js'),
@@ -20,9 +23,9 @@ function browserBackend(): Plugin {
     enforce: 'pre',
     async resolveId(source, importer) {
       if (swaps[source]) return swaps[source];
-      if (importer && source.endsWith('/auth.js') && importer.includes('/server/src/')) {
+      if (importer && source.endsWith('/auth.js') && importer.replace(/\\/g, '/').includes('/server/src/')) {
         const r = await this.resolve(source, importer, { skipSelf: true });
-        if (r?.id === serverAuth) return demo('auth.js');
+        if (r && r.id.replace(/\\/g, '/') === serverAuth.replace(/\\/g, '/')) return demo('auth.js');
       }
       return null;
     },
@@ -43,7 +46,8 @@ export default defineConfig(({ mode }) => ({
   base: mode === 'demo' ? './' : '/',
   server: {
     port: 5173,
-    proxy: { '/api': { target: 'http://localhost:4000', changeOrigin: false } },
+    // 127.0.0.1 avoids Windows resolving localhost to IPv6 first.
+    proxy: { '/api': { target: 'http://127.0.0.1:4000', changeOrigin: false } },
   },
   build: {
     target: 'es2022',

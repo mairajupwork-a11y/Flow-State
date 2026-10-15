@@ -40,6 +40,8 @@ npm install
 npm run dev          # API on :4000, web on http://localhost:5173
 ```
 
+**Windows shortcut:** double-click `start-windows.bat` in the project folder — it installs everything and opens the app in your browser.
+
 Then open **http://localhost:5173** in your browser *on the same computer* where you ran the commands.
 
 ### Not loading?

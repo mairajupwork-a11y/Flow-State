@@ -1,0 +1,27 @@
+@echo off
+title Flowstate
+cd /d "%~dp0"
+where node >nul 2>nul
+if errorlevel 1 (
+  echo.
+  echo   Node.js is not installed. Download the LTS version from https://nodejs.org, install it, then run this file again.
+  echo.
+  pause
+  exit /b 1
+)
+echo.
+echo   Installing Flowstate (first run takes a minute)...
+call npm install --no-audit --no-fund
+if errorlevel 1 (
+  echo.
+  echo   Installation failed. Copy the messages above and send them over for help.
+  pause
+  exit /b 1
+)
+echo.
+echo   Starting Flowstate. Your browser will open at http://localhost:5173
+echo   Keep this window open while you use the app. Close it to stop Flowstate.
+echo.
+start "" cmd /c "timeout /t 8 /nobreak >nul & start http://localhost:5173"
+call npm run dev
+pause
