@@ -1,4 +1,4 @@
-import { useRef, useState } from 'react';
+import { useRef } from 'react';
 import { Link, Navigate } from 'react-router-dom';
 import { Icon } from '../../components/Icon';
 import { useSession } from '../../lib/queries';
@@ -33,7 +33,6 @@ export function Welcome() {
   useReveal(root);
   useScrollVars(root);
   const typed = useTypewriter(TYPE_PHRASES);
-  const [yearly, setYearly] = useState(true);
 
   if (data?.user) return <Navigate to="/" replace />;
 
@@ -46,7 +45,6 @@ export function Welcome() {
           <nav className="lp-links" aria-label="Main">
             <a href="#what">About</a>
             <a href="#how">Product</a>
-            <a href="#pricing">Pricing</a>
             <a href="#features">Features</a>
             <a href="#guide">AI guide</a>
           </nav>
@@ -123,38 +121,6 @@ export function Welcome() {
           </article>
         </section>
 
-        <section className="lp-section" id="pricing">
-          <div className="lp-wrap">
-            <h2 className="lp-h2 xl" data-reveal>Simple pricing</h2>
-            <p className="lp-lead" data-reveal>Per-seat rates, billed as one workspace total — of £0. Every plan includes the Flow guide.</p>
-            <div className="lp-toggle" role="group" aria-label="Billing period" data-reveal>
-              <button className={!yearly ? 'on' : ''} aria-pressed={!yearly} onClick={() => setYearly(false)}>Monthly</button>
-              <button className={yearly ? 'on' : ''} aria-pressed={yearly} onClick={() => setYearly(true)}>Yearly — still free</button>
-            </div>
-            <div className="lp-plans">
-              {[
-                ['Starter', 'flag', 'Just you, getting organised', ['Unlimited projects', 'My day to-do list', 'Flow guide']],
-                ['Team', 'bolt', 'Small teams moving fast', ['Everything in Starter', 'Sprints & backlog', 'Reports']],
-                ['Company', 'people', 'Every department, one workspace', ['Everything in Team', 'Roles & viewers', 'Unlimited members'], true],
-                ['Enterprise', 'shield', 'Thousands of people', ['Everything in Company', 'Self-host anywhere', 'Bring your own AI model']],
-              ].map(([name, icon, desc, items, rec], i) => (
-                <article key={name as string} className={`lp-plan ${rec ? 'rec' : ''}`} data-reveal style={{ ['--i' as string]: i }}>
-                  {rec && <span className="lp-rec">Our recommendation</span>}
-                  <div className="lp-plan-head"><Icon name={icon as string} size={16} /> {name}</div>
-                  <div className="lp-price"><b>£0</b><span>seat / {yearly ? 'year' : 'month'}</span></div>
-                  <p className="lp-plan-desc">{desc}</p>
-                  <Link to="/signup" className="pill pill-solid pill-block">Try for free</Link>
-                  <ul>{(items as string[]).map((it) => <li key={it}><Icon name="check" size={13} /> {it}</li>)}</ul>
-                </article>
-              ))}
-            </div>
-            <div className="lp-claim" data-reveal>
-              <span><Icon name="heart" size={16} /> <b>No credit card, no trial, no seat limits.</b> Every feature is included for everyone.</span>
-              <Link to="/signup" className="pill pill-solid">Create your workspace</Link>
-            </div>
-          </div>
-        </section>
-
         <section className="lp-section lp-grey" id="features">
           <div className="lp-wrap">
             <h2 className="lp-h2 xl" data-reveal>You’re in<br />control</h2>
@@ -208,9 +174,9 @@ export function Welcome() {
           <div className="lp-foot-top">
             <div><Brand to="/welcome" /><p>Free project management for unlimited users. Made in the UK for teams everywhere.</p></div>
             {[
-              ['Product', [['Features', '#features'], ['Pricing', '#pricing'], ['AI guide', '#guide']]],
+              ['Product', [['Features', '#features'], ['How it works', '#how'], ['AI guide', '#guide']]],
               ['Get started', [['Create account', '/signup'], ['Log in', '/login']]],
-              ['Principles', [['No seat limits', '#pricing'], ['Your data stays yours', '#guide'], ['Accessible by design', '#features']]],
+              ['Principles', [['No seat limits', '#features'], ['Your data stays yours', '#guide'], ['Accessible by design', '#features']]],
             ].map(([title, links]) => (
               <div key={title as string} className="lp-foot-col">
                 <b>{title}</b>
