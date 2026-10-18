@@ -96,13 +96,15 @@ docker run -p 4000:4000 -e SESSION_SECRET=change-me -v flowstate-data:/data flow
 | --- | --- | --- |
 | `SESSION_SECRET` | *(required in production)* | Signs session cookies |
 | `PORT` | `4000` | HTTP port |
-| `DATABASE_FILE` | `server/data/flowstate.db` | SQLite file location |
+| `DATABASE_URL` | — | Postgres connection string (e.g. Supabase). When set, it's used instead of SQLite. See [SUPABASE.md](SUPABASE.md) |
+| `DATABASE_FILE` | `server/data/flowstate.db` | SQLite file location (when `DATABASE_URL` is not set) |
 | `OLLAMA_URL`, `OLLAMA_MODEL` | — | Optional self-hosted model for the Flow guide |
 
 ## Quality
 
 ```bash
-npm test             # API + parser tests (node:test, in-memory DB)
+npm test             # API + parser tests (node:test, in-memory SQLite)
+TEST_DATABASE_URL=postgres://… npm test   # same suite on a disposable Postgres database (it drops Flowstate tables there)
 npm run typecheck    # strict TypeScript for the web app
 npm run check        # typecheck + tests + production build
 ```
@@ -110,9 +112,10 @@ npm run check        # typecheck + tests + production build
 ## Architecture
 
 ```
-server/  Node + Express 5 + node:sqlite
+server/  Node + Express 5 + node:sqlite or PostgreSQL / Supabase
   src/app.js            app factory (security headers, CSRF guard, routes)
-  src/db.js             schema + versioned migrations
+  src/db.js             SQLite schema + versioned migrations
+  src/db-postgres.js    Postgres adapter (same API) + schema/postgres.sql
   src/routes/           auth, workspaces/invites, projects/sprints/reports, issues, personal (to-dos, notifications), ai
   src/services/         issue & project domain logic (validation, ranking, activity, notifications)
   src/ai/               Flow guide: intents, NL parser, knowledge base, optional Ollama
@@ -132,4 +135,4 @@ web/     React 19 + TypeScript + Vite
 
 - Invitations generate shareable links; Flowstate doesn't send email yet (plug in SMTP to automate).
 - File attachments, custom fields, automations and SSO are not built yet.
-- SQLite suits teams up to thousands of users on one server; move to Postgres for multi-node scale.
+- SQLite suits teams up to thousands of users on one server. For hosted or multi-instance setups, set `DATABASE_URL` to Postgres / Supabase ([SUPABASE.md](SUPABASE.md)). The realtime hub is per-process, so multiple instances would also need a shared broadcast channel.

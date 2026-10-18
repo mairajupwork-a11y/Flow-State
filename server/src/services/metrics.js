@@ -12,8 +12,8 @@ const round = (n, d = 1) => (n == null || !Number.isFinite(n) ? null : Math.roun
 const WAITING = /review|wait|block|ready|selected|approval|authorised|queue|test/i;
 
 /** Per-issue timeline of [time, statusName] built from status-change activity. */
-function histories(db, projectId, issues) {
-  const changes = db.all(
+async function histories(db, projectId, issues) {
+  const changes = await db.all(
     "SELECT issue_id, data, created_at FROM activity WHERE project_id = ? AND verb = 'updated' AND data LIKE '%\"field\":\"statusId\"%' ORDER BY id",
     projectId,
   );
@@ -30,11 +30,11 @@ function histories(db, projectId, issues) {
   }));
 }
 
-export function flowMetrics(db, p, issues, statuses) {
+export async function flowMetrics(db, p, issues, statuses) {
   const today = isoDay();
   const categoryOf = new Map(statuses.map((s) => [s.name, s.category]));
   const work = issues.filter((i) => i.type !== 'epic' && i.type !== 'milestone' && !i.parentId);
-  const hist = histories(db, p.id, work);
+  const hist = await histories(db, p.id, work);
 
   // Status at the end of a given day, falling back to resolved dates for items without history.
   const statusAt = (i, endMs) => {
@@ -114,8 +114,8 @@ export function flowMetrics(db, p, issues, statuses) {
   return { cfd, cycle, throughput, efficiency, today };
 }
 
-export function phaseMetrics(db, p, issues) {
-  const phases = db.all('SELECT * FROM phases WHERE project_id = ? ORDER BY position', p.id);
+export async function phaseMetrics(db, p, issues) {
+  const phases = await db.all('SELECT * FROM phases WHERE project_id = ? ORDER BY position', p.id);
   const today = isoDay();
   return phases.map((ph) => {
     const list = issues.filter((i) => i.phaseId === ph.id && i.type !== 'epic');
@@ -129,8 +129,8 @@ export function phaseMetrics(db, p, issues) {
 }
 
 /** Individuals chart: σ estimated from the average moving range (MR̄ / 1.128). */
-export function controlChart(db, p, charter = {}) {
-  const points = db.all('SELECT * FROM measurements WHERE project_id = ? ORDER BY day, id', p.id);
+export async function controlChart(db, p, charter = {}) {
+  const points = await db.all('SELECT * FROM measurements WHERE project_id = ? ORDER BY day, id', p.id);
   const values = points.map((m) => m.value);
   if (!values.length) return { points: [], mean: null, ucl: null, lcl: null, sigma: null, cp: null, cpk: null, sigmaLevel: null, signals: [] };
   const mean = values.reduce((a, b) => a + b, 0) / values.length;

@@ -9,44 +9,44 @@ function assertRole(membership, min) {
   }
 }
 
-export function membershipFor(db, workspaceId, userId) {
-  return db.get('SELECT * FROM memberships WHERE workspace_id = ? AND user_id = ?', workspaceId, userId);
+export async function membershipFor(db, workspaceId, userId) {
+  return await db.get('SELECT * FROM memberships WHERE workspace_id = ? AND user_id = ?', workspaceId, userId);
 }
 
 /** Resolves a workspace by slug or id and checks the caller's role. */
-export function loadWorkspace(db, user, ref, min = 'viewer') {
+export async function loadWorkspace(db, user, ref, min = 'viewer') {
   const ws = /^\d+$/.test(String(ref))
-    ? db.get('SELECT * FROM workspaces WHERE id = ?', Number(ref))
-    : db.get('SELECT * FROM workspaces WHERE slug = ?', String(ref));
+    ? await db.get('SELECT * FROM workspaces WHERE id = ?', Number(ref))
+    : await db.get('SELECT * FROM workspaces WHERE slug = ?', String(ref));
   if (!ws) throw notFound('Workspace');
-  const membership = membershipFor(db, ws.id, user.id);
+  const membership = await membershipFor(db, ws.id, user.id);
   assertRole(membership, min);
   return { ws, membership };
 }
 
-export function loadProject(db, user, projectId, min = 'viewer') {
-  const project = db.get('SELECT * FROM projects WHERE id = ?', Number(projectId));
+export async function loadProject(db, user, projectId, min = 'viewer') {
+  const project = await db.get('SELECT * FROM projects WHERE id = ?', Number(projectId));
   if (!project) throw notFound('Project');
-  assertRole(membershipFor(db, project.workspace_id, user.id), min);
+  assertRole(await membershipFor(db, project.workspace_id, user.id), min);
   return project;
 }
 
 /** Accepts a numeric id or a human key such as WEB-101 (scoped to the caller's workspaces). */
-export function loadIssue(db, user, ref, min = 'viewer') {
+export async function loadIssue(db, user, ref, min = 'viewer') {
   let issue;
   const key = String(ref).match(/^([A-Za-z][A-Za-z0-9]{1,9})-(\d+)$/);
   if (key) {
-    issue = db.get(
+    issue = await db.get(
       `SELECT i.* FROM issues i
          JOIN projects p ON p.id = i.project_id
          JOIN memberships m ON m.workspace_id = p.workspace_id AND m.user_id = ?
-        WHERE p.key = ? COLLATE NOCASE AND i.number = ?`,
+        WHERE UPPER(p.key) = UPPER(?) AND i.number = ?`,
       user.id, key[1], Number(key[2]),
     );
   } else if (/^\d+$/.test(String(ref))) {
-    issue = db.get('SELECT * FROM issues WHERE id = ?', Number(ref));
+    issue = await db.get('SELECT * FROM issues WHERE id = ?', Number(ref));
   }
   if (!issue) throw notFound('Work item');
-  const project = loadProject(db, user, issue.project_id, min);
+  const project = await loadProject(db, user, issue.project_id, min);
   return { issue, project };
 }

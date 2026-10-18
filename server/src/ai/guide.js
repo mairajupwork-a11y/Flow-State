@@ -16,16 +16,16 @@ const fmt = (iso, locale) => (iso ? new Date(iso + 'T12:00:00Z').toLocaleDateStr
  * an optional self-hosted model (Ollama) can rephrase open-ended answers.
  */
 export function createGuide({ db, llm = null }) {
-  function context(user, ws, projectId) {
-    const members = db.all('SELECT u.id, u.name FROM users u JOIN memberships m ON m.user_id = u.id WHERE m.workspace_id = ?', ws.id);
-    const project = projectId ? db.get('SELECT * FROM projects WHERE id = ? AND workspace_id = ?', projectId, ws.id) : null;
+  async function context(user, ws, projectId) {
+    const members = await db.all('SELECT u.id, u.name FROM users u JOIN memberships m ON m.user_id = u.id WHERE m.workspace_id = ?', ws.id);
+    const project = projectId ? await db.get('SELECT * FROM projects WHERE id = ? AND workspace_id = ?', projectId, ws.id) : null;
     const scopeSql = project ? 'i.project_id = ?' : 'p.workspace_id = ? AND p.archived = 0';
-    const issues = db.all(`${ISSUE_SELECT} WHERE ${scopeSql}`, project ? project.id : ws.id).map(serializeIssue);
+    const issues = (await db.all(`${ISSUE_SELECT} WHERE ${scopeSql}`, project ? project.id : ws.id)).map(serializeIssue);
     const open = issues.filter((i) => i.statusCategory !== 'done' && i.type !== 'epic');
-    const blockedIds = new Set(db.all(
+    const blockedIds = new Set((await db.all(
       `SELECT l.target_id AS id FROM issue_links l JOIN issues s ON s.id = l.source_id JOIN statuses st ON st.id = s.status_id
-        WHERE l.kind = 'blocks' AND st.category <> 'done'`).map((r) => r.id));
-    const sprint = project ? db.get("SELECT * FROM sprints WHERE project_id = ? AND state = 'active'", project.id) : null;
+        WHERE l.kind = 'blocks' AND st.category <> 'done'`)).map((r) => r.id));
+    const sprint = project ? await db.get("SELECT * FROM sprints WHERE project_id = ? AND state = 'active'", project.id) : null;
     return { user, ws, members, project, issues, open, blockedIds, sprint, today: isoDay(), locale: ws.locale, name: (id) => members.find((m) => m.id === id)?.name ?? 'Unassigned' };
   }
 
@@ -77,9 +77,9 @@ export function createGuide({ db, llm = null }) {
     };
   }
 
-  function focus(c) {
+  async function focus(c) {
     const mine = c.open.filter((i) => i.assigneeId === c.user.id).sort(byUrgency);
-    const todos = db.all('SELECT text FROM todos WHERE user_id = ? AND done = 0 AND day <= ? ORDER BY important DESC, position LIMIT 3', c.user.id, c.today);
+    const todos = await db.all('SELECT text FROM todos WHERE user_id = ? AND done = 0 AND day <= ? ORDER BY important DESC, position LIMIT 3', c.user.id, c.today);
     if (!mine.length && !todos.length) {
       const unassigned = c.open.filter((i) => !i.assigneeId).sort(byUrgency).slice(0, 3);
       return {
@@ -108,14 +108,14 @@ export function createGuide({ db, llm = null }) {
     };
   }
 
-  function risks(c) {
+  async function risks(c) {
     const overdue = c.open.filter((i) => i.dueDate && i.dueDate < c.today);
     const blocked = c.open.filter((i) => c.blockedIds.has(i.id));
     const urgentUnowned = c.open.filter((i) => !i.assigneeId && (i.priority === 'urgent' || i.priority === 'high'));
     const dueSoon = c.open.filter((i) => i.dueDate && i.dueDate >= c.today && daysBetween(c.today, i.dueDate) <= 2 && i.statusCategory === 'todo');
-    const wip = c.project ? db.all(
+    const wip = c.project ? await db.all(
       `SELECT s.name, s.wip_limit, COUNT(i.id) AS n FROM statuses s LEFT JOIN issues i ON i.status_id = s.id
-        WHERE s.project_id = ? AND s.wip_limit IS NOT NULL GROUP BY s.id HAVING n > s.wip_limit`, c.project.id) : [];
+        WHERE s.project_id = ? AND s.wip_limit IS NOT NULL GROUP BY s.id, s.name, s.wip_limit HAVING COUNT(i.id) > s.wip_limit`, c.project.id) : [];
     const sections = [];
     const list = (arr) => arr.slice(0, 4).map((i) => `• **${i.key}** ${i.title} — ${c.name(i.assigneeId)}${i.dueDate ? `, due ${fmt(i.dueDate, c.locale)}` : ''}`).join('\n');
     if (overdue.length) sections.push(`**Overdue (${overdue.length})**\n${list(overdue.sort(byUrgency))}`);
@@ -125,9 +125,9 @@ export function createGuide({ db, llm = null }) {
     if (wip.length) sections.push(`**Columns over their WIP limit**\n${wip.map((w) => `• ${w.name}: ${w.n} / ${w.wip_limit}`).join('\n')}`);
     if (c.project) {
       const m = methodology(c.project.methodology);
-      const latePhase = db.get("SELECT name, end_date, state FROM phases WHERE project_id = ? AND state IN ('active','review') AND end_date < ? ORDER BY position LIMIT 1", c.project.id, c.today);
+      const latePhase = await db.get("SELECT name, end_date, state FROM phases WHERE project_id = ? AND state IN ('active','review') AND end_date < ? ORDER BY position LIMIT 1", c.project.id, c.today);
       if (latePhase) sections.push(`**${term(m.id, 'phase')} running late**\n• ${latePhase.name} was due to pass its ${m.features.phases === 'dmaic' ? 'tollgate' : 'gate'} on ${fmt(latePhase.end_date, c.locale)}${latePhase.state === 'review' ? ' — it is waiting for approval' : ''}.`);
-      const entries = db.all('SELECT kind, title, status, data FROM entries WHERE project_id = ?', c.project.id);
+      const entries = await db.all('SELECT kind, title, status, data FROM entries WHERE project_id = ?', c.project.id);
       const hot = entries.filter((e) => {
         const def = REGISTERS[e.kind];
         if (!def?.score || e.status === def.statuses[def.statuses.length - 1]) return false;
@@ -211,7 +211,7 @@ export function createGuide({ db, llm = null }) {
     };
   }
 
-  function sprintPlan(c) {
+  async function sprintPlan(c) {
     if (!c.project) return { text: 'Open a Scrum project and ask me again — I’ll size the next sprint from your velocity.' };
     const m = methodology(c.project.methodology);
     if (!m.features.sprints) {
@@ -220,7 +220,7 @@ export function createGuide({ db, llm = null }) {
         : `${c.project.name} runs **${m.name}** — continuous flow, so there are no sprints. Keep the first column ordered by priority, pull work only when a WIP limit allows, and watch cycle time in Reports.`,
       actions: [{ type: 'navigate', label: m.phases ? `Open ${term(m.id, 'phases')}` : 'Open reports', payload: { to: `p/${c.project.key}/${m.phases ? 'phases' : 'reports'}` } }] };
     }
-    const velocity = db.all("SELECT completed_points FROM sprints WHERE project_id = ? AND state = 'closed' ORDER BY completed_at DESC LIMIT 3", c.project.id).map((s) => s.completed_points ?? 0);
+    const velocity = (await db.all("SELECT completed_points FROM sprints WHERE project_id = ? AND state = 'closed' ORDER BY completed_at DESC LIMIT 3", c.project.id)).map((s) => s.completed_points ?? 0);
     const capacity = velocity.length ? Math.round(velocity.reduce((a, b) => a + b, 0) / velocity.length) : 20;
     const backlog = c.open.filter((i) => !i.sprintId && !i.parentId).sort((a, b) => byUrgency(a, b) || a.rank - b.rank);
     const picked = [];
@@ -275,12 +275,12 @@ export function createGuide({ db, llm = null }) {
     };
   }
 
-  function standup(c) {
+  async function standup(c) {
     const since = new Date(Date.now() - 36 * 3600e3).toISOString().slice(0, 19).replace('T', ' ');
-    const moved = db.all(
+    const moved = (await db.all(
       `SELECT DISTINCT a.issue_id FROM activity a WHERE a.actor_id = ? AND a.workspace_id = ? AND a.created_at >= ? AND a.issue_id IS NOT NULL`,
       c.user.id, c.ws.id, since,
-    ).map((r) => r.issue_id);
+    )).map((r) => r.issue_id);
     const touched = c.issues.filter((i) => moved.includes(i.id));
     const finished = touched.filter((i) => i.statusCategory === 'done');
     const doing = c.open.filter((i) => i.assigneeId === c.user.id && i.statusCategory === 'progress');
@@ -336,9 +336,9 @@ export function createGuide({ db, llm = null }) {
 
   async function ask({ user, ws, projectId, question }) {
     const q = String(question).trim();
-    const c = context(user, ws, projectId);
+    const c = await context(user, ws, projectId);
     const intent = intents.find((i) => i.test.test(q));
-    let answer = intent ? intent.run(c, q) : howTo(c, q);
+    let answer = intent ? await intent.run(c, q) : howTo(c, q);
     const openEnded = !intent && !answer;
     answer ??= fallback(c);
     answer.source = 'builtin';

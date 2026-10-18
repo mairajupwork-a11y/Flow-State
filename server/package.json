@@ -12,6 +12,7 @@
   "dependencies": {
     "cookie-parser": "^1.4.7",
     "express": "^5.1.0",
+    "pg": "^8.23.1",
     "zod": "^3.25.0"
   }
 }

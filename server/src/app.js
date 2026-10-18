@@ -48,7 +48,10 @@ export function createApp({ db, secret, production = false, staticDir = null, ol
   });
   app.use('/api', sessionMiddleware(db, signer));
 
-  app.get('/api/health', (_req, res) => res.json({ ok: true, ai: ollama?.url ? 'builtin+local-model' : 'builtin' }));
+  app.get('/api/health', async (_req, res) => {
+    await db.get('SELECT 1 AS ok');
+    res.json({ ok: true, database: db.dialect ?? 'sqlite', ai: ollama?.url ? 'builtin+local-model' : 'builtin' });
+  });
   app.use('/api/auth', authRoutes(ctx));
   app.use('/api/workspaces', workspaceRoutes(ctx));
   app.use('/api/invites', inviteRoutes(ctx));

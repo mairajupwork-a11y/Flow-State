@@ -49,9 +49,9 @@ export function sessionCookieOptions(production) {
 
 /** Attaches req.user when a valid session cookie is present. */
 export function sessionMiddleware(db, signer) {
-  return (req, _res, next) => {
+  return async (req, _res, next) => {
     const uid = signer.verify(req.cookies?.[SESSION_COOKIE]);
-    req.user = uid ? db.get('SELECT * FROM users WHERE id = ?', uid) ?? null : null;
+    req.user = uid ? await db.get('SELECT * FROM users WHERE id = ?', uid) ?? null : null;
     next();
   };
 }

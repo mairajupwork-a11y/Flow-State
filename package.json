@@ -2,7 +2,7 @@
   "name": "flowstate",
   "private": true,
   "version": "1.0.0",
-  "description": "Flowstate \u2014 free, unlimited-user project management with boards, sprints, a personal to-do list and a free built-in AI guide.",
+  "description": "Flowstate — free, unlimited-user project management with boards, sprints, a personal to-do list and a free built-in AI guide.",
   "workspaces": [
     "server",
     "web"
@@ -13,7 +13,8 @@
     "start": "node --disable-warning=ExperimentalWarning scripts/preflight.mjs && npm run start -w server",
     "test": "npm test -w server",
     "typecheck": "npm run typecheck -w web",
-    "check": "npm run typecheck && npm test && npm run build"
+    "check": "npm run typecheck && npm test && npm run build",
+    "db:copy-to-postgres": "node --disable-warning=ExperimentalWarning scripts/copy-to-postgres.mjs"
   },
   "devDependencies": {
     "concurrently": "^9.1.0"

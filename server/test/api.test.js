@@ -6,13 +6,30 @@ import { createApp } from '../src/app.js';
 let server;
 let base;
 
+/**
+ * Runs against in-memory SQLite by default. Set TEST_DATABASE_URL to a
+ * disposable Postgres database to run the same suite there — every Flowstate
+ * table in it is dropped first, so never point it at real data.
+ */
+async function testDatabase() {
+  const url = process.env.TEST_DATABASE_URL;
+  if (!url) return openDatabase(':memory:');
+  const { openPostgres } = await import('../src/db-postgres.js');
+  const db = await openPostgres(url, { migrate: false });
+  await db.exec(`DROP TABLE IF EXISTS measurements, entries, todos, notifications, activity, watchers, issue_links, comments, checklist_items,
+    issues, phases, sprints, statuses, projects, invites, memberships, workspaces, users, flowstate_meta CASCADE`);
+  await db.close();
+  return openPostgres(url);
+}
+
+let db;
 before(async () => {
-  const db = openDatabase(':memory:');
+  db = await testDatabase();
   const app = createApp({ db, secret: 'test-secret', log: { error() {} } });
   await new Promise((resolve) => { server = app.listen(0, resolve); });
   base = `http://127.0.0.1:${server.address().port}/api`;
 });
-after(() => server.close());
+after(async () => { server.close(); await db.close(); });
 
 /** Tiny cookie-aware client. */
 function client() {

@@ -334,7 +334,11 @@ export function runMigrations(raw) {
   }
 }
 
-/** Small ergonomic layer over node:sqlite with a statement cache and nested-safe transactions. */
+/**
+ * Small ergonomic layer over node:sqlite with a statement cache and nested-safe
+ * transactions. Callers always `await` its results so the same code runs on
+ * the Postgres adapter (db-postgres.js), which is truly asynchronous.
+ */
 export function wrap(raw) {
   const cache = new Map();
   const stmt = (sql) => {
@@ -352,12 +356,14 @@ export function wrap(raw) {
     get: (sql, ...params) => stmt(sql).get(...params),
     run: (sql, ...params) => stmt(sql).run(...params),
     exec: (sql) => raw.exec(sql),
-    tx(fn) {
+    // node:sqlite is synchronous, so awaiting inside a transaction never yields
+    // to another request: the transaction completes before other I/O runs.
+    async tx(fn) {
       if (depth > 0) return fn();
       depth++;
       raw.exec('BEGIN IMMEDIATE');
       try {
-        const result = fn();
+        const result = await fn();
         raw.exec('COMMIT');
         return result;
       } catch (err) {
@@ -367,6 +373,7 @@ export function wrap(raw) {
         depth--;
       }
     },
-    close: () => raw.close(),
+    close: async () => raw.close(),
+    dialect: 'sqlite',
   };
 }
