@@ -243,3 +243,5 @@
 /* Last content on a page can scroll clear of the floating guide button. */
 .page { padding-bottom: 96px; }
 nav.tabs { max-width: 100%; overflow-x: auto; scrollbar-width: thin; }
+/* Keeps hidden screen-reader text inside off-screen columns from widening the page. */
+.kanban { position: relative; }

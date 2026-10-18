@@ -44,7 +44,11 @@ export function Backlog() {
   const dndAnnouncements = useMemo(() => {
     const row = (id: string | number) => { const i = byId.get(Number(id)); return i ? `${i.key} ${i.title}` : 'the work item'; };
     const group = (key: string) => (key === BACKLOG ? 'the backlog' : project.sprints.find((sp) => cid(sp.id) === key)?.name ?? 'a group');
-    return announcements(row, (id) => (byId.has(Number(id)) ? `${group(Object.keys(containers).find((k) => containers[k].includes(Number(id))) ?? BACKLOG)}, next to ${row(id)}` : group(String(id))));
+    return announcements(row, (id, activeId) => {
+      if (!byId.has(Number(id))) return group(String(id));
+      const where = group(Object.keys(containers).find((k) => containers[k].includes(Number(id))) ?? BACKLOG);
+      return id === activeId ? where : `${where}, next to ${row(id)}`;
+    });
   }, [byId, containers, project.sprints]);
   // eslint-disable-next-line react-hooks/exhaustive-deps
   useEffect(() => { if (dragging == null) setContainers(build()); }, [items, project.sprints, dragging]);

@@ -88,7 +88,11 @@ export function Board() {
   const dndAnnouncements = useMemo(() => {
     const card = (id: string | number) => { const i = byId.get(Number(id)); return i ? `${i.key} ${i.title}` : 'the card'; };
     const column = (key: string) => project.statuses.find((st) => st.id === Number(key.split('|')[1]))?.name ?? 'a column';
-    return announcements(card, (id) => (byId.has(Number(id)) ? `${column(Object.keys(columns).find((k) => columns[k].includes(Number(id))) ?? '')}, next to ${card(id)}` : column(String(id))));
+    return announcements(card, (id, activeId) => {
+      if (!byId.has(Number(id))) return column(String(id));
+      const col = column(Object.keys(columns).find((k) => columns[k].includes(Number(id))) ?? '');
+      return id === activeId ? col : `${col}, next to ${card(id)}`;
+    });
   }, [byId, columns, project.statuses]);
   const [dragging, setDragging] = useState<number | null>(null);
   const [origin, setOrigin] = useState<{ key: string; index: number } | null>(null);
