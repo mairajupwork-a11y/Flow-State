@@ -1,4 +1,5 @@
 import { randomBytes } from 'node:crypto';
+import { existsSync } from 'node:fs';
 import { fileURLToPath } from 'node:url';
 import { dirname, join } from 'node:path';
 import { openDatabase } from './db.js';
@@ -6,7 +7,14 @@ import { createApp } from './app.js';
 
 const here = dirname(fileURLToPath(import.meta.url));
 // Settings such as DATABASE_URL can live in a .env file at the repo root.
-try { process.loadEnvFile(join(here, '..', '..', '.env')); } catch { /* no .env file */ }
+// On Windows, Notepad often saves it as ".env.txt" with the extension hidden;
+// accept that too and say how to fix it.
+const root = join(here, '..', '..');
+const envFile = ['.env', '.env.txt'].map((n) => join(root, n)).find((f) => existsSync(f));
+if (envFile) {
+  process.loadEnvFile(envFile);
+  if (envFile.endsWith('.txt')) console.warn('Read settings from .env.txt — rename it to just ".env" (File Explorer → View → File name extensions).');
+}
 const production = process.env.NODE_ENV === 'production' || process.argv.includes('--production');
 const port = Number(process.env.PORT) || 4000;
 
@@ -22,9 +30,26 @@ if (!secret) {
 
 // DATABASE_URL (e.g. Supabase's Postgres connection string) selects Postgres;
 // otherwise a local SQLite file is used, which needs no setup at all.
-const db = process.env.DATABASE_URL
-  ? await (await import('./db-postgres.js')).openPostgres(process.env.DATABASE_URL)
-  : openDatabase(process.env.DATABASE_FILE || join(here, '..', 'data', 'flowstate.db'));
+const db = process.env.DATABASE_URL ? await connectPostgres(process.env.DATABASE_URL) : openDatabase(process.env.DATABASE_FILE || join(here, '..', 'data', 'flowstate.db'));
+
+/** Opens Postgres, turning common connection failures into a plain-English fix. */
+async function connectPostgres(url) {
+  try {
+    return await (await import('./db-postgres.js')).openPostgres(url);
+  } catch (err) {
+    const msg = String(err.message || err);
+    const hints = [
+      [/password authentication failed/i, 'The password in DATABASE_URL is wrong. Reset it in Supabase (Project Settings → Database) and update .env.'],
+      [/Tenant or user not found/i, 'The user name must look like postgres.<project-ref>. Copy the "Session pooler" string from Supabase → Connect again.'],
+      [/ENOTFOUND|ENETUNREACH|EAI_AGAIN/i, 'The database host could not be reached. Use the "Session pooler" connection string (not "Direct connection") and check your internet.'],
+      [/timeout|ETIMEDOUT/i, 'The connection timed out. Check your internet, and in the Supabase dashboard make sure the project is not paused.'],
+      [/Invalid URL|invalid connection/i, 'DATABASE_URL is not a valid connection string. It should start with postgresql:// and contain no spaces or [ ] brackets.'],
+    ];
+    const hint = hints.find(([re]) => re.test(msg))?.[1] ?? 'Check DATABASE_URL in .env (see SUPABASE.md).';
+    console.error(`\nCould not connect to the database: ${msg}\n→ ${hint}\n`);
+    process.exit(1);
+  }
+}
 console.log(`Database: ${db.dialect === 'postgres' ? `Postgres (${new URL(process.env.DATABASE_URL).hostname})` : 'SQLite'}`);
 const app = createApp({
   db,
