@@ -214,4 +214,5 @@
 .invite-status { font-size: 11px; font-weight: 700; margin-left: 6px; }
 .invite-status.ok { color: #1c8f72; }
 .invite-status.bad { color: #c93a59; }
+.invite-designation { font-size: 12px; font-weight: 600; color: var(--muted, #5d6072); }
 .invite-error { display: block; color: #c93a59; font-size: 11px; margin-top: 2px; }

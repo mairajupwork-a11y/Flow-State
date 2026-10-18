@@ -45,6 +45,7 @@ CREATE TABLE IF NOT EXISTS invites (
   email TEXT NOT NULL,
   role TEXT NOT NULL CHECK (role IN ('admin','member','viewer')),
   invited_by INTEGER NOT NULL REFERENCES users(id),
+  designation TEXT NOT NULL DEFAULT '',
   created_at TEXT NOT NULL DEFAULT to_char(now() AT TIME ZONE 'utc', 'YYYY-MM-DD HH24:MI:SS'),
   accepted_at TEXT
 );

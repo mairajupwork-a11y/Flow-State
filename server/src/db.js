@@ -296,6 +296,8 @@ export const MIGRATIONS = [
   CREATE INDEX measurements_project ON measurements(project_id, day);
   `,
   },
+  // v3 — the designation (job title) someone is invited as, e.g. "Project Manager".
+  `ALTER TABLE invites ADD COLUMN designation TEXT NOT NULL DEFAULT '';`,
 ];
 
 export function openDatabase(file = process.env.DATABASE_FILE || 'data/flowstate.db') {

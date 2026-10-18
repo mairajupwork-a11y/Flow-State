@@ -4,6 +4,7 @@ import { createServer } from 'node:net';
 import { openDatabase } from '../src/db.js';
 import { createApp } from '../src/app.js';
 import { createMailer } from '../src/mail.js';
+import { DESIGNATIONS, DESIGNATION_GROUPS } from '../../shared/designations.js';
 
 function client(base) {
   let cookie = '';
@@ -64,6 +65,35 @@ test('invitations are emailed to any address with a working join link', async (t
   assert.equal(sent.filter((m) => m.to === 'lee@yahoo.co.uk').length, 2);
   assert.equal((await api('POST', `/workspaces/${slug}/invites/${byEmail['x@bounce.test'].token}/resend`)).status, 502);
   assert.deepEqual(await fetch(`${base}/auth/providers`).then((r) => r.json()), { google: false, email: true });
+});
+
+test('invites carry a designation into the email, the preview and the job title', async (t) => {
+  assert.equal(new Set(DESIGNATIONS).size, DESIGNATIONS.length, 'designations are unique');
+  for (const role of ['Project Manager', 'Product Manager', 'MERN Stack Developer', 'MEAN Stack Developer', 'Full-Stack Developer', 'CEO', 'CTO', 'Managing Director', 'UI/UX Designer']) assert.ok(DESIGNATIONS.includes(role), role);
+  assert.ok(DESIGNATION_GROUPS.length > 5);
+
+  const sent = [];
+  const { base } = await start(t, { mailer: { send: async (m) => { sent.push(m); } } });
+  const api = client(base);
+  const slug = (await admin(api)).data.workspace.slug;
+
+  const res = await api('POST', `/workspaces/${slug}/invites`, { emails: ['pm@gmail.com'], designation: 'Project Manager' });
+  assert.equal(res.data[0].designation, 'Project Manager');
+  const mail = sent.find((m) => m.to === 'pm@gmail.com');
+  assert.match(mail.text, /as Project Manager\./);
+  assert.match(mail.html, /as <b[^>]*>Project Manager<\/b>/);
+
+  // Re-inviting the same person updates the pending designation.
+  const again = await api('POST', `/workspaces/${slug}/invites`, { emails: ['pm@gmail.com'], designation: '  CTO ' });
+  assert.equal(again.data[0].token, res.data[0].token);
+  assert.equal((await api('GET', `/workspaces/${slug}/invites`)).data.find((i) => i.email === 'pm@gmail.com').designation, 'CTO');
+  assert.equal((await fetch(`${base}/invites/${res.data[0].token}`).then((r) => r.json())).designation, 'CTO');
+  assert.equal((await api('POST', `/workspaces/${slug}/invites`, { emails: ['x@gmail.com'], designation: 'x'.repeat(81) })).status, 400);
+
+  const pm = client(base);
+  await pm('POST', '/auth/signup', { name: 'Pat', email: 'pm@gmail.com', password: 'longenough1' });
+  await pm('POST', `/invites/${res.data[0].token}/accept`);
+  assert.equal((await pm('GET', '/auth/me')).data.user.jobTitle, 'CTO');
 });
 
 test('without SMTP, invites still work as links and say they were not emailed', async (t) => {

@@ -7,8 +7,9 @@ import { useWs } from '../../lib/workspace';
 import { useProviders } from '../../lib/queries';
 import { copyText } from '../../lib/store';
 import type { Role } from '../../lib/types';
+import { DesignationSelect } from './DesignationSelect';
 
-interface Invite { token: string; email: string; role: Role; emailed?: boolean; emailError?: string }
+interface Invite { token: string; email: string; role: Role; designation?: string; emailed?: boolean; emailError?: string }
 export const inviteUrl = (token: string) => `${location.origin}/invite/${token}`;
 
 export function copy(text: string, message = 'Link copied.') {
@@ -20,6 +21,7 @@ export function InviteModal({ onClose }: { onClose: () => void }) {
   const qc = useQueryClient();
   const [raw, setRaw] = useState('');
   const [role, setRole] = useState<Role>('member');
+  const [designation, setDesignation] = useState('');
   const [created, setCreated] = useState<Invite[] | null>(null);
   const [error, setError] = useState('');
   const [busy, setBusy] = useState(false);
@@ -30,7 +32,7 @@ export function InviteModal({ onClose }: { onClose: () => void }) {
     setBusy(true);
     setError('');
     try {
-      const res = await api.post<Invite[]>(`/workspaces/${workspace.slug}/invites`, link ? { link: true, role } : { emails, role });
+      const res = await api.post<Invite[]>(`/workspaces/${workspace.slug}/invites`, link ? { link: true, role } : { emails, role, designation: designation.trim() });
       setCreated(res);
       qc.invalidateQueries({ queryKey: ['invites'] });
     } catch (err) {
@@ -47,8 +49,8 @@ export function InviteModal({ onClose }: { onClose: () => void }) {
   return (
     <Modal title="Invite teammates" subtitle="Free for unlimited people — invite your whole organisation" onClose={onClose}
       footer={created
-        ? <><button className="btn btn-light" onClick={() => { setCreated(null); setRaw(''); }}>Invite more</button><button className="btn btn-primary" onClick={onClose}>Done</button></>
-        : <><button className="btn btn-light" onClick={() => create(true)} disabled={busy}><Icon name="link" size={14} /> Get a team link</button><button className="btn btn-primary" onClick={() => create()} disabled={busy || !emails.length}><Icon name="mail" size={14} /> {emailOn ? 'Send' : 'Create'} {emails.length > 1 ? `${emails.length} invites` : 'invite'}</button></>}>
+        ? <><button className="btn btn-light" onClick={() => { setCreated(null); setRaw(''); setDesignation(''); }}>Invite more</button><button className="btn btn-primary" onClick={onClose}>Done</button></>
+        : <><button className="btn btn-light" onClick={() => create(true)} disabled={busy}><Icon name="link" size={14} /> Get a team link</button><button className="btn btn-primary" onClick={() => create()} disabled={busy || !emails.length || !designation.trim()} title={emails.length && !designation.trim() ? 'Choose their designation first' : undefined}><Icon name="mail" size={14} /> {emailOn ? 'Send' : 'Create'} {emails.length > 1 ? `${emails.length} invites` : 'invite'}</button></>}>
       <div className="modal-body">
         {created ? (
           <>
@@ -65,6 +67,7 @@ export function InviteModal({ onClose }: { onClose: () => void }) {
                 <div className="invite-link" key={i.token}>
                   <div style={{ minWidth: 0 }}>
                     <b>{i.email || 'Reusable team link'}</b>
+                    {i.designation && <span className="invite-designation"> · {i.designation}</span>}
                     {i.email && emailOn && <span className={`invite-status ${i.emailed ? 'ok' : 'bad'}`} title={i.emailError}>{i.emailed ? ' ✓ Emailed' : ' ✕ Not emailed'}</span>}
                     <code className="ellipsis">{inviteUrl(i.token)}</code>
                     {i.emailError && <small className="invite-error">{i.emailError}</small>}
@@ -85,7 +88,9 @@ export function InviteModal({ onClose }: { onClose: () => void }) {
             <div className="row-between" style={{ marginTop: 8 }}>
               <span className="tiny-note">{emails.length ? `${emails.length} valid address${emails.length === 1 ? '' : 'es'}` : 'Any email works — Gmail, Outlook/Hotmail, Yahoo, company addresses. Separate with commas or new lines.'}</span>
             </div>
-            <label className="form-field" style={{ marginTop: 14 }}><span>Role</span>
+            <DesignationSelect value={designation} onChange={setDesignation} required
+              hint={emails.length > 1 ? `All ${emails.length} people are invited with this designation — send separate invites for different roles.` : 'Shown in the invitation email and set as their job title when they join.'} />
+            <label className="form-field" style={{ marginTop: 14 }}><span>Access</span>
               <select className="field-select" value={role} onChange={(e) => setRole(e.target.value as Role)}>
                 <option value="member">Member — create and edit work</option>
                 <option value="viewer">Viewer — read-only, ideal for stakeholders</option>

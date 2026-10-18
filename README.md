@@ -17,7 +17,7 @@ Built UK-first (en-GB dates, Monday weeks, British English), with US and Asia-Pa
 | **Reports** | Sprint burndown, velocity, created vs resolved, cycle time, workload, status and priority mix — each with a table view |
 | **Personal** | My tasks (grouped by due date, across projects) and **My day**: private to-dos by time of day, stars, roll-over, "do it tomorrow", 7-day momentum, pin project work |
 | **Flow guide (free AI)** | Plans your day, spots blockers/overdue/WIP breaches, sizes the next sprint from velocity, writes your stand-up, summarises projects, shows workload, answers how-to questions with "Take me there", and turns sentences into work items or to-dos |
-| **Team** | Unlimited members, admin/member/viewer roles, invitation emails (any provider, via SMTP) plus shareable invite links and reusable team links |
+| **Team** | Unlimited members, admin/member/viewer roles, designations (CEO, Project Manager, MERN Stack Developer… or your own), invitation emails (any provider, via SMTP) plus shareable invite links and reusable team links |
 | **Everywhere** | ⌘K command palette, keyboard shortcuts (`?`), notifications, realtime updates (SSE), light/dark/system themes, compact mode, reduced motion, responsive down to phones |
 
 ## Methodologies

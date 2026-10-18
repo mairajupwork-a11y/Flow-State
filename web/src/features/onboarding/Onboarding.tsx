@@ -8,6 +8,7 @@ import { Brand } from '../auth/Welcome';
 import type { MethodologyId, Session, Workspace } from '../../lib/types';
 import { MethodologyPicker } from '../../components/MethodologyPicker';
 import { METHODOLOGIES } from '../../lib/methodology';
+import { DesignationSelect } from '../team/DesignationSelect';
 
 const ROLES = [
   ['Engineering', 'bolt'], ['Product', 'target'], ['Design', 'sparkles'], ['Marketing', 'trend'],
@@ -44,6 +45,7 @@ export function Onboarding() {
   const [project, setProject] = useState({ name: '', key: '', keyTouched: false, methodology: '' as MethodologyId | '', withSamples: true });
   const [emails, setEmails] = useState<string[]>([]);
   const [draft, setDraft] = useState('');
+  const [inviteDesignation, setInviteDesignation] = useState('');
   const [error, setError] = useState('');
   const [busy, setBusy] = useState(false);
   const [created, setCreated] = useState<Workspace | null>(null);
@@ -80,6 +82,7 @@ export function Onboarding() {
         name: ws.name.trim(), region: ws.region, teamSize: ws.teamSize, useCase: role, jobTitle: role === 'Something else' ? undefined : role,
         project: { name: project.name.trim(), key, methodology, withSamples: project.withSamples },
         invites: draft.trim() ? [...emails, ...draft.split(/[\s,;]+/).filter((s) => s.includes('@'))] : emails,
+        inviteDesignation: inviteDesignation.trim(),
       });
       qc.setQueryData(keys.session, { user: res.user, workspaces: res.workspaces });
       try {
@@ -202,6 +205,7 @@ export function Onboarding() {
                   onPaste={(e) => { e.preventDefault(); addEmails(e.clipboardData.getData('text')); }} placeholder={emails.length ? 'Add another…' : 'name@company.com, teammate@company.com'} autoFocus />
               </div>
             </label>
+            {(emails.length > 0 || !!draft.trim()) && <DesignationSelect value={inviteDesignation} onChange={setInviteDesignation} label="Their designation" hint="Applies to everyone above. You can invite people with different designations later from the Team page." />}
             <div className="tip-box"><Icon name="lightbulb" size={18} /><span>Any email address works — Gmail, Outlook/Hotmail, Yahoo or company email. If invitation emails are switched on they’re sent straight away; you can always copy each person’s link from the Team page too.</span></div>
             {error && <div className="form-error" role="alert" style={{ marginTop: 14 }}>{error}</div>}
           </section>

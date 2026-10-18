@@ -8,7 +8,7 @@ import { PageLoader } from '../../components/ui';
 import type { Session } from '../../lib/types';
 import { Brand } from './Welcome';
 
-interface InvitePreview { workspaceName: string; workspaceSlug: string; inviter: string; email: string; role: string; members: number }
+interface InvitePreview { workspaceName: string; workspaceSlug: string; inviter: string; email: string; role: string; designation?: string; members: number }
 
 export function AcceptInvite() {
   const { token = '' } = useParams();
@@ -48,7 +48,7 @@ export function AcceptInvite() {
           <>
             <div className="invite-ws"><span className="ws-avatar lg">{invite.data.workspaceName[0]?.toUpperCase()}</span></div>
             <h1>Join {invite.data.workspaceName}</h1>
-            <p className="page-subtitle"><b>{invite.data.inviter}</b> invited you to collaborate as a <b>{invite.data.role}</b>. {invite.data.members} {invite.data.members === 1 ? 'person is' : 'people are'} already here.</p>
+            <p className="page-subtitle"><b>{invite.data.inviter}</b> invited you to collaborate as {invite.data.designation ? <b>{invite.data.designation}</b> : <>a <b>{invite.data.role}</b></>}. {invite.data.members} {invite.data.members === 1 ? 'person is' : 'people are'} already here.</p>
             {error && <div className="form-error" role="alert">{error}</div>}
             {session.data?.user ? (
               <button className="btn btn-primary btn-block btn-xl" onClick={accept} disabled={busy}>{busy ? 'Joining…' : `Join as ${session.data.user.name}`} <Icon name="right" size={16} /></button>

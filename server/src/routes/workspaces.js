@@ -12,6 +12,8 @@ import { inviteEmail, mailHint } from '../emails.js';
 
 const REGIONS = { uk: { locale: 'en-GB', weekStart: 1 }, us: { locale: 'en-US', weekStart: 0 }, asia: { locale: 'en-SG', weekStart: 1 }, other: { locale: 'en-GB', weekStart: 1 } };
 const role = z.enum(['admin', 'member', 'viewer']);
+/** Job title someone is invited as — from the suggested list or typed in. */
+const designation = z.string().trim().max(80, 'keep the designation under 80 characters').default('');
 const projectInput = z.object({
   name: z.string().trim().min(1, 'give the project a name').max(80),
   key: z.string().trim().toUpperCase().regex(/^[A-Z][A-Z0-9]{1,5}$/, 'use 2–6 letters or numbers, starting with a letter').optional(),
@@ -39,7 +41,7 @@ export function workspaceRoutes({ db, events, hub, mailer, appUrl }) {
   const emailInvites = (req, workspaceName, invites) => Promise.all(invites.map(async (inv) => {
     if (!mailer || !inv.email) return { ...inv, emailed: false };
     try {
-      await mailer.send(inviteEmail({ to: inv.email, inviter: req.user.name, workspace: workspaceName, role: inv.role, url: `${baseUrl(req)}/invite/${inv.token}` }));
+      await mailer.send(inviteEmail({ to: inv.email, inviter: req.user.name, workspace: workspaceName, role: inv.role, designation: inv.designation, url: `${baseUrl(req)}/invite/${inv.token}` }));
       return { ...inv, emailed: true };
     } catch (err) {
       console.error(`Invite email to ${inv.email} failed:`, err.message);
@@ -57,6 +59,7 @@ export function workspaceRoutes({ db, events, hub, mailer, appUrl }) {
       jobTitle: z.string().trim().max(80).optional(),
       project: projectInput.optional(),
       invites: z.array(z.string().trim().toLowerCase().email()).max(200).default([]),
+      inviteDesignation: designation,
     }), req.body);
     const createdInvites = [];
     const ws = await db.tx(async () => {
@@ -72,8 +75,8 @@ export function workspaceRoutes({ db, events, hub, mailer, appUrl }) {
       if (body.project) await createProject(db, { workspaceId: wsId, actor: req.user, ...body.project });
       for (const email of new Set(body.invites)) {
         const token = randomBytes(18).toString('base64url');
-        await db.run("INSERT INTO invites (token, workspace_id, email, role, invited_by) VALUES (?, ?, ?, 'member', ?)", token, wsId, email, req.user.id);
-        createdInvites.push({ token, email, role: 'member' });
+        await db.run("INSERT INTO invites (token, workspace_id, email, role, invited_by, designation) VALUES (?, ?, ?, 'member', ?, ?)", token, wsId, email, req.user.id, body.inviteDesignation);
+        createdInvites.push({ token, email, role: 'member', designation: body.inviteDesignation });
       }
       await events.record({ workspaceId: wsId, actorId: req.user.id, verb: 'workspace_created', data: { name: body.name } });
       return await db.get('SELECT * FROM workspaces WHERE id = ?', wsId);
@@ -140,23 +143,28 @@ export function workspaceRoutes({ db, events, hub, mailer, appUrl }) {
   // ---- Invitations (unlimited, free) ----
   r.get('/:ws/invites', async (req, res) => {
     const { ws } = await loadWorkspace(db, req.user, req.params.ws, 'admin');
-    res.json((await db.all('SELECT token, email, role, created_at FROM invites WHERE workspace_id = ? AND accepted_at IS NULL ORDER BY created_at DESC', ws.id))
-      .map((i) => ({ token: i.token, email: i.email, role: i.role, createdAt: i.created_at })));
+    res.json((await db.all('SELECT token, email, role, designation, created_at FROM invites WHERE workspace_id = ? AND accepted_at IS NULL ORDER BY created_at DESC', ws.id))
+      .map((i) => ({ token: i.token, email: i.email, role: i.role, designation: i.designation, createdAt: i.created_at })));
   });
 
   r.post('/:ws/invites', async (req, res) => {
     const { ws } = await loadWorkspace(db, req.user, req.params.ws, 'admin');
-    const body = parse(z.object({ emails: z.array(z.string().trim().toLowerCase().email()).max(200).default([]), role: role.default('member'), link: z.boolean().default(false) }), req.body);
+    const body = parse(z.object({ emails: z.array(z.string().trim().toLowerCase().email()).max(200).default([]), role: role.default('member'), designation, link: z.boolean().default(false) }), req.body);
     const created = await db.tx(async () => {
       const list = body.link ? [''] : [...new Set(body.emails)];
       if (!list.length) throw new HttpError(400, 'Add at least one email address.');
       const out = [];
       for (const email of list) {
         const existing = email && await db.get('SELECT token FROM invites WHERE workspace_id = ? AND email = ? AND accepted_at IS NULL', ws.id, email);
-        if (existing) { out.push({ token: existing.token, email, role: body.role }); continue; }
+        if (existing) {
+          // Re-inviting updates the pending invite to the latest role and designation.
+          await db.run('UPDATE invites SET role = ?, designation = ? WHERE token = ?', body.role, body.designation, existing.token);
+          out.push({ token: existing.token, email, role: body.role, designation: body.designation });
+          continue;
+        }
         const token = randomBytes(18).toString('base64url');
-        await db.run('INSERT INTO invites (token, workspace_id, email, role, invited_by) VALUES (?, ?, ?, ?, ?)', token, ws.id, email, body.role, req.user.id);
-        out.push({ token, email, role: body.role });
+        await db.run('INSERT INTO invites (token, workspace_id, email, role, invited_by, designation) VALUES (?, ?, ?, ?, ?, ?)', token, ws.id, email, body.role, req.user.id, body.designation);
+        out.push({ token, email, role: body.role, designation: body.designation });
       }
       return out;
     });
@@ -165,7 +173,7 @@ export function workspaceRoutes({ db, events, hub, mailer, appUrl }) {
 
   r.post('/:ws/invites/:token/resend', async (req, res) => {
     const { ws } = await loadWorkspace(db, req.user, req.params.ws, 'admin');
-    const inv = await db.get('SELECT token, email, role FROM invites WHERE workspace_id = ? AND token = ? AND accepted_at IS NULL', ws.id, req.params.token);
+    const inv = await db.get('SELECT token, email, role, designation FROM invites WHERE workspace_id = ? AND token = ? AND accepted_at IS NULL', ws.id, req.params.token);
     if (!inv) throw notFound('Invitation');
     if (!inv.email) throw new HttpError(400, 'Team links are shared by copying the link, not by email.');
     if (!mailer) throw new HttpError(400, 'Email isn’t set up on this Flowstate yet — copy the link instead (see EMAIL.md).');
@@ -248,12 +256,16 @@ export function inviteRoutes({ db, events }) {
   r.get('/:token', async (req, res) => {
     const i = await find(req.params.token);
     const members = (await db.get('SELECT COUNT(*) AS n FROM memberships WHERE workspace_id = ?', i.workspace_id)).n;
-    res.json({ workspaceName: i.ws_name, workspaceSlug: i.slug, inviter: i.inviter, email: i.email, role: i.role, members });
+    res.json({ workspaceName: i.ws_name, workspaceSlug: i.slug, inviter: i.inviter, email: i.email, role: i.role, designation: i.designation ?? '', members });
   });
   r.post('/:token/accept', requireUser, async (req, res) => {
     const i = await find(req.params.token);
     await db.tx(async () => {
       await db.run('INSERT OR IGNORE INTO memberships (workspace_id, user_id, role) VALUES (?, ?, ?)', i.workspace_id, req.user.id, i.role);
+      // The designation they were invited as becomes their job title, unless
+      // they already set one while belonging to another workspace.
+      const others = (await db.get('SELECT COUNT(*) AS n FROM memberships WHERE user_id = ? AND workspace_id <> ?', req.user.id, i.workspace_id)).n;
+      if (i.designation && (!req.user.job_title || !others)) await db.run('UPDATE users SET job_title = ? WHERE id = ?', i.designation, req.user.id);
       if (i.email) await db.run("UPDATE invites SET accepted_at = datetime('now') WHERE token = ?", i.token);
     });
     await events.record({ workspaceId: i.workspace_id, actorId: req.user.id, verb: 'member_joined', data: { name: req.user.name } });

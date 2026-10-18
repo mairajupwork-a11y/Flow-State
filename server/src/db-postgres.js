@@ -113,7 +113,13 @@ export async function openPostgres(url, { max = Number(process.env.DATABASE_POOL
 
 /** Applies schema/postgres.sql once per schema version, under an advisory lock so parallel boots don't race. */
 export async function migratePostgres(pool) {
-  const VERSION = 1;
+  // Version 1 is the full schema file; later versions are small upgrades for
+  // databases created before them (all safe to re-run).
+  const UPGRADES = [
+    null,
+    "ALTER TABLE invites ADD COLUMN IF NOT EXISTS designation TEXT NOT NULL DEFAULT ''",
+  ];
+  const VERSION = UPGRADES.length;
   const client = await pool.connect();
   try {
     await client.query('SELECT pg_advisory_lock(727274)');
@@ -124,7 +130,9 @@ export async function migratePostgres(pool) {
       const sql = readFileSync(new URL('./schema/postgres.sql', import.meta.url), 'utf8');
       await client.query('BEGIN');
       try {
-        await client.query(sql);
+        const current = Number(row?.value ?? 0);
+        if (current < 1) await client.query(sql);
+        for (let v = Math.max(current, 1); v < VERSION; v++) await client.query(UPGRADES[v]);
         await client.query("INSERT INTO flowstate_meta (key, value) VALUES ('schema_version', $1) ON CONFLICT (key) DO UPDATE SET value = EXCLUDED.value", [String(VERSION)]);
         await client.query('COMMIT');
       } catch (err) {

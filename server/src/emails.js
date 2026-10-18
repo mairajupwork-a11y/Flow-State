@@ -4,12 +4,14 @@ const esc = (s) => String(s).replace(/[&<>"']/g, (c) => ({ '&': '&amp;', '<': '&
 const oneLine = (s) => String(s).replace(/[\r\n]+/g, ' ').trim();
 const ROLE = { admin: 'an admin', member: 'a member', viewer: 'a viewer' };
 
-export function inviteEmail({ to, inviter, workspace, role, url }) {
+export function inviteEmail({ to, inviter, workspace, role, designation = '', url }) {
+  const as = designation ? designation : ROLE[role] ?? 'a member';
+  const asText = designation ? `as ${designation}` : `as ${as}`;
   const subject = oneLine(`${inviter} invited you to ${workspace} on Flowstate`);
   const text = [
     `Hi,`,
     ``,
-    `${inviter} has invited you to join ${workspace} on Flowstate as ${ROLE[role] ?? 'a member'}.`,
+    `${inviter} has invited you to join ${workspace} on Flowstate ${asText}.`,
     ``,
     `Accept the invitation: ${url}`,
     ``,
@@ -24,7 +26,7 @@ export function inviteEmail({ to, inviter, workspace, role, url }) {
         <tr><td style="font-size:20px;font-weight:700;color:#3a1f86;padding-bottom:20px">flowstate<span style="color:#8278f4">.</span></td></tr>
         <tr><td style="font-size:22px;font-weight:700;line-height:1.3;padding-bottom:12px">You're invited to ${esc(workspace)}</td></tr>
         <tr><td style="font-size:15px;line-height:1.6;color:#5d6072;padding-bottom:24px">
-          <b style="color:#1b1d29">${esc(inviter)}</b> has invited you to join <b style="color:#1b1d29">${esc(workspace)}</b> on Flowstate as ${ROLE[role] ?? 'a member'}.
+          <b style="color:#1b1d29">${esc(inviter)}</b> has invited you to join <b style="color:#1b1d29">${esc(workspace)}</b> on Flowstate ${designation ? `as <b style="color:#1b1d29">${esc(designation)}</b>` : `as ${as}`}.
         </td></tr>
         <tr><td style="padding-bottom:24px">
           <a href="${esc(url)}" style="display:inline-block;background:#3a1f86;color:#ffffff;text-decoration:none;font-weight:600;font-size:15px;padding:12px 24px;border-radius:999px">Join ${esc(workspace)}</a>

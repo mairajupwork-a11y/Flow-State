@@ -16,7 +16,7 @@ export default function Team() {
   const { workspace, members, me, isAdmin, locale } = useWs();
   const qc = useQueryClient();
   const navigate = useNavigate();
-  const invites = useQuery({ queryKey: ['invites', workspace.slug], queryFn: () => api.get<{ token: string; email: string; role: Role; createdAt: string }[]>(`/workspaces/${workspace.slug}/invites`), enabled: isAdmin });
+  const invites = useQuery({ queryKey: ['invites', workspace.slug], queryFn: () => api.get<{ token: string; email: string; role: Role; designation?: string; createdAt: string }[]>(`/workspaces/${workspace.slug}/invites`), enabled: isAdmin });
   const refresh = () => { qc.invalidateQueries({ queryKey: ['ws'] }); qc.invalidateQueries({ queryKey: ['invites'] }); };
   const setRole = useMutation({ mutationFn: ({ id, role }: { id: number; role: Role }) => api.patch(`/workspaces/${workspace.slug}/members/${id}`, { role }), onSuccess: () => { refresh(); toast('Role updated.'); } });
   const removeMember = useMutation({
@@ -67,7 +67,7 @@ export default function Team() {
           <p className="muted">{emailOn ? 'Resend the email, share the link, or withdraw it' : 'Share a link again or withdraw it'}</p>
           {invites.data.map((i) => (
             <div className="setting-row" key={i.token}>
-              <div style={{ minWidth: 0 }}><strong>{i.email || 'Reusable team link'}</strong><small>{i.role} · created {timeAgo(i.createdAt)}</small></div>
+              <div style={{ minWidth: 0 }}><strong>{i.email || 'Reusable team link'}</strong><small>{i.designation ? `${i.designation} · ` : ''}{i.role} · created {timeAgo(i.createdAt)}</small></div>
               <div className="row-8">
                 {emailOn && i.email && <button className="btn btn-soft btn-sm" disabled={resend.isPending} onClick={() => resend.mutate(i.token)}><Icon name="mail" size={13} /> Resend</button>}
                 <button className="btn btn-soft btn-sm" onClick={() => copy(inviteUrl(i.token))}><Icon name="copy" size={13} /> Copy link</button>
