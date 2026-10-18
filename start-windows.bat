@@ -18,6 +18,13 @@ if errorlevel 1 (
   pause
   exit /b 1
 )
+if not exist ".env" (
+  findstr /r /c:"^DATABASE_URL=..*" ".env.example" >nul 2>nul && (
+    copy /y ".env.example" ".env" >nul
+    echo.
+    echo   Found your database settings in .env.example and copied them to .env.
+  )
+)
 echo.
 echo   Starting Flowstate. Your browser will open at http://localhost:5173
 echo   Keep this window open while you use the app. Close it to stop Flowstate.

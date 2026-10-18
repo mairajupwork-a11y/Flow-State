@@ -1,5 +1,5 @@
 import { randomBytes } from 'node:crypto';
-import { existsSync } from 'node:fs';
+import { existsSync, readFileSync } from 'node:fs';
 import { fileURLToPath } from 'node:url';
 import { dirname, join } from 'node:path';
 import { openDatabase } from './db.js';
@@ -10,10 +10,13 @@ const here = dirname(fileURLToPath(import.meta.url));
 // On Windows, Notepad often saves it as ".env.txt" with the extension hidden;
 // accept that too and say how to fix it.
 const root = join(here, '..', '..');
-const envFile = ['.env', '.env.txt'].map((n) => join(root, n)).find((f) => existsSync(f));
+// People also often fill in .env.example itself; use it when it has a DATABASE_URL.
+const filled = (f) => /^DATABASE_URL=\S+/m.test(readFileSync(f, 'utf8'));
+const envFile = ['.env', '.env.txt', '.env.example'].map((n) => join(root, n))
+  .find((f) => existsSync(f) && (!f.endsWith('.example') || filled(f)));
 if (envFile) {
   process.loadEnvFile(envFile);
-  if (envFile.endsWith('.txt')) console.warn('Read settings from .env.txt — rename it to just ".env" (File Explorer → View → File name extensions).');
+  if (!envFile.endsWith('.env')) console.warn(`Read settings from ${envFile.split(/[\\/]/).pop()} — for clarity, rename it to just ".env".`);
 }
 const production = process.env.NODE_ENV === 'production' || process.argv.includes('--production');
 const port = Number(process.env.PORT) || 4000;
