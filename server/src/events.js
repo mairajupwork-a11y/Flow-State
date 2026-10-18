@@ -15,12 +15,13 @@ export function createEvents(db, hub) {
         'INSERT INTO notifications (user_id, workspace_id, issue_id, actor_id, kind, text) VALUES (?, ?, ?, ?, ?, ?)',
         userId, workspaceId, issueId, actorId, kind, text,
       );
-      hub.publish(workspaceId, { scope: ['notifications'], userId });
+      db.afterCommit(() => hub.publish(workspaceId, { scope: ['notifications'], userId }));
     }
   }
 
+  /** Browsers refetch on these hints, so they wait until the data is committed. */
   function changed(workspaceId, scope, actorId) {
-    hub.publish(workspaceId, { scope, actorId });
+    db.afterCommit(() => hub.publish(workspaceId, { scope, actorId }));
   }
 
   return { record, notify, changed };

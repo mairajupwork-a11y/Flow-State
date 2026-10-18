@@ -14,6 +14,8 @@ CREATE TABLE IF NOT EXISTS users (
   job_title TEXT NOT NULL DEFAULT '',
   locale TEXT NOT NULL DEFAULT 'en-GB',
   theme TEXT NOT NULL DEFAULT 'light',
+  session_version INTEGER NOT NULL DEFAULT 0,
+  email_verified INTEGER NOT NULL DEFAULT 0,
   created_at TEXT NOT NULL DEFAULT to_char(now() AT TIME ZONE 'utc', 'YYYY-MM-DD HH24:MI:SS')
 );
 CREATE UNIQUE INDEX IF NOT EXISTS users_email ON users (lower(email));
@@ -240,6 +242,15 @@ CREATE TABLE IF NOT EXISTS measurements (
   created_at TEXT NOT NULL DEFAULT to_char(now() AT TIME ZONE 'utc', 'YYYY-MM-DD HH24:MI:SS')
 );
 CREATE INDEX IF NOT EXISTS measurements_project ON measurements(project_id, day);
+
+-- Hot lookups and foreign keys used in WHERE / ON DELETE.
+CREATE INDEX IF NOT EXISTS issues_status_rank ON issues (status_id, rank);
+CREATE INDEX IF NOT EXISTS notifications_issue ON notifications (issue_id);
+CREATE INDEX IF NOT EXISTS todos_issue ON todos (issue_id);
+CREATE INDEX IF NOT EXISTS issue_links_target ON issue_links (target_id);
+CREATE INDEX IF NOT EXISTS invites_workspace ON invites (workspace_id);
+CREATE INDEX IF NOT EXISTS memberships_user ON memberships (user_id);
+CREATE INDEX IF NOT EXISTS users_email_exact ON users (email);
 
 -- Supabase publishes the public schema through its REST API to the browser
 -- "anon" and "authenticated" roles. Flowstate talks to the database only from

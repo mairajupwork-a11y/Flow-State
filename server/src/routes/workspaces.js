@@ -1,9 +1,9 @@
 import { Router } from 'express';
 import { randomBytes } from 'node:crypto';
 import { z } from 'zod';
-import { requireUser } from '../auth.js';
+import { requireUser, rateLimit } from '../auth.js';
 import { HttpError, parse, notFound } from '../http.js';
-import { loadWorkspace } from '../access.js';
+import { loadWorkspace, lockRow } from '../access.js';
 import { createProject } from '../services/projects.js';
 import { METHODOLOGY_IDS } from '../../../shared/methodologies.js';
 import { ISSUE_SELECT, issue as serializeIssue, user as serializeUser, workspace as serializeWorkspace, project as serializeProject, activity as serializeActivity } from '../serialize.js';
@@ -25,15 +25,21 @@ const projectInput = z.object({
 });
 
 async function slugify(db, name) {
-  const base = String(name).toLowerCase().replace(/[^a-z0-9]+/g, '-').replace(/^-|-$/g, '').slice(0, 40) || 'workspace';
+  let base = String(name).toLowerCase().replace(/[^a-z0-9]+/g, '-').replace(/^-|-$/g, '').slice(0, 40) || 'workspace';
+  if (/^\d+$/.test(base)) base = `ws-${base}`; // all-digit refs are read as ids
   let slug = base;
   while (await db.get('SELECT 1 FROM workspaces WHERE slug = ?', slug)) slug = `${base}-${randomBytes(2).toString('hex')}`;
   return slug;
 }
 
-export function workspaceRoutes({ db, events, hub, mailer, appUrl }) {
+export function workspaceRoutes({ db, events, hub, mailer, appUrl, production }) {
   const r = Router();
   r.use(requireUser);
+  // Invitation emails go out from the operator's mail account, so cap how fast one person can send them.
+  const inviteLimiter = rateLimit({
+    windowMs: 60 * 60_000, max: production ? 30 : 10_000, key: (req) => `u${req.user.id}`,
+    message: 'You’ve sent a lot of invitations in the last hour. Please wait a while, or share invite links instead.',
+  });
 
   // Links in emails must point at the address people actually open Flowstate on.
   const baseUrl = (req) => (appUrl || `${req.protocol}://${req.get('host')}`).replace(/\/$/, '');
@@ -95,7 +101,7 @@ export function workspaceRoutes({ db, events, hub, mailer, appUrl }) {
       `SELECT p.*,
          (SELECT COUNT(*) FROM issues i WHERE i.project_id = p.id) AS total,
          (SELECT COUNT(*) FROM issues i JOIN statuses s ON s.id = i.status_id WHERE i.project_id = p.id AND s.category = 'done') AS done
-       FROM projects p WHERE p.workspace_id = ? AND p.archived = 0 ORDER BY p.created_at`,
+       FROM projects p WHERE p.workspace_id = ? AND p.archived = 0 ORDER BY p.created_at, p.id`,
       ws.id,
     )).map((p) => serializeProject(p, { issueCount: p.total, doneCount: p.done }));
     res.json({ workspace: serializeWorkspace(ws, membership.role), members, projects });
@@ -121,9 +127,12 @@ export function workspaceRoutes({ db, events, hub, mailer, appUrl }) {
     const { ws } = await loadWorkspace(db, req.user, req.params.ws, 'admin');
     const body = parse(z.object({ role }), req.body);
     const target = Number(req.params.userId);
-    if (!await db.get('SELECT 1 FROM memberships WHERE workspace_id = ? AND user_id = ?', ws.id, target)) throw notFound('Member');
-    if (body.role !== 'admin') await ensureAnotherAdmin(db, ws.id, target);
-    await db.run('UPDATE memberships SET role = ? WHERE workspace_id = ? AND user_id = ?', body.role, ws.id, target);
+    await db.tx(async () => {
+      await lockRow(db, 'workspaces', ws.id);
+      if (!await db.get('SELECT 1 FROM memberships WHERE workspace_id = ? AND user_id = ?', ws.id, target)) throw notFound('Member');
+      if (body.role !== 'admin') await ensureAnotherAdmin(db, ws.id, target);
+      await db.run('UPDATE memberships SET role = ? WHERE workspace_id = ? AND user_id = ?', body.role, ws.id, target);
+    });
     events.changed(ws.id, ['workspace'], req.user.id);
     res.json({ ok: true });
   });
@@ -131,11 +140,18 @@ export function workspaceRoutes({ db, events, hub, mailer, appUrl }) {
   r.delete('/:ws/members/:userId', async (req, res) => {
     const target = Number(req.params.userId);
     const { ws } = await loadWorkspace(db, req.user, req.params.ws, target === req.user.id ? 'viewer' : 'admin');
-    await ensureAnotherAdmin(db, ws.id, target);
     await db.tx(async () => {
-      await db.run('UPDATE issues SET assignee_id = NULL WHERE assignee_id = ? AND project_id IN (SELECT id FROM projects WHERE workspace_id = ?)', target, ws.id);
+      await lockRow(db, 'workspaces', ws.id);
+      await ensureAnotherAdmin(db, ws.id, target);
+      // Clear everything that would keep pointing at (or notifying) the ex-member.
+      const inWs = 'IN (SELECT id FROM projects WHERE workspace_id = ?)';
+      await db.run(`UPDATE issues SET assignee_id = NULL WHERE assignee_id = ? AND project_id ${inWs}`, target, ws.id);
+      await db.run(`DELETE FROM watchers WHERE user_id = ? AND issue_id IN (SELECT id FROM issues WHERE project_id ${inWs})`, target, ws.id);
+      await db.run('UPDATE projects SET lead_id = NULL WHERE lead_id = ? AND workspace_id = ?', target, ws.id);
+      await db.run(`UPDATE entries SET owner_id = NULL WHERE owner_id = ? AND project_id ${inWs}`, target, ws.id);
       await db.run('DELETE FROM memberships WHERE workspace_id = ? AND user_id = ?', ws.id, target);
     });
+    hub.kick(ws.id, target);
     events.changed(ws.id, ['workspace', 'issues'], req.user.id);
     res.json({ ok: true });
   });
@@ -143,11 +159,11 @@ export function workspaceRoutes({ db, events, hub, mailer, appUrl }) {
   // ---- Invitations (unlimited, free) ----
   r.get('/:ws/invites', async (req, res) => {
     const { ws } = await loadWorkspace(db, req.user, req.params.ws, 'admin');
-    res.json((await db.all('SELECT token, email, role, designation, created_at FROM invites WHERE workspace_id = ? AND accepted_at IS NULL ORDER BY created_at DESC', ws.id))
+    res.json((await db.all('SELECT token, email, role, designation, created_at FROM invites WHERE workspace_id = ? AND accepted_at IS NULL ORDER BY created_at DESC, email', ws.id))
       .map((i) => ({ token: i.token, email: i.email, role: i.role, designation: i.designation, createdAt: i.created_at })));
   });
 
-  r.post('/:ws/invites', async (req, res) => {
+  r.post('/:ws/invites', inviteLimiter, async (req, res) => {
     const { ws } = await loadWorkspace(db, req.user, req.params.ws, 'admin');
     const body = parse(z.object({ emails: z.array(z.string().trim().toLowerCase().email()).max(200).default([]), role: role.default('member'), designation, link: z.boolean().default(false) }), req.body);
     const created = await db.tx(async () => {
@@ -171,7 +187,7 @@ export function workspaceRoutes({ db, events, hub, mailer, appUrl }) {
     res.status(201).json(await emailInvites(req, ws.name, created));
   });
 
-  r.post('/:ws/invites/:token/resend', async (req, res) => {
+  r.post('/:ws/invites/:token/resend', inviteLimiter, async (req, res) => {
     const { ws } = await loadWorkspace(db, req.user, req.params.ws, 'admin');
     const inv = await db.get('SELECT token, email, role, designation FROM invites WHERE workspace_id = ? AND token = ? AND accepted_at IS NULL', ws.id, req.params.token);
     if (!inv) throw notFound('Invitation');

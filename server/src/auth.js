@@ -21,7 +21,7 @@ export function verifyPassword(password, stored) {
   return timingSafeEqual(actual, expected);
 }
 
-/** Stateless signed session token: base64url(payload).base64url(hmac). */
+/** Signed tokens: base64url(payload).base64url(hmac). */
 export function createSigner(secret) {
   const sign = (data) => createHmac('sha256', secret).update(data).digest('base64url');
   /** Signs any small JSON value with an expiry — used for short-lived OAuth state. */
@@ -46,23 +46,14 @@ export function createSigner(secret) {
   return {
     seal,
     unseal,
-    issue(userId) {
-      const payload = Buffer.from(JSON.stringify({ uid: userId, exp: Date.now() + SESSION_DAYS * 864e5 })).toString('base64url');
-      return `${payload}.${sign(payload)}`;
+    /** Session token; `version` is users.session_version, so bumping it signs out every device. */
+    issue(userId, version = 0) {
+      return seal({ uid: userId, sv: version }, SESSION_DAYS * 864e5);
     },
+    /** @returns {{uid:number, sv:number} | null} */
     verify(token) {
-      if (typeof token !== 'string') return null;
-      const [payload, sig] = token.split('.');
-      if (!payload || !sig) return null;
-      const expected = Buffer.from(sign(payload));
-      const given = Buffer.from(sig);
-      if (expected.length !== given.length || !timingSafeEqual(expected, given)) return null;
-      try {
-        const data = JSON.parse(Buffer.from(payload, 'base64url').toString());
-        return data.exp > Date.now() ? data.uid : null;
-      } catch {
-        return null;
-      }
+      const v = unseal(token);
+      return v && Number.isInteger(v.uid) ? { uid: v.uid, sv: v.sv ?? 0 } : null;
     },
   };
 }
@@ -74,8 +65,9 @@ export function sessionCookieOptions(production) {
 /** Attaches req.user when a valid session cookie is present. */
 export function sessionMiddleware(db, signer) {
   return async (req, _res, next) => {
-    const uid = signer.verify(req.cookies?.[SESSION_COOKIE]);
-    req.user = uid ? await db.get('SELECT * FROM users WHERE id = ?', uid) ?? null : null;
+    const token = signer.verify(req.cookies?.[SESSION_COOKIE]);
+    const user = token ? await db.get('SELECT * FROM users WHERE id = ?', token.uid) : null;
+    req.user = user && (user.session_version ?? 0) === token.sv ? user : null;
     next();
   };
 }
@@ -85,19 +77,23 @@ export function requireUser(req, _res, next) {
   next();
 }
 
-/** Minimal fixed-window limiter for credential endpoints. */
-export function rateLimit({ windowMs, max }) {
+/**
+ * Minimal fixed-window limiter. Keyed by client IP by default; pass `key` to
+ * limit per account or per user instead (requests without a key pass).
+ */
+export function rateLimit({ windowMs, max, key: keyOf = (req) => req.ip, message = 'Too many attempts. Please wait a minute and try again.' }) {
   const hits = new Map();
   return (req, _res, next) => {
     const now = Date.now();
-    const key = req.ip;
+    const key = keyOf(req);
+    if (!key) return next();
     const entry = hits.get(key);
     if (!entry || entry.reset < now) {
       hits.set(key, { count: 1, reset: now + windowMs });
       if (hits.size > 10_000) for (const [k, v] of hits) if (v.reset < now) hits.delete(k);
       return next();
     }
-    if (++entry.count > max) return next(new HttpError(429, 'Too many attempts. Please wait a minute and try again.'));
+    if (++entry.count > max) return next(new HttpError(429, message));
     next();
   };
 }

@@ -26,7 +26,12 @@ export function InviteModal({ onClose }: { onClose: () => void }) {
   const [error, setError] = useState('');
   const [busy, setBusy] = useState(false);
   const emailOn = useProviders().data?.email ?? false;
-  const emails = [...new Set(raw.split(/[\s,;]+/).map((s) => s.trim().toLowerCase()).filter((s) => /^[^\s@]+@[^\s@]+\.[^\s@]+$/.test(s)))];
+  const tokens = raw.split(/[\s,;]+/).map((s) => s.trim().toLowerCase()).filter(Boolean);
+  const isEmail = (s: string) => /^[^\s@]+@[^\s@]+\.[^\s@]+$/.test(s);
+  const emails = [...new Set(tokens.filter(isEmail))];
+  const invalid = tokens.filter((t) => !isEmail(t));
+  // Said on screen, not just in a tooltip, so touch and screen-reader users know why Send is off.
+  const blocker = emails.length && !designation.trim() ? 'Choose their designation to send the invite.' : '';
 
   async function create(link = false) {
     setBusy(true);
@@ -50,7 +55,7 @@ export function InviteModal({ onClose }: { onClose: () => void }) {
     <Modal title="Invite teammates" subtitle="Free for unlimited people — invite your whole organisation" onClose={onClose}
       footer={created
         ? <><button className="btn btn-light" onClick={() => { setCreated(null); setRaw(''); setDesignation(''); }}>Invite more</button><button className="btn btn-primary" onClick={onClose}>Done</button></>
-        : <><button className="btn btn-light" onClick={() => create(true)} disabled={busy}><Icon name="link" size={14} /> Get a team link</button><button className="btn btn-primary" onClick={() => create()} disabled={busy || !emails.length || !designation.trim()} title={emails.length && !designation.trim() ? 'Choose their designation first' : undefined}><Icon name="mail" size={14} /> {emailOn ? 'Send' : 'Create'} {emails.length > 1 ? `${emails.length} invites` : 'invite'}</button></>}>
+        : <><button className="btn btn-light" onClick={() => create(true)} disabled={busy}><Icon name="link" size={14} /> Get a team link</button><button className="btn btn-primary" onClick={() => create()} disabled={busy || !emails.length || !designation.trim()}><Icon name="mail" size={14} /> {emailOn ? 'Send' : 'Create'} {emails.length > 1 ? `${emails.length} invites` : 'invite'}</button></>}>
       <div className="modal-body">
         {created ? (
           <>
@@ -88,6 +93,11 @@ export function InviteModal({ onClose }: { onClose: () => void }) {
             <div className="row-between" style={{ marginTop: 8 }}>
               <span className="tiny-note">{emails.length ? `${emails.length} valid address${emails.length === 1 ? '' : 'es'}` : 'Any email works — Gmail, Outlook/Hotmail, Yahoo, company addresses. Separate with commas or new lines.'}</span>
             </div>
+            {invalid.length > 0 && (
+              <div className="invite-error" role="alert" style={{ marginTop: 6 }}>
+                Not a full email address, so it won’t be invited: {invalid.slice(0, 5).join(', ')}{invalid.length > 5 ? ` and ${invalid.length - 5} more` : ''}
+              </div>
+            )}
             <DesignationSelect value={designation} onChange={setDesignation} required
               hint={emails.length > 1 ? `All ${emails.length} people are invited with this designation — send separate invites for different roles.` : 'Shown in the invitation email and set as their job title when they join.'} />
             <label className="form-field" style={{ marginTop: 14 }}><span>Access</span>
@@ -97,6 +107,7 @@ export function InviteModal({ onClose }: { onClose: () => void }) {
                 <option value="admin">Admin — manage people and settings</option>
               </select>
             </label>
+            {blocker && <p className="tiny-note" role="status" style={{ marginTop: 10 }}>{blocker}</p>}
           </>
         )}
       </div>

@@ -18,7 +18,7 @@ import { aiRoutes } from './routes/ai.js';
  * Builds the HTTP app. Kept free of side effects (no listen, no env reads
  * beyond defaults) so tests can spin up isolated instances.
  */
-export function createApp({ db, secret, production = false, staticDir = null, ollama = null, google = null, mailer = null, appUrl = null, log = console }) {
+export function createApp({ db, secret, production = false, staticDir = null, ollama = null, google = null, mailer = null, appUrl = null, trustProxy = production ? 1 : false, log = console }) {
   const app = express();
   const hub = createHub();
   const events = createEvents(db, hub);
@@ -27,7 +27,9 @@ export function createApp({ db, secret, production = false, staticDir = null, ol
   const ctx = { db, events, hub, guide, signer, production, google, mailer, appUrl };
 
   app.disable('x-powered-by');
-  app.set('trust proxy', 1);
+  // Hops of reverse proxy in front of us (Render, nginx…). Off when Node faces the
+  // internet directly, so clients can't fake their IP via X-Forwarded-For.
+  app.set('trust proxy', trustProxy);
   app.use((req, res, next) => {
     res.setHeader('X-Content-Type-Options', 'nosniff');
     res.setHeader('Referrer-Policy', 'strict-origin-when-cross-origin');

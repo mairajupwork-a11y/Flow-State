@@ -8,6 +8,7 @@ import { IconSprite } from './components/Icon';
 import { Toasts } from './components/ui';
 import { ConfirmHost } from './components/ConfirmHost';
 import { App } from './App';
+import { ErrorBoundary } from './components/ErrorBoundary';
 import './lib/theme';
 import './styles/prototype.css';
 import './styles/app.css';
@@ -22,7 +23,7 @@ createRoot(document.getElementById('root')!).render(
     <QueryClientProvider client={queryClient}>
       <Router>
         <IconSprite />
-        <App />
+        <ErrorBoundary><App /></ErrorBoundary>
         <Toasts />
         <ConfirmHost />
         {IS_DEMO && <div className="demo-ribbon" role="note">Demo · your data stays in this browser</div>}

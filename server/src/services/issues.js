@@ -104,6 +104,16 @@ export async function updateIssue(db, { issueRow, project, actor, input, events 
     }
     if ('parentId' in patch && patch.parentId === current.id) throw new HttpError(400, 'A work item cannot be its own parent.');
     if ('epicId' in patch && patch.epicId === current.id) throw new HttpError(400, 'An epic cannot contain itself.');
+    const type = patch.type ?? current.type;
+    const parentId = 'parentId' in patch ? patch.parentId : current.parentId;
+    if (type === 'subtask' && !parentId) throw new HttpError(400, 'Choose the parent work item for this sub-task.');
+    if (patch.parentId != null) {
+      // Walk up from the new parent: reaching this item again would make a loop.
+      for (let id = patch.parentId, hops = 0; id != null && hops < 50; hops++) {
+        if (id === current.id) throw new HttpError(400, 'That would put this work item inside its own sub-task.');
+        id = (await db.get('SELECT parent_id FROM issues WHERE id = ?', id))?.parent_id ?? null;
+      }
+    }
     await validateRefs(db, project, patch);
     if (!Object.keys(patch).length) return await getIssueRow(db, issueRow.id);
 
@@ -120,6 +130,9 @@ export async function updateIssue(db, { issueRow, project, actor, input, events 
     }
     sets.push("updated_at = datetime('now')");
     await db.run(`UPDATE issues SET ${sets.join(', ')} WHERE id = ?`, ...params, issueRow.id);
+
+    // An epic that becomes something else no longer groups its children.
+    if (current.type === 'epic' && type !== 'epic') await db.run('UPDATE issues SET epic_id = NULL WHERE epic_id = ?', current.id);
 
     if (events) await logChanges(db, { project, actor, current, patch, events });
     return await getIssueRow(db, issueRow.id);
@@ -205,7 +218,10 @@ export async function issueDetail(db, issueId) {
     ...await db.all(`SELECT l.id, l.kind, 'outward' AS dir, l.target_id AS other FROM issue_links l WHERE l.source_id = ?`, issueId),
     ...await db.all(`SELECT l.id, l.kind, 'inward' AS dir, l.source_id AS other FROM issue_links l WHERE l.target_id = ?`, issueId),
   ];
-  for (const l of linkRows) links.push({ id: l.id, kind: l.kind, direction: l.dir, issue: serializeIssue(await getIssueRow(db, l.other)) });
+  const others = linkRows.length
+    ? new Map((await db.all(`${ISSUE_SELECT} WHERE i.id IN (${linkRows.map(() => '?').join(',')})`, ...linkRows.map((l) => l.other))).map((r) => [r.id, r]))
+    : new Map();
+  for (const l of linkRows) if (others.has(l.other)) links.push({ id: l.id, kind: l.kind, direction: l.dir, issue: serializeIssue(others.get(l.other)) });
   const activity = (await db.all('SELECT * FROM activity WHERE issue_id = ? ORDER BY id DESC LIMIT 60', issueId)).map(serializeActivity);
   const watchers = (await db.all('SELECT user_id FROM watchers WHERE issue_id = ?', issueId)).map((w) => w.user_id);
   return { ...serializeIssue(row), checklist, comments, subtasks, children, links, activity, watchers };

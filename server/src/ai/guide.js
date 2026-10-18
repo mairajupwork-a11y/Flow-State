@@ -24,7 +24,8 @@ export function createGuide({ db, llm = null }) {
     const open = issues.filter((i) => i.statusCategory !== 'done' && i.type !== 'epic');
     const blockedIds = new Set((await db.all(
       `SELECT l.target_id AS id FROM issue_links l JOIN issues s ON s.id = l.source_id JOIN statuses st ON st.id = s.status_id
-        WHERE l.kind = 'blocks' AND st.category <> 'done'`)).map((r) => r.id));
+        JOIN projects bp ON bp.id = s.project_id
+        WHERE l.kind = 'blocks' AND st.category <> 'done' AND bp.workspace_id = ?`, ws.id)).map((r) => r.id));
     const sprint = project ? await db.get("SELECT * FROM sprints WHERE project_id = ? AND state = 'active'", project.id) : null;
     return { user, ws, members, project, issues, open, blockedIds, sprint, today: isoDay(), locale: ws.locale, name: (id) => members.find((m) => m.id === id)?.name ?? 'Unassigned' };
   }
@@ -220,7 +221,7 @@ export function createGuide({ db, llm = null }) {
         : `${c.project.name} runs **${m.name}** — continuous flow, so there are no sprints. Keep the first column ordered by priority, pull work only when a WIP limit allows, and watch cycle time in Reports.`,
       actions: [{ type: 'navigate', label: m.phases ? `Open ${term(m.id, 'phases')}` : 'Open reports', payload: { to: `p/${c.project.key}/${m.phases ? 'phases' : 'reports'}` } }] };
     }
-    const velocity = (await db.all("SELECT completed_points FROM sprints WHERE project_id = ? AND state = 'closed' ORDER BY completed_at DESC LIMIT 3", c.project.id)).map((s) => s.completed_points ?? 0);
+    const velocity = (await db.all("SELECT completed_points FROM sprints WHERE project_id = ? AND state = 'closed' ORDER BY completed_at DESC, id DESC LIMIT 3", c.project.id)).map((s) => s.completed_points ?? 0);
     const capacity = velocity.length ? Math.round(velocity.reduce((a, b) => a + b, 0) / velocity.length) : 20;
     const backlog = c.open.filter((i) => !i.sprintId && !i.parentId).sort((a, b) => byUrgency(a, b) || a.rank - b.rank);
     const picked = [];

@@ -5,7 +5,7 @@ import { PageHeader, Toggle } from '../../components/ui';
 import { api } from '../../lib/api';
 import { keys } from '../../lib/queries';
 import { useWs } from '../../lib/workspace';
-import { toast } from '../../lib/store';
+import { askConfirm, toast } from '../../lib/store';
 import { useTheme } from '../../lib/theme';
 import type { Locale, Session, Theme } from '../../lib/types';
 
@@ -35,7 +35,18 @@ export default function Settings() {
     mutationFn: (body: object) => api.patch<Session>('/auth/me', body),
     onSuccess: (s) => { qc.setQueryData(keys.session, s); qc.invalidateQueries({ queryKey: ['ws'] }); toast('Saved.'); },
   });
-  const savePw = useMutation({ mutationFn: () => api.post('/auth/password', pw), onSuccess: () => { setPw({ current: '', next: '' }); toast('Password updated.'); } });
+  const savePw = useMutation({
+    mutationFn: () => api.post('/auth/password', pw),
+    onSuccess: () => {
+      setPw({ current: '', next: '' });
+      qc.invalidateQueries({ queryKey: keys.session });
+      toast(me.hasPassword === false ? 'Password set — you can now also sign in with your email.' : 'Password updated. Other devices have been signed out.');
+    },
+  });
+  const signOutEverywhere = useMutation({
+    mutationFn: () => api.post('/auth/logout-all'),
+    onSuccess: () => { qc.clear(); location.assign('/welcome'); },
+  });
   const saveWs = useMutation({ mutationFn: () => api.patch(`/workspaces/${workspace.slug}`, wsForm), onSuccess: () => { qc.invalidateQueries({ queryKey: ['ws'] }); qc.invalidateQueries({ queryKey: keys.session }); toast('Workspace updated.'); } });
 
   const applyCompact = (v: boolean) => { setCompact(v); writePref('fs_compact', v); document.documentElement.classList.toggle('compact', v); };
@@ -100,12 +111,18 @@ export default function Settings() {
 
           <form className="content-card" onSubmit={(e: FormEvent) => { e.preventDefault(); savePw.mutate(); }}>
             <h3>Security</h3>
-            <p className="muted">Change your password</p>
+            <p className="muted">{me.hasPassword === false ? 'You sign in with Google. Set a password to also sign in with your email.' : 'Change your password. Other devices will be signed out.'}</p>
             <div className="form-grid" style={{ marginTop: 14 }}>
-              <label className="form-field"><span>Current password</span><input className="text-input" type="password" autoComplete="current-password" value={pw.current} onChange={(e) => setPw({ ...pw, current: e.target.value })} required /></label>
+              {me.hasPassword !== false && <label className="form-field"><span>Current password</span><input className="text-input" type="password" autoComplete="current-password" value={pw.current} onChange={(e) => setPw({ ...pw, current: e.target.value })} required /></label>}
               <label className="form-field"><span>New password</span><input className="text-input" type="password" autoComplete="new-password" minLength={8} value={pw.next} onChange={(e) => setPw({ ...pw, next: e.target.value })} required /></label>
             </div>
-            <button className="btn btn-light" style={{ marginTop: 14 }} disabled={savePw.isPending || pw.next.length < 8}>Update password</button>
+            <div className="row-8" style={{ marginTop: 14, flexWrap: 'wrap' }}>
+              <button className="btn btn-light" disabled={savePw.isPending || pw.next.length < 8}>{me.hasPassword === false ? 'Set password' : 'Update password'}</button>
+              <button type="button" className="btn btn-light" disabled={signOutEverywhere.isPending}
+                onClick={() => askConfirm({ title: 'Sign out of all devices?', body: 'You’ll be signed out here and on every other computer and phone.', confirmLabel: 'Sign out everywhere' }).then((ok) => ok && signOutEverywhere.mutate())}>
+                <Icon name="logout" size={14} /> Sign out of all devices
+              </button>
+            </div>
           </form>
 
           <div className="content-card">

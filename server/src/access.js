@@ -15,9 +15,9 @@ export async function membershipFor(db, workspaceId, userId) {
 
 /** Resolves a workspace by slug or id and checks the caller's role. */
 export async function loadWorkspace(db, user, ref, min = 'viewer') {
-  const ws = /^\d+$/.test(String(ref))
-    ? await db.get('SELECT * FROM workspaces WHERE id = ?', Number(ref))
-    : await db.get('SELECT * FROM workspaces WHERE slug = ?', String(ref));
+  // Slug first: older workspaces named e.g. "2025" have an all-digit slug.
+  const ws = await db.get('SELECT * FROM workspaces WHERE slug = ?', String(ref))
+    ?? (/^\d+$/.test(String(ref)) ? await db.get('SELECT * FROM workspaces WHERE id = ?', Number(ref)) : undefined);
   if (!ws) throw notFound('Workspace');
   const membership = await membershipFor(db, ws.id, user.id);
   assertRole(membership, min);
@@ -49,4 +49,14 @@ export async function loadIssue(db, user, ref, min = 'viewer') {
   if (!issue) throw notFound('Work item');
   const project = await loadProject(db, user, issue.project_id, min);
   return { issue, project };
+}
+
+/**
+ * Locks a row until the surrounding transaction ends, so check-then-write
+ * sequences (one active sprint, at least one admin…) can't race on Postgres.
+ * SQLite transactions already run one at a time, so it's a no-op there.
+ */
+export async function lockRow(db, table, id) {
+  if (!['workspaces', 'projects'].includes(table)) throw new Error(`lockRow: unexpected table ${table}`);
+  if (db.dialect === 'postgres') await db.get(`SELECT id FROM ${table} WHERE id = ? FOR UPDATE`, id);
 }

@@ -373,3 +373,52 @@ test('Flow guide recommends a methodology', async () => {
   assert.doesNotMatch(compare, /Scrumban/);
   assert.match((await ask('what is PRINCE2?')).text, /Project Board/);
 });
+
+test('QA regressions: numeric names, bad ids, prototype keys and input caps', async () => {
+  const api = client();
+  await api('POST', '/auth/signup', { name: 'Nia', email: `nia${Math.random()}@example.com`, password: 'correct-horse' });
+  const made = await api('POST', '/workspaces', { name: '2025' });
+  assert.match(made.data.workspace.slug, /^ws-2025/, 'all-digit names never become id-like slugs');
+  assert.equal((await api('GET', `/workspaces/${made.data.workspace.slug}`)).status, 200);
+
+  const { slug, ws } = await onboard(api);
+  const pid = ws.projects[0].id;
+  // Postgres would 500 on ids that don't fit an integer; both backends answer 404.
+  assert.equal((await api('GET', '/issues/WEB-99999999999')).status, 404);
+  assert.equal((await api('GET', '/projects/abc')).status, 404);
+  assert.equal((await api('POST', `/projects/${pid}/entries`, { kind: 'toString', title: 'x' })).status, 400);
+  const ids = Array.from({ length: 501 }, (_, i) => i + 1);
+  assert.equal((await api('POST', `/notifications/${slug}/read`, { ids })).status, 400);
+});
+
+test('QA regressions: issue rules hold on update', async () => {
+  const api = client();
+  const { ws } = await onboard(api);
+  const pid = ws.projects[0].id;
+  const a = (await api('POST', `/projects/${pid}/issues`, { title: 'A', type: 'story' })).data;
+  const b = (await api('POST', `/projects/${pid}/issues`, { title: 'B', type: 'story', parentId: a.id })).data;
+  assert.equal((await api('PATCH', `/issues/${a.id}`, { parentId: b.id })).status, 400, 'no parent loops');
+  assert.equal((await api('PATCH', `/issues/${a.id}`, { type: 'subtask' })).status, 400, 'sub-tasks need a parent');
+  const epic = (await api('POST', `/projects/${pid}/issues`, { title: 'E', type: 'epic' })).data;
+  await api('PATCH', `/issues/${a.id}`, { epicId: epic.id });
+  await api('PATCH', `/issues/${epic.id}`, { type: 'story' });
+  assert.equal((await api('GET', `/issues/${a.id}`)).data.epicId, null, 'an ex-epic releases its children');
+});
+
+test('QA regressions: removing a member clears their links and cannot orphan the workspace', async () => {
+  const admin = client();
+  const { slug, ws } = await onboard(admin);
+  const [invite] = (await admin('POST', `/workspaces/${slug}/invites`, { emails: ['mo@example.com'], role: 'admin' })).data;
+  const mo = client();
+  await mo('POST', '/auth/signup', { name: 'Mo', email: 'mo@example.com', password: 'longenough' });
+  await mo('POST', `/invites/${invite.token}/accept`);
+  const moId = (await mo('GET', '/auth/me')).data.user.id;
+  const issue = (await admin('POST', `/projects/${ws.projects[0].id}/issues`, { title: 'Watched', assigneeId: moId })).data;
+  await mo('POST', `/issues/${issue.id}/watch`, { watching: true });
+  assert.equal((await admin('DELETE', `/workspaces/${slug}/members/${moId}`)).status, 200);
+  const after = (await admin('GET', `/issues/${issue.id}`)).data;
+  assert.equal(after.assigneeId, null);
+  assert.ok(!after.watchers.includes(moId), 'ex-members stop watching');
+  const me = (await admin('GET', '/auth/me')).data.user;
+  assert.equal((await admin('DELETE', `/workspaces/${slug}/members/${me.id}`)).status, 400, 'the last admin cannot leave');
+});

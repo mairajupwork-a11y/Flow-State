@@ -101,9 +101,23 @@ test('an existing password account is linked by verified email', async () => {
   const { server, base, db } = await start(google());
   const signup = await fetch(`${base}/api/auth/signup`, { method: 'POST', headers: { 'Content-Type': 'application/json', 'X-Requested-With': 'flowstate' }, body: JSON.stringify({ name: 'Priya', email: 'Priya@Example.com', password: 'correct-horse' }) });
   assert.equal(signup.status, 201);
+  const oldCookie = signup.headers.get('set-cookie').split(';')[0];
   const { session } = await signIn(base);
   assert.ok(session);
   assert.equal((await db.get('SELECT COUNT(*) AS n FROM users')).n, 1);
+  // The address was never proven, so whoever set that password may be an impostor:
+  // linking drops the password and signs out its sessions.
+  const me = (cookie) => fetch(`${base}/api/auth/me`, { headers: { Cookie: cookie } }).then((r) => r.json());
+  assert.equal((await me(oldCookie)).user, null, 'pre-existing sessions are revoked');
+  assert.equal((await me(session)).user.email, 'priya@example.com');
+  assert.equal((await me(session)).user.hasPassword, false);
+  const login = await fetch(`${base}/api/auth/login`, { method: 'POST', headers: { 'Content-Type': 'application/json', 'X-Requested-With': 'flowstate' }, body: JSON.stringify({ email: 'priya@example.com', password: 'correct-horse' }) });
+  assert.equal(login.status, 401);
+  // Google-only accounts can set a password without knowing an old one.
+  const set = await fetch(`${base}/api/auth/password`, { method: 'POST', headers: { 'Content-Type': 'application/json', 'X-Requested-With': 'flowstate', Cookie: session }, body: JSON.stringify({ next: 'brand-new-pass' }) });
+  assert.equal(set.status, 200);
+  assert.equal((await me(session)).user, null, 'changing the password signs out other sessions');
+  assert.ok((await me(set.headers.get('set-cookie').split(';')[0])).user, 'but keeps this one signed in');
   server.close();
 });
 
@@ -119,7 +133,7 @@ test('forged state, bad codes and unverified emails are rejected', async () => {
 
   profile = { email: 'eve@example.com', email_verified: false, name: 'Eve' };
   const unverified = await signIn(base);
-  assert.match(decodeURIComponent(unverified.cb.headers.get('location')), /not verified/);
+  assert.equal(unverified.cb.headers.get('location'), '/login?error=google_unverified');
   assert.equal(unverified.session, undefined);
   assert.equal((await db.get('SELECT COUNT(*) AS n FROM users')).n, 0);
   profile = { email: 'priya@example.com', email_verified: true, name: 'Priya Shah' };
@@ -128,5 +142,7 @@ test('forged state, bad codes and unverified emails are rejected', async () => {
   assert.match(noCookie.headers.get('location'), /expired/);
   const open = await signIn(base, { next: '//evil.example' });
   assert.equal(open.cb.headers.get('location'), '/', 'no open redirects');
+  const backslash = await signIn(base, { next: '/\\evil.example' });
+  assert.equal(backslash.cb.headers.get('location'), '/', 'browsers read /\\ as //');
   server.close();
 });

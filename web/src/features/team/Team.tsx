@@ -1,13 +1,13 @@
 import { useMutation, useQuery, useQueryClient } from '@tanstack/react-query';
 import { useNavigate } from 'react-router-dom';
-import { useProviders } from '../../lib/queries';
+import { keys, useProviders } from '../../lib/queries';
 import { Icon } from '../../components/Icon';
 import { Avatar, PageHeader } from '../../components/ui';
 import { api } from '../../lib/api';
 import { useWs } from '../../lib/workspace';
 import { askConfirm, toast, ui } from '../../lib/store';
 import { fmtDate, timeAgo } from '../../lib/format';
-import type { Role } from '../../lib/types';
+import type { Role, Session } from '../../lib/types';
 import { copy, inviteUrl } from './InviteModal';
 
 const ROLE_HELP: Record<Role, string> = { admin: 'Manages people & settings', member: 'Creates and edits work', viewer: 'Read-only access' };
@@ -21,7 +21,16 @@ export default function Team() {
   const setRole = useMutation({ mutationFn: ({ id, role }: { id: number; role: Role }) => api.patch(`/workspaces/${workspace.slug}/members/${id}`, { role }), onSuccess: () => { refresh(); toast('Role updated.'); } });
   const removeMember = useMutation({
     mutationFn: (id: number) => api.del(`/workspaces/${workspace.slug}/members/${id}`),
-    onSuccess: (_d, id) => { if (id === me.id) { qc.invalidateQueries({ queryKey: ['session'] }); navigate('/', { replace: true }); } else { refresh(); toast('Member removed.'); } },
+    onSuccess: (_d, id) => {
+      if (id !== me.id) { refresh(); toast('Member removed.'); return; }
+      // Left the workspace: forget it locally before Home picks where to go.
+      qc.setQueryData<Session>(keys.session, (s) => s && { ...s, workspaces: s.workspaces.filter((w) => w.slug !== workspace.slug) });
+      qc.removeQueries({ queryKey: ['ws', workspace.slug] });
+      try { localStorage.removeItem('fs_last_ws'); } catch { /* storage blocked */ }
+      qc.invalidateQueries({ queryKey: keys.session });
+      navigate('/', { replace: true });
+      toast(`You left ${workspace.name}.`);
+    },
   });
   const resend = useMutation({ mutationFn: (token: string) => api.post(`/workspaces/${workspace.slug}/invites/${token}/resend`, {}), onSuccess: (_d, token) => toast(`Invitation email re-sent to ${invites.data?.find((i) => i.token === token)?.email}.`) });
   const emailOn = useProviders().data?.email ?? false;

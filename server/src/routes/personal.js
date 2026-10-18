@@ -92,7 +92,7 @@ export function notificationRoutes({ db }) {
 
   r.post('/:ws/read', async (req, res) => {
     const { ws } = await loadWorkspace(db, req.user, req.params.ws);
-    const { ids } = parse(z.object({ ids: z.array(z.number().int()).optional() }), req.body ?? {});
+    const { ids } = parse(z.object({ ids: z.array(z.number().int()).max(500).optional() }), req.body ?? {});
     if (ids?.length) await db.run(`UPDATE notifications SET read = 1 WHERE user_id = ? AND workspace_id = ? AND id IN (${ids.map(() => '?').join(',')})`, req.user.id, ws.id, ...ids);
     else await db.run('UPDATE notifications SET read = 1 WHERE user_id = ? AND workspace_id = ?', req.user.id, ws.id);
     res.json({ ok: true });

@@ -2,7 +2,7 @@ import { Router } from 'express';
 import { z } from 'zod';
 import { hashPassword, verifyPassword, requireUser, rateLimit, SESSION_COOKIE, sessionCookieOptions, NO_PASSWORD } from '../auth.js';
 import { googleRoutes } from './google.js';
-import { HttpError, parse } from '../http.js';
+import { HttpError, parse, isUniqueViolation } from '../http.js';
 import { me as serializeMe, workspace as serializeWorkspace } from '../serialize.js';
 import { USER_COLORS } from '../templates.js';
 
@@ -14,9 +14,15 @@ export function authRoutes(ctx) {
   const r = Router();
   r.use(googleRoutes(ctx));
   const limiter = rateLimit({ windowMs: 60_000, max: production ? 10 : 1000 });
+  // Per-account limit too, so rotating IP addresses can't guess one person's password.
+  const accountLimiter = rateLimit({
+    windowMs: 15 * 60_000, max: production ? 20 : 1000,
+    key: (req) => typeof req.body?.email === 'string' && req.body.email.trim().toLowerCase(),
+    message: 'Too many sign-in attempts for this account. Please wait 15 minutes and try again.',
+  });
 
   // Secure cookies only over HTTPS, so production mode still works on http://localhost.
-  const startSession = (req, res, userId) => res.cookie(SESSION_COOKIE, signer.issue(userId), sessionCookieOptions(production && req.secure));
+  const startSession = (req, res, user) => res.cookie(SESSION_COOKIE, signer.issue(user.id, user.session_version ?? 0), sessionCookieOptions(production && req.secure));
 
   r.post('/signup', limiter, async (req, res) => {
     const body = parse(z.object({ name: z.string().trim().min(1, 'tell us your name').max(80), email, password }), req.body);
@@ -24,15 +30,22 @@ export function authRoutes(ctx) {
       throw new HttpError(409, 'An account with this email already exists. Try signing in instead.');
     }
     const count = (await db.get('SELECT COUNT(*) AS n FROM users')).n;
-    const { lastInsertRowid } = await db.run(
-      'INSERT INTO users (email, name, password_hash, color) VALUES (?, ?, ?, ?)',
-      body.email, body.name, hashPassword(body.password), USER_COLORS[count % USER_COLORS.length],
-    );
-    startSession(req, res, Number(lastInsertRowid));
-    res.status(201).json(await session(db, Number(lastInsertRowid)));
+    let id;
+    try {
+      id = Number((await db.run(
+        'INSERT INTO users (email, name, password_hash, color) VALUES (?, ?, ?, ?)',
+        body.email, body.name, hashPassword(body.password), USER_COLORS[count % USER_COLORS.length],
+      )).lastInsertRowid);
+    } catch (err) {
+      // A double-submitted form can race past the check above.
+      if (isUniqueViolation(err)) throw new HttpError(409, 'An account with this email already exists. Try signing in instead.');
+      throw err;
+    }
+    startSession(req, res, { id });
+    res.status(201).json(await session(db, id));
   });
 
-  r.post('/login', limiter, async (req, res) => {
+  r.post('/login', limiter, accountLimiter, async (req, res) => {
     const body = parse(z.object({ email, password: z.string().min(1, 'enter your password') }), req.body);
     const user = await db.get('SELECT * FROM users WHERE email = ?', body.email);
     if (user?.password_hash === NO_PASSWORD) {
@@ -41,7 +54,7 @@ export function authRoutes(ctx) {
     if (!user || !verifyPassword(body.password, user.password_hash)) {
       throw new HttpError(401, 'That email and password combination did not match. Please try again.');
     }
-    startSession(req, res, user.id);
+    startSession(req, res, user);
     res.json(await session(db, user.id));
   });
 
@@ -66,10 +79,21 @@ export function authRoutes(ctx) {
     res.json(await session(db, req.user.id));
   });
 
+  /** Changes the password (or sets one for a Google-only account) and signs out every other device. */
   r.post('/password', requireUser, limiter, async (req, res) => {
-    const body = parse(z.object({ current: z.string(), next: password }), req.body);
-    if (!verifyPassword(body.current, req.user.password_hash)) throw new HttpError(400, 'Your current password is not correct.');
-    await db.run('UPDATE users SET password_hash = ? WHERE id = ?', hashPassword(body.next), req.user.id);
+    const body = parse(z.object({ current: z.string().default(''), next: password }), req.body);
+    const hasPassword = req.user.password_hash !== NO_PASSWORD;
+    if (hasPassword && !verifyPassword(body.current, req.user.password_hash)) throw new HttpError(400, 'Your current password is not correct.');
+    const version = (req.user.session_version ?? 0) + 1;
+    await db.run('UPDATE users SET password_hash = ?, session_version = ? WHERE id = ?', hashPassword(body.next), version, req.user.id);
+    startSession(req, res, { id: req.user.id, session_version: version });
+    res.json({ ok: true });
+  });
+
+  /** Signs out everywhere, e.g. after using a shared computer. */
+  r.post('/logout-all', requireUser, async (req, res) => {
+    await db.run('UPDATE users SET session_version = ? WHERE id = ?', (req.user.session_version ?? 0) + 1, req.user.id);
+    res.clearCookie(SESSION_COOKIE, { path: '/' });
     res.json({ ok: true });
   });
 

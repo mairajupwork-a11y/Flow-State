@@ -1,6 +1,6 @@
 /**
  * Just enough of Express's Router for the Flowstate route modules to run in
- * the browser demo: use(), use(prefix, router), get/post/patch/delete with
+ * the browser demo: use(mw), use(router), use(prefix, router), get/post/patch/delete with
  * :params, and synchronous-next middleware. Mirrors Express 5 error flow.
  */
 function compile(path) {
@@ -29,7 +29,9 @@ export function Router() {
   const stack = [];
   const router = {
     use(a, b) {
-      stack.push(typeof a === 'string' ? { prefix: compile(a), sub: b } : { mw: a });
+      if (typeof a === 'string') stack.push({ prefix: compile(a), sub: b });
+      else if (typeof a?.handle === 'function') stack.push({ prefix: compile(''), sub: a }); // mounted router
+      else stack.push({ mw: a });
       return router;
     },
     async handle(req, res, path) {

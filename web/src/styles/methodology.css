@@ -216,3 +216,5 @@
 .invite-status.bad { color: #c93a59; }
 .invite-designation { font-size: 12px; font-weight: 600; color: var(--muted, #5d6072); }
 .invite-error { display: block; color: #c93a59; font-size: 11px; margin-top: 2px; }
+/* Long email addresses wrap instead of pushing buttons off-screen on phones. */
+.invite-link b, .setting-row strong { overflow-wrap: anywhere; }

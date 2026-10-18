@@ -2,7 +2,7 @@ import { Router } from 'express';
 import { z } from 'zod';
 import { requireUser } from '../auth.js';
 import { HttpError, parse, notFound } from '../http.js';
-import { loadProject } from '../access.js';
+import { loadProject, lockRow } from '../access.js';
 import { ISSUE_SELECT, issue as serializeIssue, project as serializeProject, status as serializeStatus, sprint as serializeSprint,
   phase as serializePhase, entry as serializeEntry, measurement as serializeMeasurement } from '../serialize.js';
 import { createIssue } from '../services/issues.js';
@@ -173,10 +173,14 @@ export function projectRoutes({ db, events }) {
     const s = await loadSprint(p, req.params.sprintId);
     const body = parse(z.object({ goal: z.string().trim().max(240).optional(), weeks: z.number().int().min(1).max(8).default(2) }), req.body ?? {});
     if (!methodology(p.methodology).features.sprints) throw new HttpError(400, `${methodology(p.methodology).name} projects flow continuously and don't use sprints. Switch the methodology in project settings to plan in sprints.`);
-    if (s.state !== 'planned') throw new HttpError(400, 'Only planned sprints can be started.');
-    if (await db.get("SELECT 1 FROM sprints WHERE project_id = ? AND state = 'active'", p.id)) throw new HttpError(409, 'Complete the active sprint before starting another one.');
-    if (!await db.get('SELECT 1 FROM issues WHERE sprint_id = ?', s.id)) throw new HttpError(400, 'Add at least one work item to the sprint before starting it.');
-    await db.run("UPDATE sprints SET state = 'active', start_date = ?, end_date = ?, goal = COALESCE(?, goal) WHERE id = ?", isoDay(), dayOffset(body.weeks * 7), body.goal ?? null, s.id);
+    await db.tx(async () => {
+      await lockRow(db, 'projects', p.id);
+      const current = await loadSprint(p, s.id);
+      if (current.state !== 'planned') throw new HttpError(400, 'Only planned sprints can be started.');
+      if (await db.get("SELECT 1 FROM sprints WHERE project_id = ? AND state = 'active'", p.id)) throw new HttpError(409, 'Complete the active sprint before starting another one.');
+      if (!await db.get('SELECT 1 FROM issues WHERE sprint_id = ?', s.id)) throw new HttpError(400, 'Add at least one work item to the sprint before starting it.');
+      await db.run("UPDATE sprints SET state = 'active', start_date = ?, end_date = ?, goal = COALESCE(?, goal) WHERE id = ?", isoDay(), dayOffset(body.weeks * 7), body.goal ?? null, s.id);
+    });
     await events.record({ workspaceId: p.workspace_id, projectId: p.id, actorId: req.user.id, verb: 'sprint_started', data: { name: s.name } });
     events.changed(p.workspace_id, [`project:${p.id}`, 'issues'], req.user.id);
     res.json(serializeSprint(await db.get('SELECT * FROM sprints WHERE id = ?', s.id)));
@@ -186,8 +190,9 @@ export function projectRoutes({ db, events }) {
     const p = await loadProject(db, req.user, req.params.id, 'member');
     const s = await loadSprint(p, req.params.sprintId);
     const body = parse(z.object({ moveTo: z.union([z.literal('backlog'), z.literal('new'), z.number().int()]).default('backlog') }), req.body ?? {});
-    if (s.state !== 'active') throw new HttpError(400, 'Only the active sprint can be completed.');
     const result = await db.tx(async () => {
+      await lockRow(db, 'projects', p.id);
+      if ((await loadSprint(p, s.id)).state !== 'active') throw new HttpError(400, 'Only the active sprint can be completed.');
       const items = await db.all('SELECT i.id, i.story_points, st.category FROM issues i JOIN statuses st ON st.id = i.status_id WHERE i.sprint_id = ? AND i.parent_id IS NULL', s.id);
       const committed = items.reduce((a, i) => a + (i.story_points ?? 0), 0);
       const completed = items.filter((i) => i.category === 'done').reduce((a, i) => a + (i.story_points ?? 0), 0);
@@ -273,8 +278,10 @@ export function projectRoutes({ db, events }) {
     const label = term(p.methodology, 'phase');
     const gateWord = methodology(p.methodology).features.phases === 'dmaic' ? 'tollgate' : methodology(p.methodology).features.phases === 'stage' ? 'stage boundary' : 'gate';
     const now = new Date().toISOString();
-    const open = (await db.get("SELECT COUNT(*) AS n FROM issues i JOIN statuses s ON s.id = i.status_id WHERE i.phase_id = ? AND s.category <> 'done' AND i.parent_id IS NULL", ph.id)).n;
     await db.tx(async () => {
+      await lockRow(db, 'projects', p.id);
+      const ph = await loadPhase(p, req.params.phaseId); // re-read under the lock
+      const open = (await db.get("SELECT COUNT(*) AS n FROM issues i JOIN statuses s ON s.id = i.status_id WHERE i.phase_id = ? AND s.category <> 'done' AND i.parent_id IS NULL", ph.id)).n;
       if (body.action === 'start') {
         if (ph.state !== 'pending') throw new HttpError(400, `This ${label.toLowerCase()} has already started.`);
         const blocking = await db.get("SELECT name FROM phases WHERE project_id = ? AND position < ? AND state <> 'complete' ORDER BY position LIMIT 1", p.id, ph.position);
@@ -317,7 +324,7 @@ export function projectRoutes({ db, events }) {
   });
 
   const entryInput = z.object({
-    kind: z.string().refine((k) => k in REGISTERS, 'unknown register'),
+    kind: z.string().refine((k) => Object.hasOwn(REGISTERS, k), 'unknown register'),
     title: z.string().trim().min(1, 'give the entry a title').max(200),
     status: z.string().trim().max(40).optional(),
     ownerId: z.number().int().positive().nullable().optional(),
@@ -483,7 +490,7 @@ async function reports(db, p) {
     burndown = { sprint: serializeSprint(active), unit: usePoints ? 'points' : 'items', total, points };
   }
 
-  const velocity = (await db.all("SELECT * FROM sprints WHERE project_id = ? AND state = 'closed' ORDER BY completed_at DESC LIMIT 6", p.id))
+  const velocity = (await db.all("SELECT * FROM sprints WHERE project_id = ? AND state = 'closed' ORDER BY completed_at DESC, id DESC LIMIT 6", p.id))
     .reverse().map((s) => ({ name: s.name, committed: s.committed_points ?? 0, completed: s.completed_points ?? 0 }));
 
   return {

@@ -40,16 +40,37 @@ function GoogleButton({ available, next, label, onUnavailable }: { available?: b
   );
 }
 
+/** Fixed messages for ?error codes from the Google redirect; unknown codes show nothing. */
+const REDIRECT_ERRORS: Record<string, string> = {
+  google_off: 'Google sign-in is not set up on this server yet.',
+  google_cancelled: 'Google sign-in was cancelled.',
+  google_incomplete: 'Google sign-in did not complete. Please try again.',
+  google_expired: 'Your Google sign-in expired. Please try again.',
+  google_failed: 'Google sign-in failed. Please try again.',
+  google_unverified: 'Your Google account email is not verified, so it cannot be used to sign in.',
+};
+
+/** Only paths on this site (browsers treat `/\\host` like `//host`). */
+export function sameSitePath(next: string | null): string | null {
+  if (!next) return null;
+  try {
+    const url = new URL(next, location.origin);
+    return url.origin === location.origin && next.startsWith('/') ? url.pathname + url.search + url.hash : null;
+  } catch {
+    return null;
+  }
+}
+
 export function AuthPage({ mode }: { mode: 'login' | 'signup' }) {
   const { data } = useSession();
   const [params] = useSearchParams();
   const next = params.get('next');
-  const safeNext = next && next.startsWith('/') && !next.startsWith('//') ? next : null;
+  const safeNext = sameSitePath(next);
   const navigate = useNavigate();
   const qc = useQueryClient();
   const [form, setFormState] = useState({ name: '', email: params.get('email') ?? '', password: '' });
   // Errors from a Google redirect arrive as ?error=…; typing clears any stale message.
-  const [error, setError] = useState(params.get('error') ?? '');
+  const [error, setError] = useState(() => REDIRECT_ERRORS[params.get('error') ?? ''] ?? '');
   const setForm = (next: typeof form) => { setFormState(next); if (error) setError(''); };
   const providers = useProviders();
   const [busy, setBusy] = useState(false);

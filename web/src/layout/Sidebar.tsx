@@ -5,7 +5,7 @@ import { Icon } from '../components/Icon';
 import { Avatar } from '../components/ui';
 import { useWs, useCurrentProject } from '../lib/workspace';
 import { useSession, useTodos } from '../lib/queries';
-import { ui, useUi } from '../lib/store';
+import { toast, ui, useUi } from '../lib/store';
 import { api } from '../lib/api';
 import { todayISO } from '../lib/format';
 import { methodologyOf, viewMeta } from '../lib/methodology';
@@ -132,7 +132,12 @@ function UserBox() {
   const qc = useQueryClient();
   const ref = useOutsideClose<HTMLDivElement>(open, () => setOpen(false));
   async function signOut() {
-    await api.post('/auth/logout');
+    try {
+      await api.post('/auth/logout');
+    } catch {
+      toast('Couldn’t reach Flowstate to sign out. Check your connection and try again.');
+      return;
+    }
     qc.clear();
     navigate('/welcome', { replace: true });
   }

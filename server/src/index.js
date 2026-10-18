@@ -63,13 +63,18 @@ try {
 } catch (err) {
   console.warn(`Email is off: ${err.message}`);
 }
+if (mailer && production && !process.env.APP_URL) {
+  console.warn('Email: set APP_URL to your public address so invitation links point to the right place.');
+}
 if (mailer) {
   mailer.verify().then((problem) => console.log(problem
     ? `Email: could not log in to ${mailer.host} — ${problem}\n→ ${mailHint(problem)}`
     : `Email: on (${mailer.host}, from ${mailer.from})`));
 }
 
+const trustEnv = process.env.TRUST_PROXY?.trim();
 const app = createApp({
+  ...(trustEnv && { trustProxy: /^\d+$/.test(trustEnv) ? Number(trustEnv) : trustEnv === 'true' ? 1 : false }),
   mailer,
   appUrl: process.env.APP_URL || null,
   db,

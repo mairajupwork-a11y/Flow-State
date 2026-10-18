@@ -104,6 +104,7 @@ export async function demoFetch(method, path, body) {
     json(obj) { data = obj; return res; },
     cookie(name, value) { if (name === SESSION_COOKIE) store.set(COOKIE_KEY, value); return res; },
     clearCookie(name) { if (name === SESSION_COOKIE) store.del(COOKIE_KEY); return res; },
+    redirect(to) { status = 302; data = { redirect: to }; return res; },
     setHeader() {}, writeHead() {}, write() {}, end() {}, on() {},
   };
   const req = {

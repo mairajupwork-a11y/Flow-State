@@ -49,7 +49,7 @@ export function useRealtime(slug: string) {
     const flush = () => {
       for (const scope of pending) {
         if (scope === 'issues') for (const k of ['issues', 'my-issues', 'reports', 'activity']) qc.invalidateQueries({ queryKey: [k] });
-        else if (scope === 'workspace') qc.invalidateQueries({ queryKey: ['ws'] });
+        else if (scope === 'workspace') { qc.invalidateQueries({ queryKey: ['ws'] }); qc.invalidateQueries({ queryKey: ['invites'] }); }
         else if (scope === 'notifications') qc.invalidateQueries({ queryKey: ['notifications'] });
         else if (scope.startsWith('project:')) qc.invalidateQueries({ queryKey: ['project', Number(scope.slice(8))] });
         else if (scope.startsWith('issue:')) qc.invalidateQueries({ queryKey: ['issue'] });

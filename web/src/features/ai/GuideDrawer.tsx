@@ -13,8 +13,9 @@ import type { GuideAction, GuideAnswer, Issue } from '../../lib/types';
 
 interface Message { id: number; role: 'user' | 'guide'; text: string; answer?: GuideAnswer; done?: Set<number> }
 
-// Conversation survives closing and reopening the drawer within a session.
-let history: Message[] = [];
+// Conversation survives closing and reopening the drawer, per person and workspace,
+// so a different user signing in on the same tab never sees it.
+const histories = new Map<string, Message[]>();
 let nextId = 1;
 
 const STARTERS: [string, string][] = [['Prioritise my day', 'sun'], ['What needs attention?', 'flag'], ['Plan the next sprint', 'calendar'], ['How do I use this?', 'lightbulb']];
@@ -23,7 +24,8 @@ export function GuideDrawer({ routeKey, onClose }: { routeKey?: string; onClose:
   const { workspace, base, me } = useWs();
   const project = useCurrentProject(routeKey);
   const prompt = useUi((s) => s.guidePrompt);
-  const [messages, setMessages] = useState<Message[]>(history);
+  const historyKey = `${me.id}:${workspace.slug}`;
+  const [messages, setMessages] = useState<Message[]>(() => histories.get(historyKey) ?? []);
   const [input, setInput] = useState('');
   const [thinking, setThinking] = useState(false);
   const scrollRef = useRef<HTMLDivElement>(null);
@@ -32,7 +34,7 @@ export function GuideDrawer({ routeKey, onClose }: { routeKey?: string; onClose:
   const [, setParams] = useSearchParams();
   const qc = useQueryClient();
 
-  useEffect(() => { history = messages; }, [messages]);
+  useEffect(() => { histories.set(historyKey, messages); }, [historyKey, messages]);
   useEffect(() => { scrollRef.current?.scrollTo({ top: scrollRef.current.scrollHeight, behavior: 'smooth' }); }, [messages, thinking]);
   useEffect(() => {
     inputRef.current?.focus();

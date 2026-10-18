@@ -298,6 +298,23 @@ export const MIGRATIONS = [
   },
   // v3 — the designation (job title) someone is invited as, e.g. "Project Manager".
   `ALTER TABLE invites ADD COLUMN designation TEXT NOT NULL DEFAULT '';`,
+  // v4: revocable sessions and proof of email ownership (Google sign-in).
+  `ALTER TABLE users ADD COLUMN session_version INTEGER NOT NULL DEFAULT 0;
+   ALTER TABLE users ADD COLUMN email_verified INTEGER NOT NULL DEFAULT 0;
+   -- Indexes for foreign keys and hot lookups (Postgres already had the first seven).
+   CREATE INDEX IF NOT EXISTS statuses_project ON statuses (project_id);
+   CREATE INDEX IF NOT EXISTS sprints_project ON sprints (project_id);
+   CREATE INDEX IF NOT EXISTS issues_parent ON issues (parent_id);
+   CREATE INDEX IF NOT EXISTS issues_epic ON issues (epic_id);
+   CREATE INDEX IF NOT EXISTS checklist_issue ON checklist_items (issue_id);
+   CREATE INDEX IF NOT EXISTS comments_issue ON comments (issue_id);
+   CREATE INDEX IF NOT EXISTS activity_project ON activity (project_id);
+   CREATE INDEX IF NOT EXISTS issues_status_rank ON issues (status_id, rank);
+   CREATE INDEX IF NOT EXISTS notifications_issue ON notifications (issue_id);
+   CREATE INDEX IF NOT EXISTS todos_issue ON todos (issue_id);
+   CREATE INDEX IF NOT EXISTS issue_links_target ON issue_links (target_id);
+   CREATE INDEX IF NOT EXISTS invites_workspace ON invites (workspace_id);
+   CREATE INDEX IF NOT EXISTS memberships_user ON memberships (user_id);`,
 ];
 
 export function openDatabase(file = process.env.DATABASE_FILE || 'data/flowstate.db') {
@@ -352,6 +369,7 @@ export function wrap(raw) {
     return s;
   };
   let depth = 0;
+  let pending = [];
   return {
     raw,
     all: (sql, ...params) => stmt(sql).all(...params),
@@ -364,16 +382,25 @@ export function wrap(raw) {
       if (depth > 0) return fn();
       depth++;
       raw.exec('BEGIN IMMEDIATE');
+      let queued;
       try {
         const result = await fn();
         raw.exec('COMMIT');
         return result;
       } catch (err) {
         raw.exec('ROLLBACK');
+        pending = [];
         throw err;
       } finally {
         depth--;
+        [queued, pending] = [pending, []];
+        for (const f of queued) f();
       }
+    },
+    /** Runs fn once the current transaction commits (dropped on rollback), or now outside one. */
+    afterCommit(fn) {
+      if (depth > 0) pending.push(fn);
+      else fn();
     },
     close: async () => raw.close(),
     dialect: 'sqlite',

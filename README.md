@@ -99,7 +99,8 @@ docker run -p 4000:4000 -e SESSION_SECRET=change-me -v flowstate-data:/data flow
 | `DATABASE_URL` | — | Postgres connection string (e.g. Supabase). When set, it's used instead of SQLite. See [SUPABASE.md](SUPABASE.md) |
 | `GOOGLE_CLIENT_ID`, `GOOGLE_CLIENT_SECRET` | — | Turns on "Continue with Google". See [GOOGLE.md](GOOGLE.md) |
 | `SMTP_HOST`, `SMTP_PORT`, `SMTP_USER`, `SMTP_PASS`, `MAIL_FROM` | — | Sends invitation emails through any SMTP provider. See [EMAIL.md](EMAIL.md) |
-| `APP_URL` | *(request address)* | Public address used for links in emails |
+| `APP_URL` | *(request address)* | Public address used for links in emails. Set it when hosting online |
+| `TRUST_PROXY` | `1` in production, off in development | Proxy hops in front of Flowstate, used for the visitor's IP (rate limits) and HTTPS detection |
 | `DATABASE_FILE` | `server/data/flowstate.db` | SQLite file location (when `DATABASE_URL` is not set) |
 | `OLLAMA_URL`, `OLLAMA_MODEL` | — | Optional self-hosted model for the Flow guide |
 

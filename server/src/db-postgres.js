@@ -23,33 +23,42 @@ const NOW = "to_char(now() AT TIME ZONE 'utc', 'YYYY-MM-DD HH24:MI:SS')";
 const NO_ID = new Set(['memberships', 'watchers', 'invites']);
 const cache = new Map();
 
-export function translate(sql) {
-  const hit = cache.get(sql);
+export function translate(original) {
+  const hit = cache.get(original);
   if (hit) return hit;
+  // Rewrite only code outside string literals and comments.
+  const code = (part) => part.replaceAll('\0now\0', NOW).replace(/\bLIKE\b/g, 'ILIKE');
+  const sql = original.replaceAll("datetime('now')", '\0now\0'); // its quotes aren't a string literal
   let out = '';
   let n = 0;
-  let quote = null;
+  let chunk = '';
   for (let i = 0; i < sql.length; i++) {
     const ch = sql[i];
-    if (quote) {
-      out += ch;
-      if (ch === quote) quote = null;
-    } else if (ch === "'" || ch === '"') {
-      quote = ch;
-      out += ch;
+    if (ch === "'" || ch === '"') {
+      const end = sql.indexOf(ch, i + 1);
+      const stop = end === -1 ? sql.length : end + 1;
+      out += code(chunk) + sql.slice(i, stop);
+      chunk = '';
+      i = stop - 1;
+    } else if (ch === '-' && sql[i + 1] === '-') {
+      const end = sql.indexOf('\n', i);
+      const stop = end === -1 ? sql.length : end;
+      out += code(chunk) + sql.slice(i, stop);
+      chunk = '';
+      i = stop - 1;
     } else if (ch === '?') {
-      out += `$${++n}`;
-    } else out += ch;
+      chunk += `$${++n}`;
+    } else chunk += ch;
   }
-  out = out.replace(/datetime\('now'\)/g, NOW).replace(/\bLIKE\b/g, 'ILIKE');
+  out += code(chunk);
   let ignore = false;
   out = out.replace(/\bINSERT\s+OR\s+IGNORE\s+INTO\b/i, () => { ignore = true; return 'INSERT INTO'; });
   const insert = out.match(/^\s*INSERT\s+INTO\s+([a-z_]+)/i);
   out = out.trimEnd().replace(/;$/, '');
-  if (ignore) out += ' ON CONFLICT DO NOTHING';
+  if (ignore && !/\bON\s+CONFLICT\b/i.test(out)) out += ' ON CONFLICT DO NOTHING';
   if (insert && !NO_ID.has(insert[1].toLowerCase()) && !/\bRETURNING\b/i.test(out)) out += ' RETURNING id';
   const result = { text: out, isInsert: !!insert };
-  cache.set(sql, result);
+  cache.set(original, result);
   return result;
 }
 
@@ -92,17 +101,27 @@ export async function openPostgres(url, { max = Number(process.env.DATABASE_POOL
     async tx(fn) {
       if (txClient.getStore()) return fn();
       const client = await pool.connect();
+      let broken;
+      client.afterCommit = [];
       try {
         await client.query('BEGIN');
         const result = await txClient.run(client, fn);
         await client.query('COMMIT');
+        for (const f of client.afterCommit) f();
         return result;
       } catch (err) {
-        await client.query('ROLLBACK').catch(() => {});
+        // A connection that can't even roll back is broken: destroy it rather than reuse it.
+        broken = await client.query('ROLLBACK').then(() => undefined, (e) => e);
         throw err;
       } finally {
-        client.release();
+        client.release(broken);
       }
+    },
+    /** Runs fn once the current transaction commits (dropped on rollback), or now outside one. */
+    afterCommit(fn) {
+      const client = txClient.getStore();
+      if (client) client.afterCommit.push(fn);
+      else fn();
     },
     close: () => pool.end(),
   };
@@ -118,6 +137,15 @@ export async function migratePostgres(pool) {
   const UPGRADES = [
     null,
     "ALTER TABLE invites ADD COLUMN IF NOT EXISTS designation TEXT NOT NULL DEFAULT ''",
+    `ALTER TABLE users ADD COLUMN IF NOT EXISTS session_version INTEGER NOT NULL DEFAULT 0;
+     ALTER TABLE users ADD COLUMN IF NOT EXISTS email_verified INTEGER NOT NULL DEFAULT 0;
+     CREATE INDEX IF NOT EXISTS issues_status_rank ON issues (status_id, rank);
+     CREATE INDEX IF NOT EXISTS notifications_issue ON notifications (issue_id);
+     CREATE INDEX IF NOT EXISTS todos_issue ON todos (issue_id);
+     CREATE INDEX IF NOT EXISTS issue_links_target ON issue_links (target_id);
+     CREATE INDEX IF NOT EXISTS invites_workspace ON invites (workspace_id);
+     CREATE INDEX IF NOT EXISTS memberships_user ON memberships (user_id);
+     CREATE INDEX IF NOT EXISTS users_email_exact ON users (email)`,
   ];
   const VERSION = UPGRADES.length;
   const client = await pool.connect();

@@ -195,16 +195,17 @@ export function Onboarding() {
             <div className="eyebrow"><span className="line" />Bring your team</div>
             <h1 className="page-title">Work is better together.</h1>
             <p className="page-subtitle">Invite as many people as you like — Flowstate is free for unlimited users. You can also do this later.</p>
-            <label className="form-field">
-              <span>Email addresses</span>
+            {/* A div, not a label: a label would forward clicks to the first chip's remove button. */}
+            <div className="form-field">
+              <span id="invite-emails-label">Email addresses</span>
               <div className="email-chips" onClick={(e) => (e.currentTarget.querySelector('input') as HTMLInputElement)?.focus()}>
                 {emails.map((em) => (
                   <span className="email-chip" key={em}>{em}<button type="button" aria-label={`Remove ${em}`} onClick={() => setEmails(emails.filter((x) => x !== em))}><Icon name="close" size={11} /></button></span>
                 ))}
                 <input value={draft} onChange={(e) => setDraft(e.target.value)} onKeyDown={onEmailKey} onBlur={() => draft && addEmails(draft)}
-                  onPaste={(e) => { e.preventDefault(); addEmails(e.clipboardData.getData('text')); }} placeholder={emails.length ? 'Add another…' : 'name@company.com, teammate@company.com'} autoFocus />
+                  onPaste={(e) => { e.preventDefault(); addEmails(e.clipboardData.getData('text')); }} placeholder={emails.length ? 'Add another…' : 'name@company.com, teammate@company.com'} autoFocus aria-labelledby="invite-emails-label" />
               </div>
-            </label>
+            </div>
             {(emails.length > 0 || !!draft.trim()) && <DesignationSelect value={inviteDesignation} onChange={setInviteDesignation} label="Their designation" hint="Applies to everyone above. You can invite people with different designations later from the Team page." />}
             <div className="tip-box"><Icon name="lightbulb" size={18} /><span>Any email address works — Gmail, Outlook/Hotmail, Yahoo or company email. If invitation emails are switched on they’re sent straight away; you can always copy each person’s link from the Team page too.</span></div>
             {error && <div className="form-error" role="alert" style={{ marginTop: 14 }}>{error}</div>}

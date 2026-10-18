@@ -1,4 +1,5 @@
 /** Row -> API shape converters. Keep the wire format camelCase and stable. */
+import { NO_PASSWORD } from './auth.js';
 
 export const initials = (name) =>
   String(name).trim().split(/\s+/).slice(0, 2).map((p) => p[0]?.toUpperCase() ?? '').join('') || '?';
@@ -9,7 +10,7 @@ export function user(u) {
 }
 
 export function me(u) {
-  return { ...user(u), locale: u.locale, theme: u.theme };
+  return { ...user(u), locale: u.locale, theme: u.theme, hasPassword: u.password_hash !== NO_PASSWORD };
 }
 
 export function workspace(w, role) {
