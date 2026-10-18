@@ -45,3 +45,4 @@ export function requireUser(req, _res, next) {
   next();
 }
 export const rateLimit = () => (_req, _res, next) => next();
+export const NO_PASSWORD = '!oauth';

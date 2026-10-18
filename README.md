@@ -8,7 +8,7 @@ Built UK-first (en-GB dates, Monday weeks, British English), with US and Asia-Pa
 
 | Area | Features |
 | --- | --- |
-| **Onboarding** | Landing page → sign-up → 5-step setup (role, workspace & region, methodology with "Help me choose", invite team, ready) with optional example work |
+| **Onboarding** | Landing page → sign-up (email or Google) → 5-step setup (role, workspace & region, methodology with "Help me choose", invite team, ready) with optional example work |
 | **Methodologies** | Waterfall, Scrum, Kanban, Lean, Six Sigma, PRINCE2 and Scrumban (hybrid), plus a simple workflow. Each one sets its own board columns and WIP limits, work item types and terms, views, reports and rhythm. Switch at any time without losing data. See the table below |
 | **Boards** | Drag & drop with mouse, touch (long-press) and keyboard; inline quick-add; WIP limits; sprint/all-work scope; filters (text, assignee, priority, type, label, "only mine") |
 | **Planning** | Backlog with sprints: create, drag to plan, reorder, start (goal + length), complete (move leftovers to backlog / next / new sprint) |
@@ -97,6 +97,7 @@ docker run -p 4000:4000 -e SESSION_SECRET=change-me -v flowstate-data:/data flow
 | `SESSION_SECRET` | *(required in production)* | Signs session cookies |
 | `PORT` | `4000` | HTTP port |
 | `DATABASE_URL` | — | Postgres connection string (e.g. Supabase). When set, it's used instead of SQLite. See [SUPABASE.md](SUPABASE.md) |
+| `GOOGLE_CLIENT_ID`, `GOOGLE_CLIENT_SECRET` | — | Turns on "Continue with Google". See [GOOGLE.md](GOOGLE.md) |
 | `DATABASE_FILE` | `server/data/flowstate.db` | SQLite file location (when `DATABASE_URL` is not set) |
 | `OLLAMA_URL`, `OLLAMA_MODEL` | — | Optional self-hosted model for the Flow guide |
 

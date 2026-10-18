@@ -18,13 +18,13 @@ import { aiRoutes } from './routes/ai.js';
  * Builds the HTTP app. Kept free of side effects (no listen, no env reads
  * beyond defaults) so tests can spin up isolated instances.
  */
-export function createApp({ db, secret, production = false, staticDir = null, ollama = null, log = console }) {
+export function createApp({ db, secret, production = false, staticDir = null, ollama = null, google = null, log = console }) {
   const app = express();
   const hub = createHub();
   const events = createEvents(db, hub);
   const guide = createGuide({ db, llm: ollama?.url ? createOllama(ollama) : null });
   const signer = createSigner(secret);
-  const ctx = { db, events, hub, guide, signer, production };
+  const ctx = { db, events, hub, guide, signer, production, google };
 
   app.disable('x-powered-by');
   app.set('trust proxy', 1);

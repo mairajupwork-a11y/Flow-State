@@ -53,12 +53,16 @@ async function connectPostgres(url) {
     process.exit(1);
   }
 }
+if (process.env.GOOGLE_CLIENT_ID && process.env.GOOGLE_CLIENT_SECRET) console.log('Google sign-in: on');
 console.log(`Database: ${db.dialect === 'postgres' ? `Postgres (${new URL(process.env.DATABASE_URL).hostname})` : 'SQLite'}`);
 const app = createApp({
   db,
   secret,
   production,
   staticDir: join(here, '..', '..', 'web', 'dist'),
+  google: process.env.GOOGLE_CLIENT_ID && process.env.GOOGLE_CLIENT_SECRET
+    ? { clientId: process.env.GOOGLE_CLIENT_ID, clientSecret: process.env.GOOGLE_CLIENT_SECRET, redirectUrl: process.env.GOOGLE_REDIRECT_URL || null }
+    : null,
   ollama: process.env.OLLAMA_URL ? { url: process.env.OLLAMA_URL, model: process.env.OLLAMA_MODEL || 'llama3.2' } : null,
 });
 

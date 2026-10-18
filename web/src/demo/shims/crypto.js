@@ -9,3 +9,7 @@ export function randomBytes(n) {
     },
   };
 }
+/** Only Google sign-in uses hashing, and it is switched off in the demo. */
+export function createHash() {
+  throw new Error('Not available in the demo.');
+}

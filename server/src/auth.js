@@ -10,6 +10,9 @@ export function hashPassword(password) {
   return `scrypt$${salt.toString('base64')}$${hash.toString('base64')}`;
 }
 
+/** Accounts created with Google have no password; this marker can never match one. */
+export const NO_PASSWORD = '!oauth';
+
 export function verifyPassword(password, stored) {
   const [scheme, saltB64, hashB64] = String(stored).split('$');
   if (scheme !== 'scrypt' || !saltB64 || !hashB64) return false;
@@ -21,7 +24,28 @@ export function verifyPassword(password, stored) {
 /** Stateless signed session token: base64url(payload).base64url(hmac). */
 export function createSigner(secret) {
   const sign = (data) => createHmac('sha256', secret).update(data).digest('base64url');
+  /** Signs any small JSON value with an expiry — used for short-lived OAuth state. */
+  const seal = (value, ttlMs) => {
+    const payload = Buffer.from(JSON.stringify({ v: value, exp: Date.now() + ttlMs })).toString('base64url');
+    return `${payload}.${sign(payload)}`;
+  };
+  const unseal = (token) => {
+    if (typeof token !== 'string') return null;
+    const [payload, sig] = token.split('.');
+    if (!payload || !sig) return null;
+    const expected = Buffer.from(sign(payload));
+    const given = Buffer.from(sig);
+    if (expected.length !== given.length || !timingSafeEqual(expected, given)) return null;
+    try {
+      const data = JSON.parse(Buffer.from(payload, 'base64url').toString());
+      return data.exp > Date.now() ? data.v : null;
+    } catch {
+      return null;
+    }
+  };
   return {
+    seal,
+    unseal,
     issue(userId) {
       const payload = Buffer.from(JSON.stringify({ uid: userId, exp: Date.now() + SESSION_DAYS * 864e5 })).toString('base64url');
       return `${payload}.${sign(payload)}`;

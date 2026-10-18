@@ -1,6 +1,7 @@
 import { Router } from 'express';
 import { z } from 'zod';
-import { hashPassword, verifyPassword, requireUser, rateLimit, SESSION_COOKIE, sessionCookieOptions } from '../auth.js';
+import { hashPassword, verifyPassword, requireUser, rateLimit, SESSION_COOKIE, sessionCookieOptions, NO_PASSWORD } from '../auth.js';
+import { googleRoutes } from './google.js';
 import { HttpError, parse } from '../http.js';
 import { me as serializeMe, workspace as serializeWorkspace } from '../serialize.js';
 import { USER_COLORS } from '../templates.js';
@@ -8,8 +9,10 @@ import { USER_COLORS } from '../templates.js';
 const email = z.string().trim().toLowerCase().email('enter a valid email address').max(200);
 const password = z.string().min(8, 'use at least 8 characters').max(200);
 
-export function authRoutes({ db, signer, production }) {
+export function authRoutes(ctx) {
+  const { db, signer, production } = ctx;
   const r = Router();
+  r.use(googleRoutes(ctx));
   const limiter = rateLimit({ windowMs: 60_000, max: production ? 10 : 1000 });
 
   // Secure cookies only over HTTPS, so production mode still works on http://localhost.
@@ -32,6 +35,9 @@ export function authRoutes({ db, signer, production }) {
   r.post('/login', limiter, async (req, res) => {
     const body = parse(z.object({ email, password: z.string().min(1, 'enter your password') }), req.body);
     const user = await db.get('SELECT * FROM users WHERE email = ?', body.email);
+    if (user?.password_hash === NO_PASSWORD) {
+      throw new HttpError(401, 'This account signs in with Google. Use “Continue with Google” instead.');
+    }
     if (!user || !verifyPassword(body.password, user.password_hash)) {
       throw new HttpError(401, 'That email and password combination did not match. Please try again.');
     }
