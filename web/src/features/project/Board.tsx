@@ -9,6 +9,7 @@ import { CSS } from '@dnd-kit/utilities';
 import { useQueryClient } from '@tanstack/react-query';
 import { Icon } from '../../components/Icon';
 import { Avatar, Empty, PriorityPill } from '../../components/ui';
+import { announcements } from '../../lib/dnd';
 import { useMoveIssue, useUpdateIssue, invalidateWork } from '../../lib/queries';
 import { useWs } from '../../lib/workspace';
 import { toast, toastError } from '../../lib/store';
@@ -84,6 +85,11 @@ export function Board() {
 
   const byId = useMemo(() => new Map(cards.map((i) => [i.id, i])), [cards]);
   const [columns, setColumns] = useState<Columns>(() => buildColumns(project.statuses, lanes, laneMode, cards));
+  const dndAnnouncements = useMemo(() => {
+    const card = (id: string | number) => { const i = byId.get(Number(id)); return i ? `${i.key} ${i.title}` : 'the card'; };
+    const column = (key: string) => project.statuses.find((st) => st.id === Number(key.split('|')[1]))?.name ?? 'a column';
+    return announcements(card, (id) => (byId.has(Number(id)) ? `${column(Object.keys(columns).find((k) => columns[k].includes(Number(id))) ?? '')}, next to ${card(id)}` : column(String(id))));
+  }, [byId, columns, project.statuses]);
   const [dragging, setDragging] = useState<number | null>(null);
   const [origin, setOrigin] = useState<{ key: string; index: number } | null>(null);
   const move = useMoveIssue();
@@ -199,7 +205,7 @@ export function Board() {
         </label>
       </div>
       <DndContext sensors={sensors} collisionDetection={closestCorners} onDragStart={onDragStart} onDragOver={onDragOver} onDragEnd={onDragEnd} onDragCancel={() => setDragging(null)}
-        accessibility={{ screenReaderInstructions: { draggable: 'To pick up a card, press Space. Use the arrow keys to move it between columns, then press Space again to drop it, or Escape to cancel.' } }}>
+        accessibility={{ announcements: dndAnnouncements, screenReaderInstructions: { draggable: 'To pick up a card, press Space. Use the arrow keys to move it between columns, then press Space again to drop it, or Escape to cancel.' } }}>
         <div className={laneMode === 'none' ? '' : 'swimlanes'}>
           {lanes.map((lane, li) => (
             <div key={lane.key} className={laneMode === 'none' ? '' : `swimlane ${lane.expedite ? 'expedite' : ''}`}>
@@ -288,6 +294,7 @@ function QuickAdd({ statusId, sprintId, phaseId, lanePatch, projectId, onDone }:
   const qc = useQueryClient();
   async function submit(e: FormEvent) {
     e.preventDefault();
+    if (busy) return;
     if (!title.trim()) return onDone();
     setBusy(true);
     try {
@@ -303,7 +310,7 @@ function QuickAdd({ statusId, sprintId, phaseId, lanePatch, projectId, onDone }:
   }
   return (
     <form className="quick-add" onSubmit={submit}>
-      <textarea className="text-input" autoFocus rows={2} maxLength={200} value={title} disabled={busy} placeholder="What needs doing? Press Enter to add."
+      <textarea className="text-input" autoFocus rows={2} maxLength={200} value={title} readOnly={busy} aria-busy={busy} placeholder="What needs doing? Press Enter to add."
         onChange={(e) => setTitle(e.target.value)} onKeyDown={(e) => { if (e.key === 'Enter' && !e.shiftKey) submit(e); if (e.key === 'Escape') onDone(); }} onBlur={() => !title.trim() && onDone()} />
       <div className="row-8"><button className="btn btn-primary btn-sm" type="submit" disabled={busy}>Add card</button><button type="button" className="btn btn-light btn-sm" onClick={onDone}>Cancel</button></div>
     </form>

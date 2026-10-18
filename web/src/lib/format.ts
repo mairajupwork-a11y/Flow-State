@@ -31,14 +31,14 @@ export function relativeDay(iso: string | null, locale: Locale | string = 'en-GB
 }
 
 /** Server timestamps are UTC "YYYY-MM-DD HH:MM:SS" or ISO strings. */
-export function timeAgo(ts: string): string {
+export function timeAgo(ts: string, locale = 'en-GB'): string {
   const t = new Date(ts.includes('T') ? ts : ts.replace(' ', 'T') + 'Z').getTime();
   const s = Math.max(0, (Date.now() - t) / 1000);
   if (s < 60) return 'just now';
   if (s < 3600) return `${Math.floor(s / 60)}m ago`;
   if (s < 86400) return `${Math.floor(s / 3600)}h ago`;
   if (s < 604800) return `${Math.floor(s / 86400)}d ago`;
-  return new Date(t).toLocaleDateString('en-GB', { day: 'numeric', month: 'short' });
+  return new Date(t).toLocaleDateString(locale, { day: 'numeric', month: 'short' });
 }
 
 export function greeting(): string {

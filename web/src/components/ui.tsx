@@ -85,8 +85,9 @@ export function Modal({ title, subtitle, onClose, children, wide = false, footer
   useEffect(() => {
     const previous = document.activeElement as HTMLElement | null;
     const node = ref.current;
-    const first = node?.querySelector<HTMLElement>('[data-autofocus], input:not([type=hidden]):not([type=checkbox]), textarea, select');
-    (first ?? node)?.focus();
+    // Focus the field a dialog marks with data-autofocus; otherwise the dialog itself,
+    // so opening something to read doesn't pop up the phone keyboard.
+    (node?.querySelector<HTMLElement>('[data-autofocus]') ?? node)?.focus();
     const onKey = (e: KeyboardEvent) => {
       const all = document.querySelectorAll('.modal');
       if (all[all.length - 1] !== node) return; // only the top-most dialog reacts

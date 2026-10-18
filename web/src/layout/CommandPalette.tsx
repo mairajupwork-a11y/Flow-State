@@ -50,7 +50,7 @@ export function CommandPalette({ routeKey, onClose }: { routeKey?: string; onClo
         ...methodologyOf(project).views.map((v) => {
           const meta = viewMeta(methodologyOf(project), v);
           const hint = ({ board: 'G B', backlog: 'G L', reports: 'G R' } as Record<string, string>)[v];
-          return { id: v, icon: <Icon name={meta.icon} size={16} />, label: `${project!.name} · ${meta.label}`, hint, group: 'Go to', run: go(`${p}/${v}`) };
+          return { id: `view-${v}`, icon: <Icon name={meta.icon} size={16} />, label: `${project!.name} · ${meta.label}`, hint, group: 'Go to', run: go(`${p}/${v}`) };
         }),
       ] : []),
       { id: 'home', icon: <Icon name="grid" size={16} />, label: 'Overview', hint: 'G H', group: 'Go to', run: go(base) },

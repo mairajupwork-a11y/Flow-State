@@ -62,7 +62,7 @@ export function ListView() {
                   <td><span className="row-8 nowrap"><Avatar user={owner} />{owner ? owner.name.split(' ')[0] : <span className="subtle-key">Unassigned</span>}</span></td>
                   <td className={overdue ? 'overdue nowrap' : 'nowrap'}>{t.dueDate ? fmtDate(t.dueDate, locale) : '—'}</td>
                   <td>{t.storyPoints ?? '—'}</td>
-                  <td className="nowrap">{timeAgo(t.updatedAt)}</td>
+                  <td className="nowrap">{timeAgo(t.updatedAt, locale)}</td>
                 </tr>
               );
             })}

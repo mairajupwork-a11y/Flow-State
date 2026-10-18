@@ -149,8 +149,9 @@
 .trigger-chip { display: inline-flex; align-items: center; gap: 6px; font-size: 11.5px; font-weight: 600; padding: 6px 12px; border-radius: 999px; background: #dff5ec; color: #1c8f72; }
 .trigger-chip.low { background: #fff0d8; color: #b77a1f; }
 .trigger-chip a { color: inherit; font-weight: 700; }
-.swimlanes { display: grid; gap: 10px; }
-.swimlane { border-radius: 18px; background: var(--panel); padding: 10px 10px 0; }
+.swimlanes { display: grid; grid-template-columns: minmax(0, 1fr); gap: 10px; }
+/* min-width: 0 lets each lane's board scroll inside it instead of widening the page. */
+.swimlane { min-width: 0; border-radius: 18px; background: var(--panel); padding: 10px 10px 0; }
 .swimlane.expedite { background: #fff1f3; box-shadow: inset 4px 0 0 #e35d73; }
 .swimlane-head { display: flex; align-items: center; gap: 8px; padding: 2px 4px 8px; font-size: 12.5px; }
 .kanban.in-lane { padding-bottom: 10px; }
@@ -218,3 +219,27 @@
 .invite-error { display: block; color: #c93a59; font-size: 11px; margin-top: 2px; }
 /* Long email addresses wrap instead of pushing buttons off-screen on phones. */
 .invite-link b, .setting-row strong { overflow-wrap: anywhere; }
+
+/* A form that is also the modal body keeps the modal's padding. */
+.modal-body.field-grid { padding: 22px 25px; }
+
+/* Dialog actions stay in view while a long form scrolls. */
+.modal-footer { position: sticky; bottom: 0; background: inherit; z-index: 1; }
+
+.show-phone { display: none; }
+@media (max-width: 760px) {
+  .hide-phone { display: none; }
+  .show-phone { display: inline; }
+  .list-table .list-name { min-width: 0; }
+  /* Rows with actions (team, invites) stack instead of running off the card. */
+  .setting-row { flex-wrap: wrap; }
+  .setting-row > .row-8 { flex-wrap: wrap; }
+}
+
+/* .form-field > span is a block label; the quick-date links are a row of buttons. */
+.form-field > span.quick-dates { display: flex; flex-wrap: wrap; gap: 10px; }
+/* Tab labels stay on one line; the tab bar scrolls when there are many. */
+.tab { white-space: nowrap; }
+/* Last content on a page can scroll clear of the floating guide button. */
+.page { padding-bottom: 96px; }
+nav.tabs { max-width: 100%; overflow-x: auto; scrollbar-width: thin; }

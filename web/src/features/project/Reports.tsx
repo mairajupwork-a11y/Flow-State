@@ -252,7 +252,7 @@ function PriorityCard({ data }: { data: ReportsData }) {
       <p className="muted">Live distribution from this project’s work</p>
       {data.byPriority.map((p) => (
         <div className="dist-row" key={p.priority}>
-          <div className="dist-top"><span>{PRIORITY_LABEL[p.priority]}</span><span>{p.count} items · {total ? Math.round((p.count / total) * 100) : 0}%</span></div>
+          <div className="dist-top"><span>{PRIORITY_LABEL[p.priority]}</span><span>{p.count} {p.count === 1 ? 'item' : 'items'} · {total ? Math.round((p.count / total) * 100) : 0}%</span></div>
           <div className="dist-track"><div className="dist-fill" style={{ width: `${total ? (p.count / total) * 100 : 0}%`, background: colors[p.priority] }} /></div>
         </div>
       ))}

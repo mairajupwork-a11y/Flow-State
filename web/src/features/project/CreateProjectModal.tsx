@@ -47,7 +47,7 @@ export function CreateProjectModal({ onClose }: { onClose: () => void }) {
       <form onSubmit={submit}>
         <div className="modal-body stack-14">
           {error && <div className="form-error" role="alert">{error}</div>}
-          <label className="form-field"><span>Project name *</span><input className="text-input" required maxLength={80} value={form.name} onChange={(e) => setForm({ ...form, name: e.target.value })} placeholder="e.g. Mobile Banking App" /></label>
+          <label className="form-field"><span>Project name *</span><input className="text-input" data-autofocus required maxLength={80} value={form.name} onChange={(e) => setForm({ ...form, name: e.target.value })} placeholder="e.g. Mobile Banking App" /></label>
           <div className="form-grid">
             <label className="form-field"><span>Key</span><input className="text-input mono" maxLength={6} value={key} aria-invalid={!!key && !keyValid} onChange={(e) => setForm({ ...form, key: e.target.value.toUpperCase().replace(/[^A-Z0-9]/g, ''), keyTouched: true })} placeholder="MBA" /></label>
             <div className="form-field"><span>Preview</span><div className="key-preview">{key || 'KEY'}-101</div></div>

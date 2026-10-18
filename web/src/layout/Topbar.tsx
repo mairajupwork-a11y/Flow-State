@@ -58,7 +58,7 @@ export function Topbar({ activeKey }: { activeKey?: string }) {
 }
 
 function Notifications() {
-  const { workspace } = useWs();
+  const { workspace, locale } = useWs();
   const [open, setOpen] = useState(false);
   const { data } = useNotifications(workspace.slug);
   const qc = useQueryClient();
@@ -90,7 +90,7 @@ function Notifications() {
             {data?.items.length ? data.items.map((n) => (
               <button key={n.id} className={`notification ${n.read ? '' : 'unread'}`} onClick={() => openItem(n.id, n.issueKey)}>
                 {n.actor ? <Avatar user={n.actor} size="sm" /> : <span className="avatar sm" style={{ background: 'var(--accent)' }}><Icon name="bell" size={11} /></span>}
-                <span><span className="notif-text">{n.text}</span><small>{timeAgo(n.createdAt)}</small></span>
+                <span><span className="notif-text">{n.text}</span><small>{timeAgo(n.createdAt, locale)}</small></span>
               </button>
             )) : (
               <div className="empty" style={{ padding: '26px 8px' }}><Icon name="bell" size={30} /><p>You’re all caught up.<br />We’ll let you know when something needs you.</p></div>

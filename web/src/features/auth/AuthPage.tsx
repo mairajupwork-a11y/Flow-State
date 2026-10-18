@@ -111,7 +111,7 @@ export function AuthPage({ mode }: { mode: 'login' | 'signup' }) {
           </ul>
         </div>
         <div className="auth-quote">
-          <Icon name="lightbulb" size={16} /> Tip: once you’re in, press <b>⌘K</b> (or <b>Ctrl K</b>) to jump anywhere, and <b>C</b> to create a work item.
+          <Icon name="lightbulb" size={16} /><span>Tip: once you’re in, press <b>⌘K</b> (or <b>Ctrl K</b>) to jump anywhere, and <b>C</b> to create a work item.</span>
         </div>
       </aside>
 

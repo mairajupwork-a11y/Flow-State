@@ -93,7 +93,7 @@ const REGISTER_HELP: Record<string, string> = {
 };
 
 function RegisterTable({ def, list, onOpen }: { def: RegisterDef; list: Entry[]; onOpen: (e: Entry) => void }) {
-  const { member, members } = useWs();
+  const { member, members, locale } = useWs();
   const shown = def.fields.filter((f) => f.type === 'select' || f.type === 'number').slice(0, 2);
   const sorted = [...list].sort((a, b) => (entryScore(def, b.data) ?? -1) - (entryScore(def, a.data) ?? -1) || b.id - a.id);
   if (!list.length) return <Empty icon={def.icon} title="Nothing logged yet">Add the first entry to start the {def.label.toLowerCase()}.</Empty>;
@@ -120,7 +120,7 @@ function RegisterTable({ def, list, onOpen }: { def: RegisterDef; list: Entry[];
                 {shown.map((f) => <td key={f.key} className="hide-narrow">{fieldText(f, e.data[f.key], members)}</td>)}
                 <td><span className={`register-status ${e.status === def.statuses[def.statuses.length - 1] ? 'closed' : e.status === def.statuses[0] ? 'new' : 'mid'}`}>{e.status}</span></td>
                 <td><Avatar user={member(e.ownerId)} size="sm" /></td>
-                <td className="hide-narrow muted">{timeAgo(e.updatedAt)}</td>
+                <td className="hide-narrow muted">{timeAgo(e.updatedAt, locale)}</td>
               </tr>
             );
           })}

@@ -76,11 +76,11 @@ export default function Team() {
           <p className="muted">{emailOn ? 'Resend the email, share the link, or withdraw it' : 'Share a link again or withdraw it'}</p>
           {invites.data.map((i) => (
             <div className="setting-row" key={i.token}>
-              <div style={{ minWidth: 0 }}><strong>{i.email || 'Reusable team link'}</strong><small>{i.designation ? `${i.designation} · ` : ''}{i.role} · created {timeAgo(i.createdAt)}</small></div>
+              <div style={{ minWidth: 0 }}><strong>{i.email || 'Reusable team link'}</strong><small>{i.designation ? `${i.designation} · ` : ''}{i.role} · created {timeAgo(i.createdAt, locale)}</small></div>
               <div className="row-8">
                 {emailOn && i.email && <button className="btn btn-soft btn-sm" disabled={resend.isPending} onClick={() => resend.mutate(i.token)}><Icon name="mail" size={13} /> Resend</button>}
                 <button className="btn btn-soft btn-sm" onClick={() => copy(inviteUrl(i.token))}><Icon name="copy" size={13} /> Copy link</button>
-                <button className="btn btn-light btn-sm" onClick={() => revoke.mutate(i.token)}>Withdraw</button>
+                <button className="btn btn-light btn-sm" onClick={async () => (await askConfirm({ title: 'Withdraw this invitation?', body: `${i.email || 'The team link'} will stop working. You can always invite them again.`, confirmLabel: 'Withdraw' })) && revoke.mutate(i.token)}>Withdraw</button>
               </div>
             </div>
           ))}

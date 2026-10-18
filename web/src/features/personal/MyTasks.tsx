@@ -41,10 +41,10 @@ export function MyTasks() {
     const p = projectOf(t.projectId);
     return (
       <tr key={t.id} className="clickable" tabIndex={0} onClick={() => setParams({ issue: t.key })} onKeyDown={(e) => e.key === 'Enter' && setParams({ issue: t.key })}>
-        <td><span className="list-name"><TypeIcon type={t.type} /><span><strong className={t.statusCategory === 'done' ? 'struck' : ''}>{t.title}</strong><br /><span className="subtle-key">{t.key}</span></span></span></td>
-        <td>{p && <span className="row-8 nowrap"><span className="project-glyph sm" style={{ background: p.color }}>{p.name[0]}</span>{p.name}</span>}</td>
+        <td><span className="list-name"><TypeIcon type={t.type} /><span><strong className={t.statusCategory === 'done' ? 'struck' : ''}>{t.title}</strong><br /><span className="subtle-key">{t.key}<span className="show-phone">{p ? ` · ${p.name}` : ''}</span></span></span></span></td>
+        <td className="hide-phone">{p && <span className="row-8 nowrap"><span className="project-glyph sm" style={{ background: p.color }}>{p.name[0]}</span>{p.name}</span>}</td>
         <td><StatusPill name={t.statusName} category={t.statusCategory} /></td>
-        <td><PriorityPill priority={t.priority} /></td>
+        <td className="hide-phone"><PriorityPill priority={t.priority} /></td>
         <td className={`nowrap ${t.dueDate && t.dueDate < today && t.statusCategory !== 'done' ? 'overdue' : ''}`}>{t.dueDate ? fmtDate(t.dueDate, locale) : '—'}</td>
       </tr>
     );

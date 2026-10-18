@@ -57,6 +57,7 @@ export async function createIssue(db, { projectId, actor, input, events, silent 
     const data = { ...input, statusId };
     if (!data.type) data.type = methodology(project.methodology).types.includes('task') ? 'task' : methodology(project.methodology).types[0];
     if (data.type === 'subtask' && !data.parentId) throw new HttpError(400, 'Choose the parent work item for this sub-task.');
+    if (data.startDate && data.dueDate && data.dueDate < data.startDate) throw new HttpError(400, 'The due date can’t be before the start date.');
     if (data.type === 'epic') data.epicId = null;
     await validateRefs(db, project, data);
 
@@ -104,6 +105,9 @@ export async function updateIssue(db, { issueRow, project, actor, input, events 
     }
     if ('parentId' in patch && patch.parentId === current.id) throw new HttpError(400, 'A work item cannot be its own parent.');
     if ('epicId' in patch && patch.epicId === current.id) throw new HttpError(400, 'An epic cannot contain itself.');
+    const start = 'startDate' in patch ? patch.startDate : current.startDate;
+    const due = 'dueDate' in patch ? patch.dueDate : current.dueDate;
+    if (start && due && due < start) throw new HttpError(400, 'The due date can’t be before the start date.');
     const type = patch.type ?? current.type;
     const parentId = 'parentId' in patch ? patch.parentId : current.parentId;
     if (type === 'subtask' && !parentId) throw new HttpError(400, 'Choose the parent work item for this sub-task.');

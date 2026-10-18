@@ -1,4 +1,4 @@
-import { useEffect, useState, type FormEvent } from 'react';
+import { useEffect, useState, type FormEvent, type KeyboardEvent } from 'react';
 import { useSearchParams } from 'react-router-dom';
 import { useMutation, useQueryClient } from '@tanstack/react-query';
 import { Icon } from '../../components/Icon';
@@ -142,7 +142,7 @@ function IssueDetailView({ issue, onClose }: { issue: IssueDetail; onClose: () =
               </div>
             )}
 
-            <Links issue={issue} canEdit={canEdit} onOpen={openOther} onAdd={(target, kind) => post.mutate({ path: '/links', body: { target, kind } })} onRemove={(id) => remove.mutate(`/links/${id}`)} />
+            <Links issue={issue} canEdit={canEdit} onOpen={openOther} onAdd={(target, kind) => post.mutateAsync({ path: '/links', body: { target, kind } })} onRemove={(id) => remove.mutate(`/links/${id}`)} />
 
             <div className="detail-section">
               <div className="tabs" role="tablist" style={{ marginBottom: 6 }}>
@@ -204,9 +204,10 @@ function IssueDetailView({ issue, onClose }: { issue: IssueDetail; onClose: () =
                   </select>
                 </label>
               )}
-              <div className="form-grid tight">
-                <label className="form-field"><span>Start</span><input className="text-input" type="date" value={issue.startDate ?? ''} onChange={(e) => patch.mutate({ startDate: e.target.value || null })} /></label>
-                <label className="form-field"><span>Due</span><input className={`text-input ${overdue ? 'is-overdue' : ''}`} type="date" value={issue.dueDate ?? ''} onChange={(e) => patch.mutate({ dueDate: e.target.value || null })} /></label>
+              {/* Stacked: the side panel is too narrow for two date pickers side by side. */}
+              <div>
+                <label className="form-field"><span>Start</span><input className="text-input" type="date" value={issue.startDate ?? ''} max={issue.dueDate ?? undefined} onChange={(e) => patch.mutate({ startDate: e.target.value || null })} /></label>
+                <label className="form-field"><span>Due</span><input className={`text-input ${overdue ? 'is-overdue' : ''}`} type="date" value={issue.dueDate ?? ''} min={issue.startDate ?? undefined} onChange={(e) => patch.mutate({ dueDate: e.target.value || null })} /></label>
               </div>
               <label className="form-field"><span>{estimateLabel(m)}</span>
                 <input className="text-input" inputMode="numeric" defaultValue={issue.storyPoints ?? ''} key={issue.storyPoints ?? 'none'} placeholder="—"
@@ -217,7 +218,7 @@ function IssueDetailView({ issue, onClose }: { issue: IssueDetail; onClose: () =
             <div className="aside-meta">
               <div><span>Reporter</span><span className="row-8"><Avatar user={member(issue.reporterId)} size="sm" />{member(issue.reporterId)?.name ?? 'Former member'}</span></div>
               <div><span>Created</span><span>{fmtDate(issue.createdAt.slice(0, 10), locale, true)}</span></div>
-              <div><span>Updated</span><span>{timeAgo(issue.updatedAt)}</span></div>
+              <div><span>Updated</span><span>{timeAgo(issue.updatedAt, locale)}</span></div>
               {issue.resolvedAt && <div><span>Resolved</span><span>{fmtDate(issue.resolvedAt.slice(0, 10), locale, true)}</span></div>}
             </div>
           </aside>
@@ -271,7 +272,7 @@ function Checklist({ issue, canEdit, onAdd, onToggle, onRemove }: { issue: Issue
 
 const LINK_LABEL = { blocks: ['blocks', 'is blocked by'], relates: ['relates to', 'relates to'], duplicates: ['duplicates', 'is duplicated by'] } as const;
 
-function Links({ issue, canEdit, onOpen, onAdd, onRemove }: { issue: IssueDetail; canEdit: boolean; onOpen: (k: string) => void; onAdd: (t: string, k: string) => void; onRemove: (id: number) => void }) {
+function Links({ issue, canEdit, onOpen, onAdd, onRemove }: { issue: IssueDetail; canEdit: boolean; onOpen: (k: string) => void; onAdd: (t: string, k: string) => Promise<unknown>; onRemove: (id: number) => void }) {
   const [adding, setAdding] = useState(false);
   const [target, setTarget] = useState('');
   const [kind, setKind] = useState('relates');
@@ -290,7 +291,11 @@ function Links({ issue, canEdit, onOpen, onAdd, onRemove }: { issue: IssueDetail
         </div>
       ))}
       {adding && (
-        <form className="row-8 wrap" style={{ marginTop: 8 }} onSubmit={(e) => { e.preventDefault(); if (target.trim()) { onAdd(target.trim().toUpperCase(), kind); setTarget(''); setAdding(false); } }}>
+        <form className="row-8 wrap" style={{ marginTop: 8 }} onSubmit={(e) => {
+          e.preventDefault();
+          // Keep the form open on failure (unknown key, linking to itself) so it can be corrected.
+          if (target.trim()) onAdd(target.trim().toUpperCase(), kind).then(() => { setTarget(''); setAdding(false); }, () => undefined);
+        }}>
           <select className="field-select" style={{ width: 150 }} value={kind} onChange={(e) => setKind(e.target.value)} aria-label="Link type">
             <option value="relates">relates to</option><option value="blocks">blocks</option><option value="is_blocked_by">is blocked by</option><option value="duplicates">duplicates</option>
           </select>
@@ -303,11 +308,26 @@ function Links({ issue, canEdit, onOpen, onAdd, onRemove }: { issue: IssueDetail
 }
 
 function Comments({ issue, canEdit, onPost, onEdit, onDelete }: { issue: IssueDetail; canEdit: boolean; onPost: (b: string) => Promise<unknown>; onEdit: (id: number, b: string) => void; onDelete: (id: number) => void }) {
-  const { me, members, isAdmin } = useWs();
+  const { me, members, isAdmin, locale } = useWs();
   const [body, setBody] = useState('');
   const [editing, setEditing] = useState<{ id: number; body: string } | null>(null);
   const mention = body.match(/@(\w*)$/)?.[1];
   const suggestions = mention !== undefined ? members.filter((m) => m.name.toLowerCase().startsWith(mention.toLowerCase())).slice(0, 5) : [];
+  const [active, setActive] = useState(0);
+  const pick = (m: (typeof members)[number]) => { setBody(body.replace(/@\w*$/, `@${m.name.split(' ')[0]} `)); setActive(0); };
+  /** Arrow keys move through @mention suggestions; Enter or Tab picks one. */
+  function onMentionKey(e: KeyboardEvent) {
+    if (!suggestions.length) return false;
+    const i = Math.min(active, suggestions.length - 1);
+    if (e.key === 'ArrowDown') setActive((i + 1) % suggestions.length);
+    else if (e.key === 'ArrowUp') setActive((i - 1 + suggestions.length) % suggestions.length);
+    else if (e.key === 'Enter' || e.key === 'Tab') pick(suggestions[i]);
+    else if (e.key === 'Escape') setBody(`${body} `);
+    else return false;
+    e.preventDefault();
+    e.stopPropagation();
+    return true;
+  }
   async function submit(e: FormEvent) {
     e.preventDefault();
     if (!body.trim()) return;
@@ -319,7 +339,7 @@ function Comments({ issue, canEdit, onPost, onEdit, onDelete }: { issue: IssueDe
         <div className="comment" key={c.id}>
           <Avatar user={c.author} />
           <div style={{ flex: 1, minWidth: 0 }}>
-            <b>{c.author?.name ?? 'Former member'}</b> <span className="tiny-note">{timeAgo(c.createdAt)}{c.editedAt ? ' · edited' : ''}</span>
+            <b>{c.author?.name ?? 'Former member'}</b> <span className="tiny-note">{timeAgo(c.createdAt, locale)}{c.editedAt ? ' · edited' : ''}</span>
             {editing?.id === c.id ? (
               <form onSubmit={(e) => { e.preventDefault(); onEdit(c.id, editing.body); setEditing(null); }} className="stack-8" style={{ marginTop: 6 }}>
                 <textarea className="text-input field-textarea" style={{ minHeight: 70 }} value={editing.body} onChange={(e) => setEditing({ ...editing, body: e.target.value })} autoFocus />
@@ -340,11 +360,12 @@ function Comments({ issue, canEdit, onPost, onEdit, onDelete }: { issue: IssueDe
         <form onSubmit={submit} className="comment-form">
           <Avatar user={me} />
           <div style={{ flex: 1, position: 'relative' }}>
-            <textarea className="text-input" rows={2} maxLength={5000} value={body} onChange={(e) => setBody(e.target.value)} placeholder="Write a comment… use @ to mention" aria-label="Write a comment"
-              onKeyDown={(e) => { if (e.key === 'Enter' && (e.metaKey || e.ctrlKey)) submit(e); }} />
+            <textarea className="text-input" rows={2} maxLength={5000} value={body} onChange={(e) => { setBody(e.target.value); setActive(0); }} placeholder="Write a comment… use @ to mention" aria-label="Write a comment"
+              aria-autocomplete="list" aria-expanded={suggestions.length > 0}
+              onKeyDown={(e) => { if (onMentionKey(e)) return; if (e.key === 'Enter' && (e.metaKey || e.ctrlKey)) submit(e); }} />
             {suggestions.length > 0 && (
               <div className="mention-menu" role="listbox">
-                {suggestions.map((m) => <button type="button" key={m.id} role="option" aria-selected="false" onClick={() => setBody(body.replace(/@\w*$/, `@${m.name.split(' ')[0]} `))}><Avatar user={m} size="sm" /> {m.name}</button>)}
+                {suggestions.map((m, i) => <button type="button" key={m.id} role="option" aria-selected={i === Math.min(active, suggestions.length - 1)} className={i === Math.min(active, suggestions.length - 1) ? 'active' : ''} onMouseDown={(e) => e.preventDefault()} onClick={() => pick(m)}><Avatar user={m} size="sm" /> {m.name}</button>)}
               </div>
             )}
             <div className="row-between" style={{ marginTop: 6 }}><span className="tiny-note">⌘/Ctrl + Enter to send</span><button className="btn btn-primary btn-sm" disabled={!body.trim()}><Icon name="send" size={13} /> Comment</button></div>
@@ -362,7 +383,7 @@ function Mentions({ text }: { text: string }) {
 const FIELD_LABEL: Record<string, string> = { statusId: 'status', assigneeId: 'assignee', sprintId: 'sprint', epicId: 'epic', parentId: 'parent', storyPoints: 'story points', startDate: 'start date', dueDate: 'due date', type: 'type', priority: 'priority', title: 'title', description: 'description', labels: 'labels' };
 
 function History({ activity }: { activity: Activity[] }) {
-  const { member } = useWs();
+  const { member, locale } = useWs();
   if (!activity.length) return <p className="placeholder small">No history yet.</p>;
   return (
     <ul className="history">
@@ -376,7 +397,7 @@ function History({ activity }: { activity: Activity[] }) {
         else if (a.verb === 'linked') text = `linked ${d.target} (${String(d.kind).replace(/_/g, ' ')})`;
         else if (d.field === 'description') text = 'updated the description';
         else text = `changed ${FIELD_LABEL[d.field ?? ''] ?? d.field} from ${val(d.from)} to ${val(d.to)}`;
-        return <li key={a.id}><span className="history-dot" /><span><b>{who}</b> {text}</span><small>{timeAgo(a.createdAt)}</small></li>;
+        return <li key={a.id}><span className="history-dot" /><span><b>{who}</b> {text}</span><small>{timeAgo(a.createdAt, locale)}</small></li>;
       })}
     </ul>
   );

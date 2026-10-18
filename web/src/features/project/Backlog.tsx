@@ -6,6 +6,7 @@ import { CSS } from '@dnd-kit/utilities';
 import { useMutation, useQueryClient } from '@tanstack/react-query';
 import { Icon } from '../../components/Icon';
 import { Avatar, Modal, StatusPill, TypeIcon, PriorityPill } from '../../components/ui';
+import { announcements } from '../../lib/dnd';
 import { api } from '../../lib/api';
 import { invalidateWork, useMoveIssue } from '../../lib/queries';
 import { useWs } from '../../lib/workspace';
@@ -28,7 +29,10 @@ export function Backlog() {
   const [completing, setCompleting] = useState<Sprint | null>(null);
 
   const openSprints = project.sprints.filter((s) => s.state !== 'closed');
-  const items = useMemo(() => filtered.filter((i) => i.type !== 'epic' && i.type !== 'subtask' && !(i.statusCategory === 'done' && !i.sprintId)), [filtered]);
+  // Finished work stays with the sprint it was finished in; closed sprints aren't shown here.
+  const closedIds = useMemo(() => new Set(project.sprints.filter((s) => s.state === 'closed').map((s) => s.id)), [project.sprints]);
+  const items = useMemo(() => filtered.filter((i) => i.type !== 'epic' && i.type !== 'subtask'
+    && !(i.statusCategory === 'done' && !i.sprintId) && !(i.sprintId && closedIds.has(i.sprintId))), [filtered, closedIds]);
   const byId = useMemo(() => new Map(items.map((i) => [i.id, i])), [items]);
   const build = (): Containers => {
     const c: Containers = { [BACKLOG]: [], ...Object.fromEntries(openSprints.map((s) => [cid(s.id), [] as number[]])) };
@@ -37,6 +41,11 @@ export function Backlog() {
   };
   const [containers, setContainers] = useState<Containers>(build);
   const [dragging, setDragging] = useState<number | null>(null);
+  const dndAnnouncements = useMemo(() => {
+    const row = (id: string | number) => { const i = byId.get(Number(id)); return i ? `${i.key} ${i.title}` : 'the work item'; };
+    const group = (key: string) => (key === BACKLOG ? 'the backlog' : project.sprints.find((sp) => cid(sp.id) === key)?.name ?? 'a group');
+    return announcements(row, (id) => (byId.has(Number(id)) ? `${group(Object.keys(containers).find((k) => containers[k].includes(Number(id))) ?? BACKLOG)}, next to ${row(id)}` : group(String(id))));
+  }, [byId, containers, project.sprints]);
   // eslint-disable-next-line react-hooks/exhaustive-deps
   useEffect(() => { if (dragging == null) setContainers(build()); }, [items, project.sprints, dragging]);
 
@@ -92,7 +101,7 @@ export function Backlog() {
     <>
       <SectionBar title={`Backlog & ${W.toLowerCase()}s`} sub={methodologyOf(project).features.sprints === 'optional' ? `${W}s are optional in ${methodologyOf(project).name} — pull straight to Ready, or plan an ${W.toLowerCase()} for rhythm` : 'Drag work to plan, reorder to prioritise'} />
       <FilterBar count={items.length} />
-      <DndContext sensors={sensors} collisionDetection={closestCenter} onDragStart={(e) => setDragging(Number(e.active.id))} onDragOver={onDragOver} onDragEnd={onDragEnd} onDragCancel={() => setDragging(null)}>
+      <DndContext sensors={sensors} collisionDetection={closestCenter} accessibility={{ announcements: dndAnnouncements }} onDragStart={(e) => setDragging(Number(e.active.id))} onDragOver={onDragOver} onDragEnd={onDragEnd} onDragCancel={() => setDragging(null)}>
         {openSprints.map((s) => (
           <SprintBox key={s.id} sprint={s} ids={containers[cid(s.id)] ?? []} byId={byId} canEdit={canEdit} locale={locale}
             onStart={() => setStarting(s)} onComplete={() => setCompleting(s)} hasActive={openSprints.some((x) => x.state === 'active')} />
@@ -208,7 +217,7 @@ function InlineCreate({ sprintId }: { sprintId: number | null }) {
   const [busy, setBusy] = useState(false);
   async function submit(e: FormEvent) {
     e.preventDefault();
-    if (!title.trim()) return;
+    if (busy || !title.trim()) return;
     setBusy(true);
     try {
       const created = await api.post<Issue>(`/projects/${project.id}/issues`, { title: title.trim(), sprintId });
@@ -224,7 +233,7 @@ function InlineCreate({ sprintId }: { sprintId: number | null }) {
   return (
     <form className="inline-create" onSubmit={submit}>
       <Icon name="plus" size={15} />
-      <input value={title} onChange={(e) => setTitle(e.target.value)} placeholder="Add a work item — press Enter" maxLength={200} disabled={busy} aria-label="New work item title" />
+      <input value={title} onChange={(e) => setTitle(e.target.value)} placeholder="Add a work item — press Enter" maxLength={200} readOnly={busy} aria-busy={busy} aria-label="New work item title" />
     </form>
   );
 }
@@ -241,7 +250,7 @@ function StartSprintModal({ sprint, points, onClose }: { sprint: Sprint; points:
     <Modal title={`Start ${sprint.name}`} subtitle={`${points} story points planned`} onClose={onClose}
       footer={<><button className="btn btn-light" onClick={onClose}>Cancel</button><button className="btn btn-primary" onClick={() => start.mutate()} disabled={start.isPending}><Icon name="play" size={13} /> Start {W.toLowerCase()}</button></>}>
       <div className="modal-body">
-        <label className="form-field"><span>{W} goal</span><input className="text-input" value={form.goal} maxLength={240} onChange={(e) => setForm({ ...form, goal: e.target.value })} placeholder={`What will this ${W.toLowerCase()} achieve?`} /></label>
+        <label className="form-field"><span>{W} goal</span><input className="text-input" data-autofocus value={form.goal} maxLength={240} onChange={(e) => setForm({ ...form, goal: e.target.value })} placeholder={`What will this ${W.toLowerCase()} achieve?`} /></label>
         <label className="form-field" style={{ marginTop: 14 }}><span>Duration</span>
           <select className="field-select" value={form.weeks} onChange={(e) => setForm({ ...form, weeks: Number(e.target.value) })}>
             {[1, 2, 3, 4].map((w) => <option key={w} value={w}>{plural(w, 'week')}</option>)}

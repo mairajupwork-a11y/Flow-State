@@ -87,8 +87,9 @@ export function ProjectHero({ project, issues }: { project: ProjectDetail; issue
   const { members, locale } = useWs();
   const work = issues.filter((i) => i.type !== 'epic');
   const done = work.filter((i) => i.statusCategory === 'done').length;
-  const sprint = project.sprints.find((s) => s.state === 'active');
   const m = methodologyOf(project);
+  // A project switched to a flow method may still hold an old active sprint; don't advertise it.
+  const sprint = m.features.sprints ? project.sprints.find((s) => s.state === 'active') : undefined;
   const activePhase = project.phases.find((ph) => ph.state === 'active' || ph.state === 'review');
   let phase = `${m.name} · ${m.features.sprints === 'required' ? `No active ${term(m.id, 'sprint').toLowerCase()} · Plan one in the backlog` : m.cadence}`;
   if (activePhase) phase = `${m.name} · ${term(m.id, 'phase')} ${activePhase.position + 1} of ${project.phases.length}: ${activePhase.name}${activePhase.state === 'review' ? ` · awaiting ${gateWord(m)} approval` : ''}`;

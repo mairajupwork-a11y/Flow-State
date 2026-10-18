@@ -113,7 +113,7 @@ function describe(a: Activity, name: string) {
 }
 
 function RecentActivity() {
-  const { workspace, member } = useWs();
+  const { workspace, member, locale } = useWs();
   const { data } = useActivity(workspace.slug);
   const [, setParams] = useSearchParams();
   return (
@@ -126,7 +126,7 @@ function RecentActivity() {
             <Avatar user={member(a.actorId)} size="sm" />
             <button className="link-plain" onClick={() => a.issueKey && setParams({ issue: a.issueKey })} disabled={!a.issueKey}>
               <span>{describe(a, member(a.actorId)?.name.split(' ')[0] ?? 'Someone')}</span>
-              <small>{timeAgo(a.createdAt)}</small>
+              <small>{timeAgo(a.createdAt, locale)}</small>
             </button>
           </li>
         ))}

@@ -69,7 +69,7 @@ export function authRoutes(ctx) {
 
   r.patch('/me', requireUser, async (req, res) => {
     const body = parse(z.object({
-      name: z.string().trim().min(1).max(80).optional(),
+      name: z.string().trim().min(1, 'tell us your name').max(80, 'keep your name under 80 characters').optional(),
       jobTitle: z.string().trim().max(80).optional(),
       theme: z.enum(['light', 'dark', 'system']).optional(),
       locale: z.enum(['en-GB', 'en-US', 'en-IN', 'en-SG', 'en-AU']).optional(),
