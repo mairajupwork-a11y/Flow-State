@@ -23,7 +23,7 @@ const ENDPOINTS = {
 const b64url = (buf) => buf.toString('base64url');
 const safeNext = (next) => (typeof next === 'string' && next.startsWith('/') && !next.startsWith('//') ? next : '/');
 
-export function googleRoutes({ db, signer, production, google }) {
+export function googleRoutes({ db, signer, production, google, mailer }) {
   const r = Router();
   const limiter = rateLimit({ windowMs: 60_000, max: production ? 20 : 1000 });
   const urls = { ...ENDPOINTS, ...(google?.endpoints ?? {}) };
@@ -33,7 +33,7 @@ export function googleRoutes({ db, signer, production, google }) {
   const redirectUri = (req) => google.redirectUrl || `${req.protocol}://${req.get('host')}/api/auth/google/callback`;
   const fail = (res, reason) => res.redirect(`/login?error=${encodeURIComponent(reason)}`);
 
-  r.get('/providers', (_req, res) => res.json({ google: enabled }));
+  r.get('/providers', (_req, res) => res.json({ google: enabled, email: !!mailer }));
 
   r.get('/google', limiter, (req, res) => {
     if (!enabled) return fail(res, 'Google sign-in is not set up on this server yet.');

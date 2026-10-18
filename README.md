@@ -17,7 +17,7 @@ Built UK-first (en-GB dates, Monday weeks, British English), with US and Asia-Pa
 | **Reports** | Sprint burndown, velocity, created vs resolved, cycle time, workload, status and priority mix — each with a table view |
 | **Personal** | My tasks (grouped by due date, across projects) and **My day**: private to-dos by time of day, stars, roll-over, "do it tomorrow", 7-day momentum, pin project work |
 | **Flow guide (free AI)** | Plans your day, spots blockers/overdue/WIP breaches, sizes the next sprint from velocity, writes your stand-up, summarises projects, shows workload, answers how-to questions with "Take me there", and turns sentences into work items or to-dos |
-| **Team** | Unlimited members, admin/member/viewer roles, email invite links and reusable team links |
+| **Team** | Unlimited members, admin/member/viewer roles, invitation emails (any provider, via SMTP) plus shareable invite links and reusable team links |
 | **Everywhere** | ⌘K command palette, keyboard shortcuts (`?`), notifications, realtime updates (SSE), light/dark/system themes, compact mode, reduced motion, responsive down to phones |
 
 ## Methodologies
@@ -98,6 +98,8 @@ docker run -p 4000:4000 -e SESSION_SECRET=change-me -v flowstate-data:/data flow
 | `PORT` | `4000` | HTTP port |
 | `DATABASE_URL` | — | Postgres connection string (e.g. Supabase). When set, it's used instead of SQLite. See [SUPABASE.md](SUPABASE.md) |
 | `GOOGLE_CLIENT_ID`, `GOOGLE_CLIENT_SECRET` | — | Turns on "Continue with Google". See [GOOGLE.md](GOOGLE.md) |
+| `SMTP_HOST`, `SMTP_PORT`, `SMTP_USER`, `SMTP_PASS`, `MAIL_FROM` | — | Sends invitation emails through any SMTP provider. See [EMAIL.md](EMAIL.md) |
+| `APP_URL` | *(request address)* | Public address used for links in emails |
 | `DATABASE_FILE` | `server/data/flowstate.db` | SQLite file location (when `DATABASE_URL` is not set) |
 | `OLLAMA_URL`, `OLLAMA_MODEL` | — | Optional self-hosted model for the Flow guide |
 
@@ -134,6 +136,6 @@ web/     React 19 + TypeScript + Vite
 
 ## Honest limits (next steps)
 
-- Invitations generate shareable links; Flowstate doesn't send email yet (plug in SMTP to automate).
+- Invitation emails need an SMTP account (see EMAIL.md); without one, invites are shareable links.
 - File attachments, custom fields, automations and SSO are not built yet.
 - SQLite suits teams up to thousands of users on one server. For hosted or multi-instance setups, set `DATABASE_URL` to Postgres / Supabase ([SUPABASE.md](SUPABASE.md)). The realtime hub is per-process, so multiple instances would also need a shared broadcast channel.

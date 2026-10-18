@@ -1,10 +1,9 @@
 import { useState, type FormEvent } from 'react';
-import { useQuery } from '@tanstack/react-query';
 import { Link, Navigate, useNavigate, useSearchParams } from 'react-router-dom';
 import { useQueryClient } from '@tanstack/react-query';
 import { Icon } from '../../components/Icon';
 import { api } from '../../lib/api';
-import { keys, useSession } from '../../lib/queries';
+import { keys, useProviders, useSession } from '../../lib/queries';
 import type { Session } from '../../lib/types';
 import { Brand } from './Welcome';
 
@@ -52,7 +51,7 @@ export function AuthPage({ mode }: { mode: 'login' | 'signup' }) {
   // Errors from a Google redirect arrive as ?error=…; typing clears any stale message.
   const [error, setError] = useState(params.get('error') ?? '');
   const setForm = (next: typeof form) => { setFormState(next); if (error) setError(''); };
-  const providers = useQuery({ queryKey: ['auth-providers'], queryFn: () => api.get<{ google: boolean }>('/auth/providers'), staleTime: 300_000, enabled: !DEMO });
+  const providers = useProviders();
   const [busy, setBusy] = useState(false);
   const [showPw, setShowPw] = useState(false);
 

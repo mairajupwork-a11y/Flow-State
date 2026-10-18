@@ -47,6 +47,7 @@ export function Onboarding() {
   const [error, setError] = useState('');
   const [busy, setBusy] = useState(false);
   const [created, setCreated] = useState<Workspace | null>(null);
+  const [emailed, setEmailed] = useState(0);
 
   const methodology: MethodologyId = project.methodology || RECOMMENDED[role] || 'scrum';
   const key = project.keyTouched ? project.key : suggestKey(project.name || 'Project');
@@ -75,7 +76,7 @@ export function Onboarding() {
     setBusy(true);
     setError('');
     try {
-      const res = await api.post<Session & { workspace: Workspace }>('/workspaces', {
+      const res = await api.post<Session & { workspace: Workspace; invites?: { email: string; emailed: boolean }[] }>('/workspaces', {
         name: ws.name.trim(), region: ws.region, teamSize: ws.teamSize, useCase: role, jobTitle: role === 'Something else' ? undefined : role,
         project: { name: project.name.trim(), key, methodology, withSamples: project.withSamples },
         invites: draft.trim() ? [...emails, ...draft.split(/[\s,;]+/).filter((s) => s.includes('@'))] : emails,
@@ -88,6 +89,7 @@ export function Onboarding() {
         /* storage blocked */
       }
       setCreated(res.workspace);
+      setEmailed((res.invites ?? []).filter((i) => i.emailed).length);
       setStep(4);
     } catch (err) {
       setError(err instanceof Error ? err.message : 'Something went wrong.');
@@ -200,7 +202,7 @@ export function Onboarding() {
                   onPaste={(e) => { e.preventDefault(); addEmails(e.clipboardData.getData('text')); }} placeholder={emails.length ? 'Add another…' : 'name@company.com, teammate@company.com'} autoFocus />
               </div>
             </label>
-            <div className="tip-box"><Icon name="lightbulb" size={18} /><span>After setup, you’ll get <b>shareable invite links</b> for each person, plus a reusable team link from the Team page.</span></div>
+            <div className="tip-box"><Icon name="lightbulb" size={18} /><span>Any email address works — Gmail, Outlook/Hotmail, Yahoo or company email. If invitation emails are switched on they’re sent straight away; you can always copy each person’s link from the Team page too.</span></div>
             {error && <div className="form-error" role="alert" style={{ marginTop: 14 }}>{error}</div>}
           </section>
         )}
@@ -209,7 +211,7 @@ export function Onboarding() {
           <section className="onboard-step ready" key="s4">
             <div className="ready-burst" aria-hidden="true"><Icon name="sparkles" size={34} /></div>
             <h1 className="page-title">You’re all set, {first}.</h1>
-            <p className="page-subtitle"><b>{created.name}</b> is ready with your <b>{project.name}</b> {METHODOLOGIES[methodology].name} project{emails.length ? ` and ${emails.length} invitation${emails.length === 1 ? '' : 's'}` : ''}.</p>
+            <p className="page-subtitle"><b>{created.name}</b> is ready with your <b>{project.name}</b> {METHODOLOGIES[methodology].name} project{emails.length ? ` and ${emails.length} invitation${emails.length === 1 ? '' : 's'}` : ''}.{emailed ? ` We’ve emailed ${emailed === 1 ? 'your invitation' : `all ${emailed} invitations`}.` : ''}</p>
             <div className="ready-grid">
               <div><Icon name={METHODOLOGIES[methodology].icon} size={18} /><b>{METHODOLOGIES[methodology].name}, set up properly</b><span>{METHODOLOGIES[methodology].tagline}</span></div>
               <div><Icon name="sun" size={18} /><b>My day</b><span>A private to-do list, just for you</span></div>

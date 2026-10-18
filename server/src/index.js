@@ -4,6 +4,7 @@ import { fileURLToPath } from 'node:url';
 import { dirname, join } from 'node:path';
 import { openDatabase } from './db.js';
 import { createApp } from './app.js';
+import { createMailer, mailHint } from './mail.js';
 
 const here = dirname(fileURLToPath(import.meta.url));
 // Settings such as DATABASE_URL can live in a .env file at the repo root.
@@ -55,7 +56,22 @@ async function connectPostgres(url) {
 }
 if (process.env.GOOGLE_CLIENT_ID && process.env.GOOGLE_CLIENT_SECRET) console.log('Google sign-in: on');
 console.log(`Database: ${db.dialect === 'postgres' ? `Postgres (${new URL(process.env.DATABASE_URL).hostname})` : 'SQLite'}`);
+// Optional SMTP for invitation emails (any provider — see EMAIL.md).
+let mailer = null;
+try {
+  mailer = createMailer();
+} catch (err) {
+  console.warn(`Email is off: ${err.message}`);
+}
+if (mailer) {
+  mailer.verify().then((problem) => console.log(problem
+    ? `Email: could not log in to ${mailer.host} — ${problem}\n→ ${mailHint(problem)}`
+    : `Email: on (${mailer.host}, from ${mailer.from})`));
+}
+
 const app = createApp({
+  mailer,
+  appUrl: process.env.APP_URL || null,
   db,
   secret,
   production,

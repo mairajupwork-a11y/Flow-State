@@ -32,11 +32,14 @@ before(async () => {
 });
 after(() => fake.close());
 
+const servers = [];
+after(() => servers.forEach((s) => { s.closeAllConnections(); s.close(); }));
 function start(google) {
   const db = openDatabase(':memory:');
   const app = createApp({ db, secret: 'test-secret', log: { error() {} }, google });
   return new Promise((resolve) => {
     const server = app.listen(0, () => resolve({ server, base: `http://127.0.0.1:${server.address().port}`, db }));
+    servers.push(server);
   });
 }
 
@@ -59,12 +62,12 @@ async function signIn(base, { next = '/', code = 'good-code', tamper = false } =
 
 test('providers endpoint reports whether Google is configured', async () => {
   const off = await start(null);
-  assert.deepEqual(await (await fetch(`${off.base}/api/auth/providers`)).json(), { google: false });
+  assert.deepEqual(await (await fetch(`${off.base}/api/auth/providers`)).json(), { google: false, email: false });
   const offStart = await fetch(`${off.base}/api/auth/google`, { redirect: 'manual' });
   assert.match(offStart.headers.get('location'), /^\/login\?error=/);
   off.server.close();
   const on = await start(google());
-  assert.deepEqual(await (await fetch(`${on.base}/api/auth/providers`)).json(), { google: true });
+  assert.deepEqual(await (await fetch(`${on.base}/api/auth/providers`)).json(), { google: true, email: false });
   on.server.close();
 });
 

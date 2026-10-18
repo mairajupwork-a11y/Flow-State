@@ -8,6 +8,7 @@ import { createProject } from '../services/projects.js';
 import { METHODOLOGY_IDS } from '../../../shared/methodologies.js';
 import { ISSUE_SELECT, issue as serializeIssue, user as serializeUser, workspace as serializeWorkspace, project as serializeProject, activity as serializeActivity } from '../serialize.js';
 import { session } from './auth.js';
+import { inviteEmail, mailHint } from '../emails.js';
 
 const REGIONS = { uk: { locale: 'en-GB', weekStart: 1 }, us: { locale: 'en-US', weekStart: 0 }, asia: { locale: 'en-SG', weekStart: 1 }, other: { locale: 'en-GB', weekStart: 1 } };
 const role = z.enum(['admin', 'member', 'viewer']);
@@ -28,9 +29,23 @@ async function slugify(db, name) {
   return slug;
 }
 
-export function workspaceRoutes({ db, events, hub }) {
+export function workspaceRoutes({ db, events, hub, mailer, appUrl }) {
   const r = Router();
   r.use(requireUser);
+
+  // Links in emails must point at the address people actually open Flowstate on.
+  const baseUrl = (req) => (appUrl || `${req.protocol}://${req.get('host')}`).replace(/\/$/, '');
+  /** Emails each invite (when SMTP is configured); never fails the request. */
+  const emailInvites = (req, workspaceName, invites) => Promise.all(invites.map(async (inv) => {
+    if (!mailer || !inv.email) return { ...inv, emailed: false };
+    try {
+      await mailer.send(inviteEmail({ to: inv.email, inviter: req.user.name, workspace: workspaceName, role: inv.role, url: `${baseUrl(req)}/invite/${inv.token}` }));
+      return { ...inv, emailed: true };
+    } catch (err) {
+      console.error(`Invite email to ${inv.email} failed:`, err.message);
+      return { ...inv, emailed: false, emailError: mailHint(err.message) };
+    }
+  }));
 
   /** Onboarding: creates the workspace, its first project and pending invites in one step. */
   r.post('/', async (req, res) => {
@@ -43,6 +58,7 @@ export function workspaceRoutes({ db, events, hub }) {
       project: projectInput.optional(),
       invites: z.array(z.string().trim().toLowerCase().email()).max(200).default([]),
     }), req.body);
+    const createdInvites = [];
     const ws = await db.tx(async () => {
       const preset = REGIONS[body.region];
       const { lastInsertRowid } = await db.run(
@@ -55,12 +71,15 @@ export function workspaceRoutes({ db, events, hub }) {
       if (body.jobTitle) await db.run('UPDATE users SET job_title = ? WHERE id = ?', body.jobTitle, req.user.id);
       if (body.project) await createProject(db, { workspaceId: wsId, actor: req.user, ...body.project });
       for (const email of new Set(body.invites)) {
-        await db.run("INSERT INTO invites (token, workspace_id, email, role, invited_by) VALUES (?, ?, ?, 'member', ?)", randomBytes(18).toString('base64url'), wsId, email, req.user.id);
+        const token = randomBytes(18).toString('base64url');
+        await db.run("INSERT INTO invites (token, workspace_id, email, role, invited_by) VALUES (?, ?, ?, 'member', ?)", token, wsId, email, req.user.id);
+        createdInvites.push({ token, email, role: 'member' });
       }
       await events.record({ workspaceId: wsId, actorId: req.user.id, verb: 'workspace_created', data: { name: body.name } });
       return await db.get('SELECT * FROM workspaces WHERE id = ?', wsId);
     });
-    res.status(201).json({ workspace: serializeWorkspace(ws, 'admin'), ...await session(db, req.user.id) });
+    const invites = await emailInvites(req, ws.name, createdInvites);
+    res.status(201).json({ workspace: serializeWorkspace(ws, 'admin'), invites, ...await session(db, req.user.id) });
   });
 
   r.get('/:ws', async (req, res) => {
@@ -141,7 +160,18 @@ export function workspaceRoutes({ db, events, hub }) {
       }
       return out;
     });
-    res.status(201).json(created);
+    res.status(201).json(await emailInvites(req, ws.name, created));
+  });
+
+  r.post('/:ws/invites/:token/resend', async (req, res) => {
+    const { ws } = await loadWorkspace(db, req.user, req.params.ws, 'admin');
+    const inv = await db.get('SELECT token, email, role FROM invites WHERE workspace_id = ? AND token = ? AND accepted_at IS NULL', ws.id, req.params.token);
+    if (!inv) throw notFound('Invitation');
+    if (!inv.email) throw new HttpError(400, 'Team links are shared by copying the link, not by email.');
+    if (!mailer) throw new HttpError(400, 'Email isn’t set up on this Flowstate yet — copy the link instead (see EMAIL.md).');
+    const [result] = await emailInvites(req, ws.name, [inv]);
+    if (!result.emailed) throw new HttpError(502, `The email could not be sent. ${result.emailError}`);
+    res.json(result);
   });
 
   r.delete('/:ws/invites/:token', async (req, res) => {

@@ -23,6 +23,8 @@ export const keys = {
   activity: (slug: string) => ['activity', slug] as const,
 };
 
+/** Which optional server features are switched on (Google sign-in, invitation emails). */
+export const useProviders = () => useQuery({ queryKey: ['auth-providers'], queryFn: () => api.get<{ google: boolean; email: boolean }>('/auth/providers'), staleTime: 300_000 });
 export const useSession = () => useQuery({ queryKey: keys.session, queryFn: () => api.get<Session>('/auth/me'), staleTime: 60_000 });
 export const useWorkspace = (slug: string) => useQuery({ queryKey: keys.workspace(slug), queryFn: () => api.get<WorkspaceDetail>(`/workspaces/${slug}`) });
 export const useProject = (id: number | undefined) =>

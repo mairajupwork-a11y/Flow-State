@@ -1,5 +1,6 @@
 import { useMutation, useQuery, useQueryClient } from '@tanstack/react-query';
 import { useNavigate } from 'react-router-dom';
+import { useProviders } from '../../lib/queries';
 import { Icon } from '../../components/Icon';
 import { Avatar, PageHeader } from '../../components/ui';
 import { api } from '../../lib/api';
@@ -22,6 +23,8 @@ export default function Team() {
     mutationFn: (id: number) => api.del(`/workspaces/${workspace.slug}/members/${id}`),
     onSuccess: (_d, id) => { if (id === me.id) { qc.invalidateQueries({ queryKey: ['session'] }); navigate('/', { replace: true }); } else { refresh(); toast('Member removed.'); } },
   });
+  const resend = useMutation({ mutationFn: (token: string) => api.post(`/workspaces/${workspace.slug}/invites/${token}/resend`, {}), onSuccess: (_d, token) => toast(`Invitation email re-sent to ${invites.data?.find((i) => i.token === token)?.email}.`) });
+  const emailOn = useProviders().data?.email ?? false;
   const revoke = useMutation({ mutationFn: (token: string) => api.del(`/workspaces/${workspace.slug}/invites/${token}`), onSuccess: () => { refresh(); toast('Invitation withdrawn.'); } });
 
   return (
@@ -61,11 +64,12 @@ export default function Team() {
       {isAdmin && !!invites.data?.length && (
         <div className="content-card" style={{ marginTop: 16 }}>
           <h3>Pending invitations</h3>
-          <p className="muted">Share a link again or withdraw it</p>
+          <p className="muted">{emailOn ? 'Resend the email, share the link, or withdraw it' : 'Share a link again or withdraw it'}</p>
           {invites.data.map((i) => (
             <div className="setting-row" key={i.token}>
               <div style={{ minWidth: 0 }}><strong>{i.email || 'Reusable team link'}</strong><small>{i.role} · created {timeAgo(i.createdAt)}</small></div>
               <div className="row-8">
+                {emailOn && i.email && <button className="btn btn-soft btn-sm" disabled={resend.isPending} onClick={() => resend.mutate(i.token)}><Icon name="mail" size={13} /> Resend</button>}
                 <button className="btn btn-soft btn-sm" onClick={() => copy(inviteUrl(i.token))}><Icon name="copy" size={13} /> Copy link</button>
                 <button className="btn btn-light btn-sm" onClick={() => revoke.mutate(i.token)}>Withdraw</button>
               </div>
