@@ -26,9 +26,9 @@ if not exist ".env" (
   )
 )
 echo.
-echo   Starting Flowstate. Your browser will open at http://localhost:5173
+echo   Starting Flowstate. Your browser will open at http://127.0.0.1:5173
 echo   Keep this window open while you use the app. Close it to stop Flowstate.
 echo.
-start "" cmd /c "timeout /t 8 /nobreak >nul & start http://localhost:5173"
+start "" cmd /c "timeout /t 8 /nobreak >nul & start http://127.0.0.1:5173"
 call npm run dev
 pause

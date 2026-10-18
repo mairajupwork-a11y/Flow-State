@@ -45,7 +45,12 @@ export default defineConfig(({ mode }) => ({
   plugins: [react(), mode === 'demo' ? browserBackend() : stubDemoBackend()],
   base: mode === 'demo' ? './' : '/',
   server: {
+    // Listen on 127.0.0.1 explicitly: on Windows, Node may otherwise bind only
+    // to IPv6 (::1), which some browsers and extensions don't reach.
+    host: '127.0.0.1',
     port: 5173,
+    // Fail loudly instead of silently moving to 5174 when an old copy is still running.
+    strictPort: true,
     // 127.0.0.1 avoids Windows resolving localhost to IPv6 first.
     proxy: { '/api': { target: 'http://127.0.0.1:4000', changeOrigin: false } },
   },
