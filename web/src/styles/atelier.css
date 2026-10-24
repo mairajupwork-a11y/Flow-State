@@ -382,6 +382,7 @@ body::before {
 .lp-hero::after { right: max(24px, calc(50% - 640px)); top: 150px; background-position: center 70%, center; }
 @media (max-width: 900px) { .lp-hero::before, .lp-hero::after { display: none; } }
 .lp-chip { background: rgba(255, 251, 245, .75); border: 1px solid rgba(43, 22, 13, .3); }
+[data-theme="dark"] .lp-chip { background: rgba(43, 29, 21, .72); border-color: rgba(233, 207, 174, .3); color: var(--text); }
 
 /* Dark: the workspace badge flips to cream so its letter stays readable. */
 [data-theme="dark"] .ws-avatar { background: #e9c9a2; color: #2b160d; }
@@ -464,3 +465,57 @@ body { letter-spacing: 0; word-spacing: .05em; }
   font-optical-sizing: auto;
   letter-spacing: -.01em;
 }
+
+/* ---------- Floating Martian rocks (public pages) ---------- */
+.rocks { position: absolute; inset: 0; z-index: 1; pointer-events: none; }
+.rock {
+  position: absolute;
+  left: var(--x);
+  top: var(--y);
+  /* full size at 1440px wide, shrinking with the window down to 55% */
+  width: clamp(calc(var(--s) * .55px), calc(var(--s) * .0694vw), calc(var(--s) * 1px));
+  /* scroll lifts nearer rocks faster; the pointer nudges them the opposite way */
+  transform:
+    translate3d(calc(var(--mx, 0) * var(--depth) * -30px), calc(var(--p, 0) * var(--depth) * -240px + var(--my, 0) * var(--depth) * -18px), 0)
+    rotate(calc(var(--rot) + var(--p, 0) * var(--depth) * 40deg));
+  transition: transform .9s cubic-bezier(.16, .84, .3, 1);
+  will-change: transform;
+}
+.rock-far { filter: blur(1.2px); opacity: .82; }
+.rock-float {
+  animation: rock-in 1.4s cubic-bezier(.16, .84, .3, 1) both, rock-float var(--float) ease-in-out var(--delay) infinite alternate;
+}
+.rocks:not(.is-live) .rock-float { animation-play-state: running, paused; }
+.rock img {
+  display: block;
+  width: 100%;
+  height: auto;
+  pointer-events: auto;
+  user-select: none;
+  filter: drop-shadow(0 18px 20px rgba(84, 38, 14, .22));
+  transition: transform .8s cubic-bezier(.16, .84, .3, 1), filter .8s ease;
+}
+.rock img:hover {
+  transform: translateY(-16px) rotate(16deg) scale(1.14);
+  filter: drop-shadow(0 34px 30px rgba(84, 38, 14, .3)) brightness(1.06) saturate(1.08);
+}
+@keyframes rock-float {
+  from { transform: translateY(-9px) rotate(-3deg); }
+  to { transform: translateY(11px) rotate(4deg); }
+}
+/* entrance uses the separate `scale`/`opacity` properties so it never fights the float */
+@keyframes rock-in { from { opacity: 0; scale: .7; } to { opacity: 1; scale: 1; } }
+[data-theme="dark"] .rock img { filter: drop-shadow(0 18px 22px rgba(0, 0, 0, .45)) brightness(.92); }
+@media (max-width: 760px) {
+  .rock-wide { display: none; }
+  .rock { left: var(--px); top: var(--py); }
+}
+@media (prefers-reduced-motion: reduce) {
+  .rock { transform: rotate(var(--rot)); transition: none; }
+  .rock-float { animation: none; }
+}
+html.reduce-motion .rock { transform: rotate(var(--rot)); transition: none; }
+html.reduce-motion .rock-float { animation: none; }
+/* sections hosting rocks; copy and buttons stay above them */
+.lp-hero, .lp-final, #features { position: relative; }
+.lp-hero-copy, .lp-final .lp-wrap, #features .lp-wrap { position: relative; z-index: 2; }

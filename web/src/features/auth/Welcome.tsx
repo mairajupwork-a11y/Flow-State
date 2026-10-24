@@ -2,6 +2,7 @@ import { useRef } from 'react';
 import { Link, Navigate } from 'react-router-dom';
 import { Icon } from '../../components/Icon';
 import { Logo, Mark } from '../../components/Logo';
+import { FloatingRocks, type Rock } from '../../components/FloatingRocks';
 import { useSession } from '../../lib/queries';
 import { useTheme } from '../../lib/theme';
 import { useReveal, useScrollVars, useTypewriter } from '../../lib/motion';
@@ -13,6 +14,30 @@ export function Brand({ to = '/', onDark = false, height = 28 }: { to?: string; 
     </Link>
   );
 }
+
+/* Martian rocks drifting around the public page (see FloatingRocks). Kept to
+   the margins so they frame the copy rather than cover it. */
+const HERO_ROCKS: Rock[] = [
+  { art: 'boulder', x: '2%', y: '22%', size: 200, depth: .55, rot: -10, float: 9, phone: { x: '-52px', y: '300px' } },
+  { art: 'pebbleA', x: '13%', y: '9%', size: 56, depth: .95, rot: 12, float: 6.5 },
+  { art: 'pebbleD', x: '17%', y: '47%', size: 34, depth: .2, rot: -30, float: 10, far: true },
+  { art: 'slab', x: '84%', y: '10%', size: 180, depth: .4, rot: 16, float: 11, phone: { x: 'calc(100% - 40px)', y: '0px' } },
+  { art: 'pebbleB', x: '91%', y: '45%', size: 62, depth: .85, rot: -18, float: 7.5 },
+  { art: 'pebbleC', x: '78%', y: '38%', size: 40, depth: .25, rot: 24, float: 9.5, far: true },
+  { art: 'shard', x: '87%', y: '70%', size: 160, depth: .7, rot: -12, float: 8.5 },
+  { art: 'pebbleA', x: '5%', y: '74%', size: 48, depth: .75, rot: 40, float: 7 },
+];
+const FINAL_ROCKS: Rock[] = [
+  { art: 'shard', x: '6%', y: '8%', size: 150, depth: .6, rot: 20, float: 9, phone: { x: '-44px', y: '0px' } },
+  { art: 'pebbleC', x: '20%', y: '62%', size: 50, depth: .9, rot: -14, float: 7 },
+  { art: 'boulder', x: '82%', y: '30%', size: 170, depth: .5, rot: 8, float: 10.5 },
+  { art: 'pebbleD', x: '74%', y: '6%', size: 38, depth: .3, rot: 30, float: 8, far: true },
+  { art: 'pebbleB', x: '93%', y: '74%', size: 46, depth: .8, rot: -26, float: 6.5 },
+];
+const FEATURE_ROCKS: Rock[] = [
+  { art: 'slab', x: '-2%', y: '6%', size: 140, depth: .45, rot: -24, float: 10 },
+  { art: 'pebbleA', x: '95%', y: '18%', size: 44, depth: .8, rot: 18, float: 7 },
+];
 
 const TEAMS = ['Product teams', 'Engineering', 'Marketing', 'Operations', 'People & HR', 'Finance', 'Agencies', 'Founders', 'Schools', 'Charities', 'Consultancies', 'Creative studios'];
 const TYPE_PHRASES = ['More clarity', 'More focus', 'More done'];
@@ -60,6 +85,7 @@ export function Welcome() {
       <main>
         {/* Hero: the headline recedes as the product rises into place */}
         <section className="lp-hero" data-scroll="exit">
+          <FloatingRocks rocks={HERO_ROCKS} />
           <div className="lp-wrap lp-hero-copy">
             <span className="lp-chip enter" style={{ ['--d' as string]: '0ms' }}><span className="dot" /> Free for unlimited users · forever</span>
             <h1 className="lp-h1">
@@ -122,6 +148,7 @@ export function Welcome() {
         </section>
 
         <section className="lp-section lp-grey" id="features">
+          <FloatingRocks rocks={FEATURE_ROCKS} />
           <div className="lp-wrap">
             <h2 className="lp-h2 xl" data-reveal>You’re in<br /><em>control</em></h2>
             <div className="lp-features">
@@ -161,6 +188,7 @@ export function Welcome() {
         </section>
 
         <section className="lp-section lp-final">
+          <FloatingRocks rocks={FINAL_ROCKS} />
           <div className="lp-wrap" data-reveal>
             <h2 className="lp-h2 xl">Ready to grow <em>your team?</em></h2>
             <p className="lp-lead">Start in under a minute and let WorkMars handle the rest.</p>
