@@ -1,4 +1,5 @@
-import { useMemo, useState, type FormEvent, type KeyboardEvent } from 'react';
+import { SCENES, sceneStyle } from '../../lib/scenes';
+import { useMemo, useState, type CSSProperties, type FormEvent, type KeyboardEvent } from 'react';
 import { useNavigate } from 'react-router-dom';
 import { useQueryClient } from '@tanstack/react-query';
 import { api } from '../../lib/api';
@@ -215,6 +216,7 @@ export function Onboarding() {
 
         {step === 4 && created && (
           <section className="onboard-step ready" key="s4">
+            <div className="ready-scene scene" style={sceneStyle(SCENES[0]) as CSSProperties} aria-hidden="true" />
             <div className="ready-burst" aria-hidden="true"><Icon name="sparkles" size={34} /></div>
             <h1 className="page-title">{accentTitle(`You’re all set, ${first}.`)}</h1>
             <p className="page-subtitle"><b>{created.name}</b> is ready with your <b>{project.name}</b> {METHODOLOGIES[methodology].name} project{emails.length ? ` and ${emails.length} invitation${emails.length === 1 ? '' : 's'}` : ''}.{emailed ? ` We’ve emailed ${emailed === 1 ? 'your invitation' : `all ${emailed} invitations`}.` : ''}</p>

@@ -1,3 +1,4 @@
+import { sceneFor, sceneStyle } from '../../lib/scenes';
 import { useMemo, useState, type CSSProperties } from 'react';
 import { Navigate, NavLink, Outlet, useLocation, useOutletContext, useParams } from 'react-router-dom';
 import { useIssues, useProject } from '../../lib/queries';
@@ -99,7 +100,7 @@ export function ProjectHero({ project, issues }: { project: ProjectDetail; issue
   }
   const people = members.filter((m) => issues.some((i) => i.assigneeId === m.id));
   return (
-    <div className="project-hero" style={{ '--project-tint': project.color } as CSSProperties}>
+    <div className="project-hero scene" style={{ '--project-tint': project.color, ...sceneStyle(sceneFor(project.id)) } as CSSProperties}>
       <div className="hero-content">
         <div className="hero-overline"><Icon name="bolt" size={13} /> {phase}</div>
         <h2>{project.name}</h2>

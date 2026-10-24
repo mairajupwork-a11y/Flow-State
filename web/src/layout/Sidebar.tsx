@@ -1,5 +1,6 @@
+import { SCENES, sceneStyle } from '../lib/scenes';
 import { Logo } from '../components/Logo';
-import { useEffect, useRef, useState } from 'react';
+import { useEffect, useRef, useState, type CSSProperties } from 'react';
 import { NavLink, useNavigate } from 'react-router-dom';
 import { useQueryClient } from '@tanstack/react-query';
 import { Icon } from '../components/Icon';
@@ -81,7 +82,7 @@ export function Sidebar({ activeKey }: { activeKey?: string }) {
       </nav>
 
       <div className="side-bottom">
-        <div className="free-banner">
+        <div className="free-banner scene" style={sceneStyle(SCENES[0]) as CSSProperties}>
           <span className="mini-label">FREE. NO SEAT LIMITS.</span>
           <strong>Make room for everyone.</strong>
           <p>Invite your whole team — every feature is free for unlimited users.</p>

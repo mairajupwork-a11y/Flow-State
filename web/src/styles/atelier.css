@@ -483,3 +483,85 @@ html.reduce-motion .rock-float { animation: none; }
 /* sections hosting rocks; copy and buttons stay above them */
 .lp-hero, .lp-final, #features { position: relative; }
 .lp-hero-copy, .lp-final .lp-wrap, #features .lp-wrap { position: relative; z-index: 2; }
+
+/* ---------- Martian scenes: photo backdrops for banner panels ----------
+   `.scene` paints --scene (a photo, see lib/scenes.ts) under a warm espresso
+   wash that is darkest where the text sits, on a layer that drifts slowly. */
+.scene { position: relative; overflow: hidden; isolation: isolate; }
+.scene::before {
+  content: '';
+  position: absolute;
+  inset: -2%;
+  z-index: -2;
+  background: var(--scene) var(--scene-pos, center) / cover no-repeat;
+  animation: scene-drift 36s ease-in-out infinite alternate;
+}
+.scene::after {
+  content: '';
+  position: absolute;
+  inset: 0;
+  z-index: -1;
+  background: linear-gradient(100deg, rgba(28, 13, 6, .9) 0%, rgba(36, 17, 8, .72) 38%, rgba(40, 18, 8, .28) 70%, rgba(40, 18, 8, .12) 100%);
+}
+@keyframes scene-drift { from { transform: scale(1.02) translate3d(0, 0, 0); } to { transform: scale(1.1) translate3d(-1.5%, -1%, 0); } }
+@media (prefers-reduced-motion: reduce) { .scene::before { animation: none; } }
+html.reduce-motion .scene::before { animation: none; }
+
+/* Project hero: the photo replaces the flat gradient; the project colour
+   tints the far edge so each project still reads as its own. */
+.project-hero.scene {
+  background: none;
+  border-color: rgba(240, 192, 141, .22);
+  min-height: 150px;
+}
+.project-hero.scene::after {
+  background:
+    radial-gradient(420px 260px at 100% 110%, color-mix(in srgb, var(--project-tint, #a65a2e) 45%, transparent), transparent 70%),
+    linear-gradient(100deg, rgba(28, 13, 6, .9) 0%, rgba(36, 17, 8, .68) 40%, rgba(40, 18, 8, .22) 72%, rgba(40, 18, 8, .35) 100%) !important; /* beats the older glow rule */
+}
+.project-hero.scene .hero-content, .project-hero.scene .hero-right { position: relative; z-index: 1; }
+/* the old decorative ring and glow used these pseudo-elements; reset them to full-bleed layers */
+.project-hero.scene::before, .project-hero.scene::after { width: auto; height: auto; top: 0; right: 0; bottom: 0; left: 0; border: 0; border-radius: 0; }
+.project-hero.scene::before { inset: -2%; }
+.project-hero.scene .hero-content p, .project-hero.scene .hero-metric span { text-shadow: 0 1px 10px rgba(0, 0, 0, .4); }
+
+/* Team banner */
+.team-banner.scene { border: 0; min-height: 132px; padding: 26px 28px; color: #fbf1e3; }
+.team-banner.scene h3 { color: #fbf1e3; font-family: var(--serif); font-style: italic; font-weight: 500; font-size: 24px; letter-spacing: -.01em; }
+.team-banner.scene .muted { color: #e2cbb1; }
+.team-banner.scene .btn-primary { background: #fbf1e3; color: #2b160d; }
+
+/* Sidebar card */
+.free-banner.scene { background: none; }
+.free-banner.scene::after { background: linear-gradient(180deg, rgba(28, 13, 6, .55), rgba(28, 13, 6, .88)); }
+.free-banner.scene::before { animation-duration: 50s; }
+
+/* Onboarding: the "all set" step opens on the canyon */
+.ready-scene { height: 160px; border-radius: 22px; margin: 0 0 22px; }
+.ready-scene::after { background: linear-gradient(180deg, transparent 40%, rgba(28, 13, 6, .45)); }
+.onboard-step.ready .ready-burst { margin-top: -62px; position: relative; z-index: 1; box-shadow: 0 0 0 6px var(--surface-solid); }
+
+/* Landing: an immersive photo band and two image tiles */
+.lp-scene-band { width: min(1240px, calc(100% - 32px)); margin: clamp(40px, 6vw, 80px) auto; display: grid; gap: 16px; }
+.lp-scene { min-height: clamp(380px, 46vw, 560px); border-radius: 32px; display: flex; align-items: flex-end; padding: clamp(26px, 5vw, 64px); box-shadow: var(--shadow-lift); }
+.lp-scene::after { background: linear-gradient(0deg, rgba(24, 11, 5, .82) 0%, rgba(24, 11, 5, .3) 38%, transparent 62%), linear-gradient(90deg, rgba(24, 11, 5, .35), transparent 55%); }
+/* scroll parallax: the photo eases up as the band passes (data-scroll sets --p) */
+.lp-scene::before { animation: none; transform: scale(1.12) translate3d(0, calc((var(--p, .5) - .5) * -6%), 0); transition: transform .2s linear; }
+.lp-scene-copy { max-width: 560px; color: #fbf1e3; }
+.lp-scene-copy .lp-h2 { color: #fbf1e3; margin: 10px 0 12px; }
+.lp-scene-copy .lp-h2 em { background: linear-gradient(100deg, #f6d3a8, #e0a16a 55%, #f3c592); -webkit-background-clip: text; background-clip: text; color: transparent; }
+.lp-scene-copy p { color: #e6d2bb; font-size: 16px; line-height: 1.6; margin: 0; }
+.lp-scene-kicker { font-size: 11px; font-weight: 700; letter-spacing: 4px; color: #f3b27c; }
+.lp-scene-pair { display: grid; grid-template-columns: 1fr 1fr; gap: 16px; }
+.lp-scene-tile { min-height: 240px; border-radius: 26px; padding: 26px; display: flex; flex-direction: column; justify-content: flex-end; gap: 6px; color: #fbf1e3; transition: transform .6s var(--ease), box-shadow .6s var(--ease); }
+.lp-scene-tile::after { background: linear-gradient(0deg, rgba(24, 11, 5, .85), rgba(24, 11, 5, .1) 70%); }
+.lp-scene-tile::before { animation: none; transition: transform 1.2s var(--ease); }
+.lp-scene-tile:hover { transform: translateY(-4px); box-shadow: var(--shadow-lift); }
+.lp-scene-tile:hover::before { transform: scale(1.08); }
+.lp-scene-tile span { font-size: 11px; font-weight: 700; letter-spacing: 3px; text-transform: uppercase; color: #f3b27c; }
+.lp-scene-tile b { font-family: var(--serif); font-style: italic; font-weight: 500; font-size: clamp(20px, 2vw, 26px); line-height: 1.25; }
+@media (max-width: 760px) {
+  .lp-scene-pair { grid-template-columns: 1fr; }
+  .lp-scene { border-radius: 24px; }
+  .ready-scene { height: 120px; }
+}

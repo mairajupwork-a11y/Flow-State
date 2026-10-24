@@ -1,3 +1,5 @@
+import { SCENES, sceneStyle } from '../../lib/scenes';
+import type { CSSProperties } from 'react';
 import { useMutation, useQuery, useQueryClient } from '@tanstack/react-query';
 import { useNavigate } from 'react-router-dom';
 import { keys, useProviders } from '../../lib/queries';
@@ -39,7 +41,7 @@ export default function Team() {
   return (
     <>
       <PageHeader eyebrow="People / Team" title="Better together, at any size." subtitle="A workspace designed for everyone to be involved — with no seat limits, ever." />
-      <div className="content-card team-banner">
+      <div className="content-card team-banner scene" style={sceneStyle(SCENES[1]) as CSSProperties}>
         <div><h3>{workspace.name} members</h3><p className="muted">{members.length} {members.length === 1 ? 'person' : 'people'} · Unlimited users, always free</p></div>
         {isAdmin && <button className="btn btn-primary" onClick={() => ui.set({ inviteOpen: true })}><Icon name="plus" size={15} /> Invite people</button>}
       </div>
