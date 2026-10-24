@@ -11,7 +11,7 @@ export function createHub() {
 
   function subscribe(workspaceId, userId, res) {
     if ((perUser.get(userId) ?? 0) >= MAX_STREAMS_PER_USER) {
-      res.status(429).json({ error: 'Too many open Flowstate tabs. Close a few and refresh.' });
+      res.status(429).json({ error: 'Too many open WorkMars tabs. Close a few and refresh.' });
       return;
     }
     perUser.set(userId, (perUser.get(userId) ?? 0) + 1);

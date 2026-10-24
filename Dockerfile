@@ -1,4 +1,4 @@
-# Flowstate — single container: builds the React app, serves it from the Node API.
+# WorkMars — single container: builds the React app, serves it from the Node API.
 FROM node:22-alpine AS build
 WORKDIR /app
 COPY package.json package-lock.json ./
@@ -10,7 +10,7 @@ RUN npm run build -w web
 
 FROM node:22-alpine
 WORKDIR /app
-ENV NODE_ENV=production PORT=4000 DATABASE_FILE=/data/flowstate.db
+ENV NODE_ENV=production PORT=4000 DATABASE_FILE=/data/workmars.db
 COPY package.json package-lock.json ./
 COPY server/package.json server/
 COPY web/package.json web/

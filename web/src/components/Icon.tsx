@@ -1,4 +1,4 @@
-/* Icon set mirrors the Flowstate design prototype (stroke icons, 24px grid). */
+/* Icon set mirrors the WorkMars design prototype (stroke icons, 24px grid). */
 export const ICON_NAMES = ['sparkles', 'grid', 'board', 'list', 'calendar', 'chart', 'people', 'settings', 'check', 'checkcircle', 'plus', 'search', 'bell', 'chevron', 'right', 'left', 'close', 'menu', 'flag', 'clock', 'message', 'attachment', 'ellipsis', 'sun', 'moon', 'filter', 'arrow', 'trend', 'bolt', 'target', 'timeline', 'inbox', 'loader', 'send', 'lock', 'lightbulb', 'trash', 'edit', 'star', 'copy', 'link', 'logout', 'eye', 'grip', 'keyboard', 'mail', 'globe', 'play', 'sort', 'folder', 'up', 'home', 'shield', 'heart', 'refresh', 'diamond', 'layers'] as const;
 export type IconName = (typeof ICON_NAMES)[number];
 

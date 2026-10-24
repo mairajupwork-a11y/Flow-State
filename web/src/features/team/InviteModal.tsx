@@ -82,7 +82,7 @@ export function InviteModal({ onClose }: { onClose: () => void }) {
               ))}
             </div>
             {created.length > 1 && <button className="link-btn" style={{ marginTop: 10 }} onClick={() => copy(created.map((i) => `${i.email}: ${inviteUrl(i.token)}`).join('\n'), 'All links copied.')}>Copy all links</button>}
-            {!emailOn && <div className="tip-box" style={{ marginTop: 14 }}><Icon name="lightbulb" size={17} /><span>Email isn’t set up on this Flowstate yet, so paste these links into WhatsApp, Slack, Teams or your own email. An admin can switch on invitation emails — see EMAIL.md.</span></div>}
+            {!emailOn && <div className="tip-box" style={{ marginTop: 14 }}><Icon name="lightbulb" size={17} /><span>Email isn’t set up on this WorkMars yet, so paste these links into WhatsApp, Slack, Teams or your own email. An admin can switch on invitation emails — see EMAIL.md.</span></div>}
           </>
         ) : (
           <>

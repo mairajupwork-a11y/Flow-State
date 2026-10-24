@@ -91,7 +91,7 @@ test('Google sign-in creates an account, signs in, and links on return', async (
   assert.ok(again.session);
   assert.equal((await db.get('SELECT COUNT(*) AS n FROM users')).n, 1, 'same email reuses the account');
 
-  const pw = await fetch(`${base}/api/auth/login`, { method: 'POST', headers: { 'Content-Type': 'application/json', 'X-Requested-With': 'flowstate' }, body: JSON.stringify({ email: 'priya@example.com', password: 'whatever1' }) });
+  const pw = await fetch(`${base}/api/auth/login`, { method: 'POST', headers: { 'Content-Type': 'application/json', 'X-Requested-With': 'workmars' }, body: JSON.stringify({ email: 'priya@example.com', password: 'whatever1' }) });
   assert.equal(pw.status, 401);
   assert.match((await pw.json()).error, /Continue with Google/);
   server.close();
@@ -99,7 +99,7 @@ test('Google sign-in creates an account, signs in, and links on return', async (
 
 test('an existing password account is linked by verified email', async () => {
   const { server, base, db } = await start(google());
-  const signup = await fetch(`${base}/api/auth/signup`, { method: 'POST', headers: { 'Content-Type': 'application/json', 'X-Requested-With': 'flowstate' }, body: JSON.stringify({ name: 'Priya', email: 'Priya@Example.com', password: 'correct-horse' }) });
+  const signup = await fetch(`${base}/api/auth/signup`, { method: 'POST', headers: { 'Content-Type': 'application/json', 'X-Requested-With': 'workmars' }, body: JSON.stringify({ name: 'Priya', email: 'Priya@Example.com', password: 'correct-horse' }) });
   assert.equal(signup.status, 201);
   const oldCookie = signup.headers.get('set-cookie').split(';')[0];
   const { session } = await signIn(base);
@@ -111,10 +111,10 @@ test('an existing password account is linked by verified email', async () => {
   assert.equal((await me(oldCookie)).user, null, 'pre-existing sessions are revoked');
   assert.equal((await me(session)).user.email, 'priya@example.com');
   assert.equal((await me(session)).user.hasPassword, false);
-  const login = await fetch(`${base}/api/auth/login`, { method: 'POST', headers: { 'Content-Type': 'application/json', 'X-Requested-With': 'flowstate' }, body: JSON.stringify({ email: 'priya@example.com', password: 'correct-horse' }) });
+  const login = await fetch(`${base}/api/auth/login`, { method: 'POST', headers: { 'Content-Type': 'application/json', 'X-Requested-With': 'workmars' }, body: JSON.stringify({ email: 'priya@example.com', password: 'correct-horse' }) });
   assert.equal(login.status, 401);
   // Google-only accounts can set a password without knowing an old one.
-  const set = await fetch(`${base}/api/auth/password`, { method: 'POST', headers: { 'Content-Type': 'application/json', 'X-Requested-With': 'flowstate', Cookie: session }, body: JSON.stringify({ next: 'brand-new-pass' }) });
+  const set = await fetch(`${base}/api/auth/password`, { method: 'POST', headers: { 'Content-Type': 'application/json', 'X-Requested-With': 'workmars', Cookie: session }, body: JSON.stringify({ next: 'brand-new-pass' }) });
   assert.equal(set.status, 200);
   assert.equal((await me(session)).user, null, 'changing the password signs out other sessions');
   assert.ok((await me(set.headers.get('set-cookie').split(';')[0])).user, 'but keeps this one signed in');

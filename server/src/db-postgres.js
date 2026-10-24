@@ -153,9 +153,15 @@ export async function migratePostgres(pool) {
   const client = await pool.connect();
   try {
     await client.query('SELECT pg_advisory_lock(727274)');
-    await client.query('CREATE TABLE IF NOT EXISTS flowstate_meta (key TEXT PRIMARY KEY, value TEXT NOT NULL)');
-    await client.query('ALTER TABLE flowstate_meta ENABLE ROW LEVEL SECURITY');
-    const row = (await client.query("SELECT value FROM flowstate_meta WHERE key = 'schema_version'")).rows[0];
+    // Databases created before the rename keep their version history under the old table name.
+    await client.query(`DO $$ BEGIN
+      IF to_regclass('public.flowstate_meta') IS NOT NULL AND to_regclass('public.workmars_meta') IS NULL THEN
+        ALTER TABLE flowstate_meta RENAME TO workmars_meta;
+      END IF;
+    END $$`);
+    await client.query('CREATE TABLE IF NOT EXISTS workmars_meta (key TEXT PRIMARY KEY, value TEXT NOT NULL)');
+    await client.query('ALTER TABLE workmars_meta ENABLE ROW LEVEL SECURITY');
+    const row = (await client.query("SELECT value FROM workmars_meta WHERE key = 'schema_version'")).rows[0];
     if (Number(row?.value ?? 0) < VERSION) {
       const sql = readFileSync(new URL('./schema/postgres.sql', import.meta.url), 'utf8');
       await client.query('BEGIN');
@@ -163,7 +169,7 @@ export async function migratePostgres(pool) {
         const current = Number(row?.value ?? 0);
         if (current < 1) await client.query(sql);
         for (let v = Math.max(current, 1); v < VERSION; v++) await client.query(UPGRADES[v]);
-        await client.query("INSERT INTO flowstate_meta (key, value) VALUES ('schema_version', $1) ON CONFLICT (key) DO UPDATE SET value = EXCLUDED.value", [String(VERSION)]);
+        await client.query("INSERT INTO workmars_meta (key, value) VALUES ('schema_version', $1) ON CONFLICT (key) DO UPDATE SET value = EXCLUDED.value", [String(VERSION)]);
         await client.query('COMMIT');
       } catch (err) {
         await client.query('ROLLBACK');

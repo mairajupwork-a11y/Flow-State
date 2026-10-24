@@ -41,7 +41,7 @@ export function workspaceRoutes({ db, events, hub, mailer, appUrl, production })
     message: 'You’ve sent a lot of invitations in the last hour. Please wait a while, or share invite links instead.',
   });
 
-  // Links in emails must point at the address people actually open Flowstate on.
+  // Links in emails must point at the address people actually open WorkMars on.
   const baseUrl = (req) => (appUrl || `${req.protocol}://${req.get('host')}`).replace(/\/$/, '');
   /** Emails each invite (when SMTP is configured); never fails the request. */
   const emailInvites = (req, workspaceName, invites) => Promise.all(invites.map(async (inv) => {
@@ -192,7 +192,7 @@ export function workspaceRoutes({ db, events, hub, mailer, appUrl, production })
     const inv = await db.get('SELECT token, email, role, designation FROM invites WHERE workspace_id = ? AND token = ? AND accepted_at IS NULL', ws.id, req.params.token);
     if (!inv) throw notFound('Invitation');
     if (!inv.email) throw new HttpError(400, 'Team links are shared by copying the link, not by email.');
-    if (!mailer) throw new HttpError(400, 'Email isn’t set up on this Flowstate yet — copy the link instead (see EMAIL.md).');
+    if (!mailer) throw new HttpError(400, 'Email isn’t set up on this WorkMars yet — copy the link instead (see EMAIL.md).');
     const [result] = await emailInvites(req, ws.name, [inv]);
     if (!result.emailed) throw new HttpError(502, `The email could not be sent. ${result.emailError}`);
     res.json(result);

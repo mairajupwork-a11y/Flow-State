@@ -1,15 +1,15 @@
 import { useRef } from 'react';
 import { Link, Navigate } from 'react-router-dom';
 import { Icon } from '../../components/Icon';
+import { Logo, Mark } from '../../components/Logo';
 import { useSession } from '../../lib/queries';
 import { useTheme } from '../../lib/theme';
 import { useReveal, useScrollVars, useTypewriter } from '../../lib/motion';
 
-export function Brand({ to = '/' }: { to?: string }) {
+export function Brand({ to = '/', onDark = false, height = 28 }: { to?: string; onDark?: boolean; height?: number }) {
   return (
-    <Link to={to} className="brand" style={{ textDecoration: 'none', color: 'inherit' }} aria-label="Flowstate home">
-      <span className="logo-mark"><Icon name="sparkles" size={22} /></span>
-      <span className="brand-name">flowstate<span className="brand-dot">.</span></span>
+    <Link to={to} className="brand" style={{ textDecoration: 'none', color: 'inherit' }} aria-label="WorkMars home">
+      <Logo onDark={onDark} height={height} />
     </Link>
   );
 }
@@ -18,7 +18,7 @@ const TEAMS = ['Product teams', 'Engineering', 'Marketing', 'Operations', 'Peopl
 const TYPE_PHRASES = ['More clarity', 'More focus', 'More done'];
 
 const FEATURES: [string, string, string, string][] = [
-  ['sparkles', 'Flow guide — your free AI', 'Plans your day, spots blockers, sizes sprints and turns a sentence into a work item. No limits, no bill.', 'violet'],
+  ['sparkles', 'Mars guide — your free AI', 'Plans your day, spots blockers, sizes sprints and turns a sentence into a work item. No limits, no bill.', 'violet'],
   ['board', 'Boards that bend to you', 'Rename, reorder and colour columns, set WIP limits, and drag work with mouse, touch or keyboard.', 'blue'],
   ['inbox', 'Sprints & backlog', 'Plan, start and complete sprints. Unfinished work rolls forward and velocity is recorded for you.', 'amber'],
   ['timeline', 'Timeline & calendar', 'See epics and deadlines across the weeks ahead, then drag your attention to what is due next.', 'green'],
@@ -65,7 +65,7 @@ export function Welcome() {
             <h1 className="lp-h1">
               {['Work', 'beautifully,', 'together.'].map((w, i) => <span key={w} className={`enter word ${i === 2 ? 'serif-accent' : ''}`} style={{ ['--d' as string]: `${120 + i * 110}ms` }}>{w}&nbsp;</span>)}
             </h1>
-            <p className="lp-sub enter" style={{ ['--d' as string]: '480ms' }}><b>flowstate</b> runs your team’s projects in minutes. Boards, sprints, timelines and a free AI guide — in one calm space.</p>
+            <p className="lp-sub enter" style={{ ['--d' as string]: '480ms' }}><b>WorkMars</b> runs your team’s projects in minutes. Boards, sprints, timelines and a free AI guide — in one calm space.</p>
             <div className="lp-cta enter" style={{ ['--d' as string]: '600ms' }}>
               <Link to="/signup" className="pill pill-solid pill-lg">Get started free <Icon name="right" size={15} /></Link>
               <a href="#how" className="pill pill-ghost pill-lg">See how it works</a>
@@ -76,7 +76,7 @@ export function Welcome() {
           </div>
         </section>
 
-        <section className="lp-trust" aria-label="Who Flowstate is for">
+        <section className="lp-trust" aria-label="Who WorkMars is for">
           <p className="lp-kicker">BUILT FOR EVERY KIND OF TEAM</p>
           <div className="lp-marquee"><div className="lp-marquee-track">{[...TEAMS, ...TEAMS].map((t, i) => <span key={i}>{t}</span>)}</div></div>
         </section>
@@ -85,8 +85,8 @@ export function Welcome() {
         <section className="lp-wrap lp-stack">
           <article className="lp-card" data-stack id="what">
             <div className="lp-card-copy">
-              <h2 className="lp-h2">What is<br /><em>Flowstate?</em></h2>
-              <p>Most project tools force you into their complex systems — and charge per seat for the privilege. Flowstate is different. Set up in a minute, invite everyone for free, and let the board, the sprints and your Flow guide keep work moving. Every department, every project, one simple workspace.</p>
+              <h2 className="lp-h2">What is<br /><em>WorkMars?</em></h2>
+              <p>Most project tools force you into their complex systems — and charge per seat for the privilege. WorkMars is different. Set up in a minute, invite everyone for free, and let the board, the sprints and your Mars guide keep work moving. Every department, every project, one simple workspace.</p>
             </div>
             <div className="lp-card-visual lp-type">
               <p>More <em>people</em></p>
@@ -98,7 +98,7 @@ export function Welcome() {
           <article className="lp-card lp-card-grey" data-stack id="how">
             <div className="lp-card-copy">
               <h2 className="lp-h2">How does<br /><em>it work?</em></h2>
-              <p>Capture work as cards, drag it across your board, plan sprints in the backlog and watch progress in reports. When you’re unsure what’s next, ask the Flow guide — it reads your real work and tells you.</p>
+              <p>Capture work as cards, drag it across your board, plan sprints in the backlog and watch progress in reports. When you’re unsure what’s next, ask the Mars guide — it reads your real work and tells you.</p>
               <Link to="/signup" className="pill pill-solid">Try for free <Icon name="right" size={14} /></Link>
             </div>
             <div className="lp-card-visual"><MiniBoard /></div>
@@ -106,12 +106,12 @@ export function Welcome() {
 
           <article className="lp-card" data-stack>
             <div className="lp-card-copy">
-              <h2 className="lp-h2">Flowstate builds<br /><em>around you</em></h2>
+              <h2 className="lp-h2">WorkMars builds<br /><em>around you</em></h2>
               <p>Tell us your role, your region and how your team likes to work. We set up the right workflow — Scrum, Kanban or simple approvals — with UK, US or Asia date formats, ready in under a minute.</p>
               <Link to="/signup" className="pill pill-solid">Try for free <Icon name="right" size={14} /></Link>
             </div>
             <div className="lp-card-visual lp-idea">
-              <span className="logo-mark sm"><Icon name="sparkles" size={18} /></span>
+              <Mark size={34} />
               <small>ZERO TO RUNNING</small>
               <p className="serif">From idea<br /><i>to workspace</i></p>
               <ol className="lp-steps">
@@ -136,7 +136,7 @@ export function Welcome() {
             <div className="lp-split" data-reveal>
               <h2 className="lp-h2 xl">One platform<br /><em>zero limits</em></h2>
               <div>
-                <p className="lp-lead">An open workspace for every team you work with. Flowstate is free for unlimited users, runs on your own server if you like, and keeps your data out of third-party AI services.</p>
+                <p className="lp-lead">An open workspace for every team you work with. WorkMars is free for unlimited users, runs on your own server if you like, and keeps your data out of third-party AI services.</p>
                 <Link to="/signup" className="pill pill-solid">Start for free</Link>
               </div>
             </div>
@@ -147,14 +147,14 @@ export function Welcome() {
           <div className="lp-wrap lp-guide">
             <div data-reveal>
               <div className="lp-avatars"><span>AM</span><span>SC</span><span>JW</span><span className="ai"><Icon name="sparkles" size={15} /></span></div>
-              <h2 className="lp-h2">Meet your <em>Flow guide</em></h2>
+              <h2 className="lp-h2">Meet your <em>Mars guide</em></h2>
               <p className="lp-lead">Ask in plain English. It reads your real board and answers — then does the work when you say yes.</p>
             </div>
             <div className="lp-chat" data-reveal style={{ ['--i' as string]: 1 }}>
               <div className="lp-msg me">Create an urgent bug: checkout fails on Safari, assign to me, due Friday</div>
               <div className="lp-msg ai"><b>Here’s the draft for WEB.</b><br />Checkout fails on Safari · Bug · Urgent<br />Assignee: you · Due: Fri 17 Oct<span className="lp-msg-btn">Create work item</span></div>
               <div className="lp-msg me">What needs attention today?</div>
-              <div className="lp-msg ai typing" aria-label="Flow guide is typing"><i /><i /><i /></div>
+              <div className="lp-msg ai typing" aria-label="Mars guide is typing"><i /><i /><i /></div>
               <div className="lp-chat-input"><Icon name="plus" size={14} /> Ask about your work… <span>Free · no limits</span></div>
             </div>
           </div>
@@ -163,7 +163,7 @@ export function Welcome() {
         <section className="lp-section lp-final">
           <div className="lp-wrap" data-reveal>
             <h2 className="lp-h2 xl">Ready to grow <em>your team?</em></h2>
-            <p className="lp-lead">Start in under a minute and let Flowstate handle the rest.</p>
+            <p className="lp-lead">Start in under a minute and let WorkMars handle the rest.</p>
             <Link to="/signup" className="pill pill-solid pill-lg">Try for free <Icon name="right" size={15} /></Link>
           </div>
         </section>
@@ -172,7 +172,7 @@ export function Welcome() {
       <footer className="lp-wrap">
         <div className="lp-footer" data-reveal>
           <div className="lp-foot-top">
-            <div><Brand to="/welcome" /><p>Free project management for unlimited users. Made in the UK for teams everywhere.</p></div>
+            <div><Brand to="/welcome" height={30} /><span className="brand-tagline">Build <i>/</i> Automate <i>/</i> Grow</span><p>Free project management for unlimited users. Made in the UK for teams everywhere.</p></div>
             {[
               ['Product', [['Features', '#features'], ['How it works', '#how'], ['AI guide', '#guide']]],
               ['Get started', [['Create account', '/signup'], ['Log in', '/login']]],
@@ -189,22 +189,22 @@ export function Welcome() {
               <div key={t}><span><Icon name={icon} size={17} /></span><p><b>{t}</b><small>{s}</small></p></div>
             ))}
           </div>
-          <p className="lp-copy">© {new Date().getFullYear()} Flowstate. All rights reserved.</p>
+          <p className="lp-copy">© {new Date().getFullYear()} WorkMars. All rights reserved.</p>
         </div>
       </footer>
     </div>
   );
 }
 
-/** A faithful, static rendering of the Flowstate overview for the hero. */
+/** A faithful, static rendering of the WorkMars overview for the hero. */
 function ProductShot() {
   const bars = [38, 52, 46, 61, 58, 74, 69, 86];
   return (
     <div className="shot" aria-hidden="true">
       <div className="shot-top">
-        <span className="shot-brand">flowstate<i>.</i></span>
+        <span className="shot-brand"><Logo height={16} /></span>
         <span className="shot-search"><Icon name="search" size={11} /> Search or jump to…</span>
-        <span className="shot-pill"><Icon name="sparkles" size={10} /> Flow guide</span>
+        <span className="shot-pill"><Icon name="sparkles" size={10} /> Mars guide</span>
         <span className="shot-av">AM</span>
       </div>
       <div className="shot-body">
@@ -240,7 +240,7 @@ function ProductShot() {
               <ul><li><i style={{ background: '#6f3e25' }} />Done 67%</li><li><i style={{ background: '#88accc' }} />Doing 19%</li><li><i style={{ background: '#e4b768' }} />Review 9%</li></ul>
             </div>
           </div>
-          <div className="shot-ask"><Icon name="sparkles" size={10} /> Ask Flow guide</div>
+          <div className="shot-ask"><Icon name="sparkles" size={10} /> Ask Mars guide</div>
         </div>
       </div>
     </div>

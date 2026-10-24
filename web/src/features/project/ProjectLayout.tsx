@@ -73,7 +73,7 @@ export function ProjectLayout() {
     <>
       <PageHeader eyebrow={eyebrow} title={title} subtitle={subtitle} actions={
         <>
-          <button className="btn btn-light" onClick={() => openGuide()}><Icon name="sparkles" size={16} /><span className="btn-label-mobile">Ask Flow guide</span></button>
+          <button className="btn btn-light" onClick={() => openGuide()}><Icon name="sparkles" size={16} /><span className="btn-label-mobile">Ask Mars guide</span></button>
           {canEdit && <button className="btn btn-primary" onClick={() => openCreate()}><Icon name="plus" size={16} /> Create task</button>}
         </>
       } />

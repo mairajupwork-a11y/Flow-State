@@ -1,10 +1,10 @@
+import { Mark } from '../components/Logo';
 import { useEffect, useMemo } from 'react';
 import { Outlet, useMatch, useNavigate, useParams, useSearchParams } from 'react-router-dom';
 import { useSession, useWorkspace } from '../lib/queries';
 import { WorkspaceProvider, useRealtime } from '../lib/workspace';
 import { ui, useUi, openCreate, openGuide } from '../lib/store';
 import { ErrorState, PageLoader } from '../components/ui';
-import { Icon } from '../components/Icon';
 import { Sidebar } from './Sidebar';
 import { Topbar } from './Topbar';
 import { MobileNav } from './MobileNav';
@@ -94,8 +94,8 @@ function Shell() {
         </main>
       </div>
       <MobileNav activeKey={routeKey} />
-      <button className="floating-ai" onClick={() => openGuide()} title="Ask the Flow guide (free)" aria-label="Open the Flow guide">
-        <Icon name="sparkles" size={23} />
+      <button className="floating-ai" onClick={() => openGuide()} title="Ask the Mars guide (free)" aria-label="Open the Mars guide">
+        <Mark size={30} />
       </button>
 
       {issueRef && <IssueModal issueRef={issueRef} onClose={closeIssue} />}

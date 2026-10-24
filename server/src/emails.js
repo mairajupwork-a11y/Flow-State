@@ -7,15 +7,15 @@ const ROLE = { admin: 'an admin', member: 'a member', viewer: 'a viewer' };
 export function inviteEmail({ to, inviter, workspace, role, designation = '', url }) {
   const as = designation ? designation : ROLE[role] ?? 'a member';
   const asText = designation ? `as ${designation}` : `as ${as}`;
-  const subject = oneLine(`${inviter} invited you to ${workspace} on Flowstate`);
+  const subject = oneLine(`${inviter} invited you to ${workspace} on WorkMars`);
   const text = [
     `Hi,`,
     ``,
-    `${inviter} has invited you to join ${workspace} on Flowstate ${asText}.`,
+    `${inviter} has invited you to join ${workspace} on WorkMars ${asText}.`,
     ``,
     `Accept the invitation: ${url}`,
     ``,
-    `Flowstate is free for everyone — boards, sprints, timelines and a free AI guide.`,
+    `WorkMars is free for everyone — boards, sprints, timelines and a free AI guide.`,
     `If you weren't expecting this, you can ignore this email.`,
   ].join('\n');
   const html = `<!doctype html>
@@ -23,17 +23,17 @@ export function inviteEmail({ to, inviter, workspace, role, designation = '', ur
   <table role="presentation" width="100%" cellpadding="0" cellspacing="0" style="padding:32px 12px">
     <tr><td align="center">
       <table role="presentation" width="100%" cellpadding="0" cellspacing="0" style="max-width:520px;background:#ffffff;border-radius:16px;padding:32px">
-        <tr><td style="font-size:20px;font-weight:700;color:#3a1f86;padding-bottom:20px">flowstate<span style="color:#8278f4">.</span></td></tr>
+        <tr><td style="font-size:22px;font-weight:800;letter-spacing:-.5px;color:#2f3340;padding-bottom:20px">Work<span style="color:#ef6a2c">Mars</span></td></tr>
         <tr><td style="font-size:22px;font-weight:700;line-height:1.3;padding-bottom:12px">You're invited to ${esc(workspace)}</td></tr>
         <tr><td style="font-size:15px;line-height:1.6;color:#5d6072;padding-bottom:24px">
-          <b style="color:#1b1d29">${esc(inviter)}</b> has invited you to join <b style="color:#1b1d29">${esc(workspace)}</b> on Flowstate ${designation ? `as <b style="color:#1b1d29">${esc(designation)}</b>` : `as ${as}`}.
+          <b style="color:#1b1d29">${esc(inviter)}</b> has invited you to join <b style="color:#1b1d29">${esc(workspace)}</b> on WorkMars ${designation ? `as <b style="color:#1b1d29">${esc(designation)}</b>` : `as ${as}`}.
         </td></tr>
         <tr><td style="padding-bottom:24px">
           <a href="${esc(url)}" style="display:inline-block;background:#3a1f86;color:#ffffff;text-decoration:none;font-weight:600;font-size:15px;padding:12px 24px;border-radius:999px">Join ${esc(workspace)}</a>
         </td></tr>
         <tr><td style="font-size:13px;line-height:1.6;color:#858899;padding-bottom:8px">Or paste this link into your browser:<br><a href="${esc(url)}" style="color:#4b2fa8;word-break:break-all">${esc(url)}</a></td></tr>
         <tr><td style="font-size:12px;line-height:1.6;color:#858899;border-top:1px solid #ebeaf0;padding-top:16px;margin-top:16px">
-          Flowstate is free for everyone. This invitation was sent to ${esc(to)}. If you weren't expecting it, you can ignore this email.
+          WorkMars is free for everyone. This invitation was sent to ${esc(to)}. If you weren't expecting it, you can ignore this email.
         </td></tr>
       </table>
     </td></tr>

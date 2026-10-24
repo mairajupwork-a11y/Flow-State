@@ -1,12 +1,12 @@
 #!/usr/bin/env node
 /**
- * Copies an existing Flowstate SQLite database into Postgres (e.g. Supabase).
+ * Copies an existing WorkMars SQLite database into Postgres (e.g. Supabase).
  *
- *   node scripts/copy-to-postgres.mjs [path/to/flowstate.db]
+ *   node scripts/copy-to-postgres.mjs [path/to/workmars.db]
  *
  * Reads DATABASE_URL from the environment or the repo's .env file. The target
  * must be empty (pass --force to copy into a database that already has users;
- * existing Flowstate rows there are deleted first). IDs are preserved, so
+ * existing WorkMars rows there are deleted first). IDs are preserved, so
  * links, invites and sessions keep working.
  */
 import { existsSync } from 'node:fs';
@@ -20,7 +20,9 @@ try { process.loadEnvFile(join(root, '.env')); } catch { /* no .env */ }
 
 const args = process.argv.slice(2);
 const force = args.includes('--force');
-const file = resolve(args.find((a) => !a.startsWith('--')) ?? process.env.DATABASE_FILE ?? join(root, 'server', 'data', 'flowstate.db'));
+// Same default as the server: workmars.db, or the pre-rename flowstate.db if that's all there is.
+const defaultFile = (dir) => (!existsSync(join(dir, 'workmars.db')) && existsSync(join(dir, 'flowstate.db')) ? join(dir, 'flowstate.db') : join(dir, 'workmars.db'));
+const file = resolve(args.find((a) => !a.startsWith('--')) ?? process.env.DATABASE_FILE ?? defaultFile(join(root, 'server', 'data')));
 const url = process.env.DATABASE_URL;
 if (!url) { console.error('Set DATABASE_URL (in .env or the environment) to your Supabase / Postgres connection string.'); process.exit(1); }
 if (!existsSync(file)) { console.error(`No SQLite database at ${file}`); process.exit(1); }
@@ -31,11 +33,11 @@ const TABLES = ['users', 'workspaces', 'memberships', 'invites', 'projects', 'st
 
 const lite = new DatabaseSync(file, { readOnly: true });
 const version = lite.prepare('PRAGMA user_version').get().user_version;
-if (version < 2) { console.error('Start Flowstate once with this SQLite file first so it upgrades to the latest schema, then re-run.'); process.exit(1); }
+if (version < 2) { console.error('Start WorkMars once with this SQLite file first so it upgrades to the latest schema, then re-run.'); process.exit(1); }
 
 const db = await openPostgres(url);
 const existing = (await db.get('SELECT COUNT(*) AS n FROM users')).n;
-if (existing && !force) { console.error(`The target already has ${existing} user(s). Re-run with --force to replace its Flowstate data.`); process.exit(1); }
+if (existing && !force) { console.error(`The target already has ${existing} user(s). Re-run with --force to replace its WorkMars data.`); process.exit(1); }
 
 const liteTables = new Set(lite.prepare("SELECT name FROM sqlite_master WHERE type = 'table'").all().map((t) => t.name));
 await db.tx(async () => {
@@ -63,4 +65,4 @@ await db.tx(async () => {
   }
 });
 await db.close();
-console.log(`Copied ${file} → ${new URL(url).hostname}. Start Flowstate with DATABASE_URL set to use it.`);
+console.log(`Copied ${file} → ${new URL(url).hostname}. Start WorkMars with DATABASE_URL set to use it.`);

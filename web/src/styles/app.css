@@ -1,5 +1,5 @@
 /*
- * Flowstate application styles.
+ * WorkMars application styles.
  * prototype.css is the design source of truth (tokens, surfaces, cards, board,
  * modals). This file extends it with the same tokens, radii and rhythm for the
  * screens the prototype did not cover. Keep new colours on the :root tokens.
@@ -364,7 +364,7 @@ button.notification:hover { background: var(--row-hover); }
 .quick-dates { display: flex; gap: 10px; margin-top: 6px; }
 .detail-section h4 .muted-inline { font-family: var(--font); }
 
-/* ---------- Flow guide ---------- */
+/* ---------- Mars guide ---------- */
 .chat-user { display: flex; justify-content: flex-end; margin: 14px 0 8px; }
 .chat-user span { background: var(--accent); color: #fffbf5; padding: 10px 14px; border-radius: 15px 15px 4px 15px; font-size: 12px; max-width: 85%; line-height: 1.55; }
 .chat-guide { margin: 8px 0 14px; animation: fade-in .2s ease; }

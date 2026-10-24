@@ -10,7 +10,7 @@ import { isUniqueViolation } from '../http.js';
  *   GET /api/auth/google            → redirects to Google's consent screen
  *   GET /api/auth/google/callback   → exchanges the code, signs the user in
  *
- * Accounts are matched by verified email: an existing Flowstate account with
+ * Accounts are matched by verified email: an existing WorkMars account with
  * the same address is signed in, otherwise a new one is created (and goes
  * through onboarding). Configure with GOOGLE_CLIENT_ID / GOOGLE_CLIENT_SECRET.
  */

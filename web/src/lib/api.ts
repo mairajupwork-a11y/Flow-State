@@ -19,7 +19,7 @@ async function request<T>(method: string, path: string, body?: unknown): Promise
     res = await fetch(`/api${path}`, {
       method,
       credentials: 'same-origin',
-      headers: { 'Content-Type': 'application/json', 'X-Requested-With': 'flowstate' },
+      headers: { 'Content-Type': 'application/json', 'X-Requested-With': 'workmars' },
       body: body === undefined ? undefined : JSON.stringify(body),
     });
   } catch {

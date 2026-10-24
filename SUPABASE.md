@@ -1,13 +1,13 @@
-# Connecting Flowstate to Supabase
+# Connecting WorkMars to Supabase
 
-Flowstate can store its data in Supabase's managed Postgres database instead of a local file. It takes about five minutes, and the free Supabase plan is enough.
+WorkMars can store its data in Supabase's managed Postgres database instead of a local file. It takes about five minutes, and the free Supabase plan is enough.
 
 When `DATABASE_URL` is set, the server creates every table it needs on first start. It also locks those tables away from Supabase's public browser API. You don't need to run any SQL by hand.
 
 ## 1. Create the Supabase project
 
 1. Sign in at [supabase.com](https://supabase.com/dashboard) and click **New project**.
-2. Choose a name, for example `flowstate`.
+2. Choose a name, for example `workmars`.
 3. Set a **database password**. Save it in a password manager, because you need it in step 2.
 4. Pick the region closest to your users. For UK-first, choose **London (eu-west-2)**.
 5. Click **Create new project** and wait until it shows as ready.
@@ -28,44 +28,44 @@ When `DATABASE_URL` is set, the server creates every table it needs on first sta
 
    If the password contains `@`, `:`, `/`, `#` or `?`, URL-encode those characters (`@` becomes `%40`), or reset the password to one without them.
 
-Use port **5432** (the session pooler), not 6543 (the transaction pooler). Flowstate takes a short session-level lock when it sets up the tables.
+Use port **5432** (the session pooler), not 6543 (the transaction pooler). WorkMars takes a short session-level lock when it sets up the tables.
 
-## 3. Point Flowstate at it
+## 3. Point WorkMars at it
 
-In the Flowstate folder, copy `.env.example` to a new file named `.env`. Then set:
+In the WorkMars folder, copy `.env.example` to a new file named `.env`. Then set:
 
 ```
 DATABASE_URL=postgresql://postgres.abcdefghijklmnop:your-password@aws-0-eu-west-2.pooler.supabase.com:5432/postgres
 ```
 
-Start Flowstate as usual: `start-windows.bat` on Windows, or `npm run dev` / `npm start`. The first lines of output confirm the connection:
+Start WorkMars as usual: `start-windows.bat` on Windows, or `npm run dev` / `npm start`. The first lines of output confirm the connection:
 
 ```
 Database: Postgres (aws-0-eu-west-2.pooler.supabase.com)
-Flowstate API listening on http://localhost:4000
+WorkMars API listening on http://localhost:4000
 ```
 
-To double-check, open `http://localhost:4000/api/health`. It shows `"database":"postgres"`. In Supabase's **Table Editor** you'll see the Flowstate tables (`users`, `workspaces`, `projects`, `issues` and so on).
+To double-check, open `http://localhost:4000/api/health`. It shows `"database":"postgres"`. In Supabase's **Table Editor** you'll see the WorkMars tables (`users`, `workspaces`, `projects`, `issues` and so on).
 
-**Hosting Flowstate on a server or platform** (Render, Railway, Fly.io, a VPS, Docker): set `DATABASE_URL` and `SESSION_SECRET` as environment variables there instead of using a `.env` file.
+**Hosting WorkMars on a server or platform** (Render, Railway, Fly.io, a VPS, Docker): set `DATABASE_URL` and `SESSION_SECRET` as environment variables there instead of using a `.env` file.
 
 ## 4. Bring over your existing data (optional)
 
-If you've been using Flowstate locally and want to keep that work, stop Flowstate and run:
+If you've been using WorkMars locally and want to keep that work, stop WorkMars and run:
 
 ```
 npm run db:copy-to-postgres
 ```
 
 The script:
-- copies everything from `server/data/flowstate.db` into the database in `DATABASE_URL`;
+- copies everything from `server/data/workmars.db` into the database in `DATABASE_URL`;
 - keeps all IDs, so passwords, invite links and work item keys keep working;
 - refuses to run if the Supabase database already has users. Add `-- --force` to replace them.
 
 ## Security notes
 
 - **Keep the connection string server-side.** It contains your database password, so never put it in the web app or commit `.env`. `.env` is already in `.gitignore`.
-- **The browser API is locked out.** Supabase exposes tables through a REST API using its `anon` and `authenticated` keys. Flowstate only talks to the database from its own server. Its setup therefore enables row level security on every table, adds no policies, and revokes those roles' access. The `anon` key can read or change nothing.
+- **The browser API is locked out.** Supabase exposes tables through a REST API using its `anon` and `authenticated` keys. WorkMars only talks to the database from its own server. Its setup therefore enables row level security on every table, adds no policies, and revokes those roles' access. The `anon` key can read or change nothing.
 - **Full certificate verification (optional).** The connection is always encrypted. To also verify Supabase's certificate:
   1. Download the CA from **Project Settings → Database → SSL configuration**.
   2. Set `DATABASE_CA_CERT=/path/to/prod-ca-2021.crt` in `.env`.
@@ -82,4 +82,4 @@ The script:
 
 ## Switching back
 
-Remove `DATABASE_URL` from `.env` and Flowstate uses the local SQLite file again. Your Supabase data stays where it is.
+Remove `DATABASE_URL` from `.env` and WorkMars uses the local SQLite file again. Your Supabase data stays where it is.

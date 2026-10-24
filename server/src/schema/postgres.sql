@@ -1,4 +1,4 @@
--- Flowstate schema for PostgreSQL (Supabase or any Postgres 13+).
+-- WorkMars schema for PostgreSQL (Supabase or any Postgres 13+).
 -- Applied automatically by the server on first start (see db-postgres.js),
 -- or paste it into the Supabase SQL editor. Safe to re-run.
 --
@@ -253,7 +253,7 @@ CREATE INDEX IF NOT EXISTS memberships_user ON memberships (user_id);
 CREATE INDEX IF NOT EXISTS users_email_exact ON users (email);
 
 -- Supabase publishes the public schema through its REST API to the browser
--- "anon" and "authenticated" roles. Flowstate talks to the database only from
+-- "anon" and "authenticated" roles. WorkMars talks to the database only from
 -- its own server, so lock those roles out: row level security with no
 -- policies denies them everything, and their table privileges are revoked.
 -- The server's own connection (the table owner) is unaffected.

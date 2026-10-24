@@ -14,7 +14,7 @@ export function createMailer(env = process.env) {
     const port = Number(env.SMTP_PORT) || 587;
     options = { host: env.SMTP_HOST, port, secure: port === 465, auth: env.SMTP_USER ? { user: env.SMTP_USER, pass: env.SMTP_PASS } : undefined };
   } else return null;
-  if (!from) throw new Error('Set MAIL_FROM to the address emails should come from (e.g. "Flowstate <you@gmail.com>").');
+  if (!from) throw new Error('Set MAIL_FROM to the address emails should come from (e.g. "WorkMars <you@gmail.com>").');
 
   const transport = nodemailer.createTransport(options, { from });
   const host = typeof options === 'string' ? new URL(options).hostname : options.host;

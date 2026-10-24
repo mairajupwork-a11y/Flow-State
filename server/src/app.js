@@ -14,6 +14,9 @@ import { issueRoutes } from './routes/issues.js';
 import { todoRoutes, notificationRoutes } from './routes/personal.js';
 import { aiRoutes } from './routes/ai.js';
 
+/** Value of the X-Requested-With header our web app sends ('flowstate' from tabs opened before the rename). */
+const CLIENT_HEADERS = ['workmars', 'flowstate'];
+
 /**
  * Builds the HTTP app. Kept free of side effects (no listen, no env reads
  * beyond defaults) so tests can spin up isolated instances.
@@ -43,7 +46,7 @@ export function createApp({ db, secret, production = false, staticDir = null, ol
 
   // CSRF defence: state-changing API calls must come from our own JS (custom header + SameSite cookie).
   app.use('/api', (req, _res, next) => {
-    if (!['GET', 'HEAD', 'OPTIONS'].includes(req.method) && req.get('X-Requested-With') !== 'flowstate') {
+    if (!['GET', 'HEAD', 'OPTIONS'].includes(req.method) && !CLIENT_HEADERS.includes(req.get('X-Requested-With'))) {
       return next(new HttpError(403, 'Request blocked for your security. Please refresh the page.'));
     }
     next();

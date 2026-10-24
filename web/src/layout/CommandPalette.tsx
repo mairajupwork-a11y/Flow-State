@@ -45,7 +45,7 @@ export function CommandPalette({ routeKey, onClose }: { routeKey?: string; onClo
     const p = project ? `${base}/p/${project.key}` : null;
     const commands: Item[] = [
       ...(canEdit ? [{ id: 'create', icon: <Icon name="plus" size={16} />, label: q.trim() ? `Create work item “${q.trim()}”` : 'Create work item', hint: 'C', group: 'Actions', run: () => { onClose(); openCreate({ title: q.trim() || undefined }); } }] : []),
-      { id: 'guide', icon: <Icon name="sparkles" size={16} />, label: q.trim() ? `Ask the Flow guide: “${q.trim()}”` : 'Ask the Flow guide', group: 'Actions', run: () => { onClose(); openGuide(q.trim() || null); } },
+      { id: 'guide', icon: <Icon name="sparkles" size={16} />, label: q.trim() ? `Ask the Mars guide: “${q.trim()}”` : 'Ask the Mars guide', group: 'Actions', run: () => { onClose(); openGuide(q.trim() || null); } },
       ...(p ? [
         ...methodologyOf(project).views.map((v) => {
           const meta = viewMeta(methodologyOf(project), v);

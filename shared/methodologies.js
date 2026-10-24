@@ -1,6 +1,6 @@
 /**
  * Methodology engine — the single source of truth for how each delivery
- * practice behaves in Flowstate. Shared by the API (project creation,
+ * practice behaves in WorkMars. Shared by the API (project creation,
  * validation, reports, AI guide) and the web app (views, boards, terms).
  *
  * Each methodology declares:

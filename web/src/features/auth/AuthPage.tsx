@@ -23,7 +23,7 @@ function validate(mode: 'login' | 'signup', f: { name: string; email: string; pa
 function GoogleButton({ available, next, label, onUnavailable }: { available?: boolean; next: string | null; label: string; onUnavailable: (msg: string) => void }) {
   const [going, setGoing] = useState(false);
   const go = () => {
-    if (available === false) return onUnavailable('Google sign-in isn’t switched on for this Flowstate yet. The administrator can enable it — see GOOGLE.md. You can use email for now.');
+    if (available === false) return onUnavailable('Google sign-in isn’t switched on for this WorkMars yet. The administrator can enable it — see GOOGLE.md. You can use email for now.');
     setGoing(true);
     window.location.assign(`/api/auth/google${next ? `?next=${encodeURIComponent(next)}` : ''}`);
   };
@@ -100,7 +100,10 @@ export function AuthPage({ mode }: { mode: 'login' | 'signup' }) {
   return (
     <div className="auth-shell">
       <aside className="auth-aside">
-        <Brand to="/welcome" />
+        <div className="auth-brand">
+          <Brand to="/welcome" onDark height={34} />
+          <span className="brand-tagline">Build <i>/</i> Automate <i>/</i> Grow</span>
+        </div>
         <div className="auth-aside-body">
           <h2>{isSignup ? <>Your whole team. <span className="serif-accent">Free. Forever.</span></> : <>Welcome <span className="serif-accent">back.</span></>}</h2>
           <p>{isSignup ? 'Boards, sprints, timelines, reports, a personal to-do list and a free AI guide — for unlimited users.' : 'Pick up exactly where you left off. Your board is waiting.'}</p>
@@ -118,7 +121,7 @@ export function AuthPage({ mode }: { mode: 'login' | 'signup' }) {
       <main className="auth-main">
         <form className="auth-card" onSubmit={submit} noValidate>
           <div className="auth-mobile-brand"><Brand to="/welcome" /></div>
-          <h1>{isSignup ? 'Create your account' : 'Sign in to Flowstate'}</h1>
+          <h1>{isSignup ? 'Create your account' : 'Sign in to WorkMars'}</h1>
           <p className="page-subtitle">{isSignup ? 'Free for everyone. No credit card required.' : 'Good to see you again.'}</p>
 
           {error && <div className="form-error" role="alert"><Icon name="flag" size={15} /> {error}</div>}
@@ -160,10 +163,10 @@ export function AuthPage({ mode }: { mode: 'login' | 'signup' }) {
           </button>
 
           <p className="auth-switch">
-            {isSignup ? 'Already have an account?' : 'New to Flowstate?'}{' '}
+            {isSignup ? 'Already have an account?' : 'New to WorkMars?'}{' '}
             <Link to={`${isSignup ? '/login' : '/signup'}${next ? `?next=${encodeURIComponent(next)}` : ''}`}>{isSignup ? 'Sign in' : 'Create a free account'}</Link>
           </p>
-          {isSignup && <p className="auth-legal">By continuing you agree to use Flowstate kindly and lawfully. We never sell your data.</p>}
+          {isSignup && <p className="auth-legal">By continuing you agree to use WorkMars kindly and lawfully. We never sell your data.</p>}
         </form>
       </main>
     </div>

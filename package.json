@@ -1,8 +1,8 @@
 {
-  "name": "flowstate",
+  "name": "workmars",
   "private": true,
   "version": "1.0.0",
-  "description": "Flowstate — free, unlimited-user project management with boards, sprints, a personal to-do list and a free built-in AI guide.",
+  "description": "WorkMars — free, unlimited-user project management with boards, sprints, a personal to-do list and a free built-in AI guide.",
   "workspaces": [
     "server",
     "web"

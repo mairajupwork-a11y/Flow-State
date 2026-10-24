@@ -127,7 +127,7 @@ export function Onboarding() {
           <section className="onboard-step" key="s0">
             <div className="eyebrow"><span className="line" />Welcome, {first}</div>
             <h1 className="page-title">{accentTitle('What kind of work do you do?')}</h1>
-            <p className="page-subtitle">We’ll tailor your first project and the Flow guide’s suggestions. You can change everything later.</p>
+            <p className="page-subtitle">We’ll tailor your first project and the Mars guide’s suggestions. You can change everything later.</p>
             <div className="chip-grid" role="radiogroup" aria-label="Your role">
               {ROLES.map(([r, icon]) => (
                 <button type="button" key={r} role="radio" aria-checked={role === r} className={`choice-chip ${role === r ? 'selected' : ''}`} onClick={() => setRole(r)}>
@@ -160,7 +160,7 @@ export function Onboarding() {
               </div>
             </fieldset>
             <fieldset className="form-field plain">
-              <legend>How many people will use Flowstate? <small className="muted-inline">(it’s free at any size)</small></legend>
+              <legend>How many people will use WorkMars? <small className="muted-inline">(it’s free at any size)</small></legend>
               <div className="chip-row">
                 {SIZES.map((s) => <button type="button" key={s} className={`choice-chip sm ${ws.teamSize === s ? 'selected' : ''}`} aria-pressed={ws.teamSize === s} onClick={() => setWs({ ...ws, teamSize: s })}>{s}</button>)}
               </div>
@@ -195,7 +195,7 @@ export function Onboarding() {
           <section className="onboard-step" key="s3">
             <div className="eyebrow"><span className="line" />Bring your team</div>
             <h1 className="page-title">{accentTitle('Work is better together.')}</h1>
-            <p className="page-subtitle">Invite as many people as you like — Flowstate is free for unlimited users. You can also do this later.</p>
+            <p className="page-subtitle">Invite as many people as you like — WorkMars is free for unlimited users. You can also do this later.</p>
             {/* A div, not a label: a label would forward clicks to the first chip's remove button. */}
             <div className="form-field">
               <span id="invite-emails-label">Email addresses</span>
@@ -221,7 +221,7 @@ export function Onboarding() {
             <div className="ready-grid">
               <div><Icon name={METHODOLOGIES[methodology].icon} size={18} /><b>{METHODOLOGIES[methodology].name}, set up properly</b><span>{METHODOLOGIES[methodology].tagline}</span></div>
               <div><Icon name="sun" size={18} /><b>My day</b><span>A private to-do list, just for you</span></div>
-              <div><Icon name="sparkles" size={18} /><b>Flow guide</b><span>Free AI help in the corner, any time</span></div>
+              <div><Icon name="sparkles" size={18} /><b>Mars guide</b><span>Free AI help in the corner, any time</span></div>
             </div>
             <button type="button" className="btn btn-primary btn-xl" autoFocus onClick={() => navigate(`/w/${created.slug}/p/${key}`, { replace: true })}>
               Open my project <Icon name="right" size={16} />

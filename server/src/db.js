@@ -320,7 +320,7 @@ export const MIGRATIONS = [
   recolorSql(),
 ];
 
-export function openDatabase(file = process.env.DATABASE_FILE || 'data/flowstate.db') {
+export function openDatabase(file = process.env.DATABASE_FILE || 'data/workmars.db') {
   if (file !== ':memory:') mkdirSync(dirname(file), { recursive: true });
   const raw = new DatabaseSync(file);
   raw.exec('PRAGMA journal_mode = WAL; PRAGMA foreign_keys = ON; PRAGMA busy_timeout = 5000;');

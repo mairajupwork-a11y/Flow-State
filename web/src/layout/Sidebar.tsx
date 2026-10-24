@@ -1,3 +1,4 @@
+import { Logo } from '../components/Logo';
 import { useEffect, useRef, useState } from 'react';
 import { NavLink, useNavigate } from 'react-router-dom';
 import { useQueryClient } from '@tanstack/react-query';
@@ -37,8 +38,7 @@ export function Sidebar({ activeKey }: { activeKey?: string }) {
   return (
     <aside ref={navRef} id="sidebar" className={`sidebar ${open ? 'open' : ''}`} aria-label="Sidebar">
       <div className="brand">
-        <span className="logo-mark"><Icon name="sparkles" size={24} /></span>
-        <span className="brand-name">flowstate<span className="brand-dot">.</span></span>
+        <Logo height={30} />
       </div>
       <WorkspaceSwitcher />
 
@@ -135,7 +135,7 @@ function UserBox() {
     try {
       await api.post('/auth/logout');
     } catch {
-      toast('Couldn’t reach Flowstate to sign out. Check your connection and try again.');
+      toast('Couldn’t reach WorkMars to sign out. Check your connection and try again.');
       return;
     }
     qc.clear();

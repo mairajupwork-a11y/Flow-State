@@ -9,7 +9,7 @@ import { DESIGNATIONS, DESIGNATION_GROUPS } from '../../shared/designations.js';
 function client(base) {
   let cookie = '';
   return async (method, path, body) => {
-    const res = await fetch(base + path, { method, headers: { 'Content-Type': 'application/json', 'X-Requested-With': 'flowstate', ...(cookie && { Cookie: cookie }) }, body: body ? JSON.stringify(body) : undefined });
+    const res = await fetch(base + path, { method, headers: { 'Content-Type': 'application/json', 'X-Requested-With': 'workmars', ...(cookie && { Cookie: cookie }) }, body: body ? JSON.stringify(body) : undefined });
     const set = res.headers.get('set-cookie');
     if (set) cookie = set.split(';')[0];
     return { status: res.status, data: await res.json().catch(() => null) };
@@ -32,7 +32,7 @@ async function admin(api, invites = []) {
 test('invitations are emailed to any address with a working join link', async (t) => {
   const sent = [];
   const mailer = { send: async (m) => { if (m.to.endsWith('@bounce.test')) throw new Error('550 mailbox unavailable'); sent.push(m); } };
-  const { server, base } = await start(t, { mailer, appUrl: 'https://flowstate.example/' });
+  const { server, base } = await start(t, { mailer, appUrl: 'https://workmars.example/' });
   const api = client(base);
 
   const onboard = await admin(api, ['first@hotmail.com']);
@@ -49,7 +49,7 @@ test('invitations are emailed to any address with a working join link', async (t
 
   const mail = sent.find((m) => m.to === 'sam@gmail.com');
   assert.match(mail.subject, /Mairaj <Ali> invited you to Studio & Co/);
-  assert.ok(mail.text.includes(`https://flowstate.example/invite/${byEmail['sam@gmail.com'].token}`));
+  assert.ok(mail.text.includes(`https://workmars.example/invite/${byEmail['sam@gmail.com'].token}`));
   assert.ok(mail.html.includes('Mairaj &lt;Ali&gt;') && !mail.html.includes('<Ali>'), 'names are HTML-escaped');
   assert.match(mail.html, /as a viewer/);
 
@@ -140,14 +140,14 @@ test('the SMTP mailer delivers a real message over the wire', async () => {
   });
   await new Promise((r) => smtp.listen(0, '127.0.0.1', r));
   const port = smtp.address().port;
-  const mailer = createMailer({ SMTP_HOST: '127.0.0.1', SMTP_PORT: String(port), SMTP_USER: 'bot@example.com', SMTP_PASS: 'app-pass', MAIL_FROM: 'Flowstate <bot@example.com>' });
+  const mailer = createMailer({ SMTP_HOST: '127.0.0.1', SMTP_PORT: String(port), SMTP_USER: 'bot@example.com', SMTP_PASS: 'app-pass', MAIL_FROM: 'WorkMars <bot@example.com>' });
   assert.equal(await mailer.verify(), null);
   await mailer.send({ to: 'friend@outlook.com', subject: 'Hello', text: 'Join here', html: '<b>Join</b>' });
   assert.match(received.auth, /bot@example\.com\0app-pass/);
   assert.match(received.from, /bot@example\.com/);
   assert.match(received.to[0], /friend@outlook\.com/);
   assert.match(received.data, /Subject: Hello/);
-  assert.match(received.data, /Flowstate/);
+  assert.match(received.data, /WorkMars/);
   smtp.close();
   assert.equal(createMailer({}), null, 'no SMTP settings means email is off');
 });

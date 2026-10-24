@@ -34,7 +34,13 @@ if (!secret) {
 
 // DATABASE_URL (e.g. Supabase's Postgres connection string) selects Postgres;
 // otherwise a local SQLite file is used, which needs no setup at all.
-const db = process.env.DATABASE_URL ? await connectPostgres(process.env.DATABASE_URL) : openDatabase(process.env.DATABASE_FILE || join(here, '..', 'data', 'flowstate.db'));
+/** data/workmars.db, or the file from before the rename so existing work isn't left behind. */
+function defaultDatabaseFile(dir) {
+  const current = join(dir, 'workmars.db');
+  const legacy = join(dir, 'flowstate.db');
+  return !existsSync(current) && existsSync(legacy) ? legacy : current;
+}
+const db = process.env.DATABASE_URL ? await connectPostgres(process.env.DATABASE_URL) : openDatabase(process.env.DATABASE_FILE || defaultDatabaseFile(join(here, '..', 'data')));
 
 /** Opens Postgres, turning common connection failures into a plain-English fix. */
 async function connectPostgres(url) {
@@ -87,7 +93,7 @@ const app = createApp({
   ollama: process.env.OLLAMA_URL ? { url: process.env.OLLAMA_URL, model: process.env.OLLAMA_MODEL || 'llama3.2' } : null,
 });
 
-const server = app.listen(port, () => console.log(`Flowstate API listening on http://localhost:${port}`));
+const server = app.listen(port, () => console.log(`WorkMars API listening on http://localhost:${port}`));
 
 function shutdown() {
   app.locals.hub.closeAll();

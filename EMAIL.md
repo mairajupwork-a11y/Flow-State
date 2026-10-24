@@ -1,30 +1,30 @@
 # Turning on invitation emails
 
-When you invite someone, Flowstate can email them a **"Join your workspace"** invitation automatically. Recipients can use any email provider: Gmail, Outlook/Hotmail, Yahoo, iCloud or a company address.
+When you invite someone, WorkMars can email them a **"Join your workspace"** invitation automatically. Recipients can use any email provider: Gmail, Outlook/Hotmail, Yahoo, iCloud or a company address.
 
-To send email, Flowstate needs an email account to send *from*. Two free options are below. Option A takes 5 minutes.
+To send email, WorkMars needs an email account to send *from*. Two free options are below. Option A takes 5 minutes.
 
 ## Option A: Send from your Gmail (free, about 500 emails a day)
 
 Gmail doesn't let apps use your normal password. Instead, you create a special **App Password**.
 
 1. **Turn on 2-Step Verification.** Go to [myaccount.google.com/security](https://myaccount.google.com/security) and switch on **2-Step Verification**. App Passwords only appear once this is on.
-2. **Create an App Password.** Go to [myaccount.google.com/apppasswords](https://myaccount.google.com/apppasswords), type the name `Flowstate`, and click **Create**.
+2. **Create an App Password.** Go to [myaccount.google.com/apppasswords](https://myaccount.google.com/apppasswords), type the name `WorkMars`, and click **Create**.
 3. **Copy it.** Google shows a 16-letter password like `abcd efgh ijkl mnop`. Copy it and remove the spaces.
-4. **Add these lines to `.env`** in the Flowstate folder (in `cmd`: `notepad .env`):
+4. **Add these lines to `.env`** in the WorkMars folder (in `cmd`: `notepad .env`):
 
    ```
    SMTP_HOST=smtp.gmail.com
    SMTP_PORT=465
    SMTP_USER=yourname@gmail.com
    SMTP_PASS=abcdefghijklmnop
-   MAIL_FROM="Flowstate <yourname@gmail.com>"
+   MAIL_FROM="WorkMars <yourname@gmail.com>"
    ```
 
-5. **Restart Flowstate.** The black window should show:
+5. **Restart WorkMars.** The black window should show:
 
    ```
-   [api] Email: on (smtp.gmail.com, from Flowstate <yourname@gmail.com>)
+   [api] Email: on (smtp.gmail.com, from WorkMars <yourname@gmail.com>)
    ```
 
 ## Option B: Brevo (free, 300 emails a day, best for a business address)
@@ -39,20 +39,20 @@ Gmail doesn't let apps use your normal password. Instead, you create a special *
    SMTP_PORT=587
    SMTP_USER=your-brevo-login@example.com
    SMTP_PASS=your-smtp-key
-   MAIL_FROM="Flowstate <you@yourcompany.com>"
+   MAIL_FROM="WorkMars <you@yourcompany.com>"
    ```
 
 Any other SMTP provider works the same way: Zoho Mail, Amazon SES, Resend, Mailgun, SendGrid and so on.
 
 ## Important: the link inside the email
 
-The invitation contains a **Join** link pointing to wherever Flowstate is running.
+The invitation contains a **Join** link pointing to wherever WorkMars is running.
 
-- **While Flowstate only runs on your laptop,** the link is `http://127.0.0.1:5173/invite/…`. It only opens on *your* computer, so people elsewhere get the email but can't open the link yet.
-- **Once Flowstate is online** (for example `https://flowstate.yourcompany.com`), add this line so links point there:
+- **While WorkMars only runs on your laptop,** the link is `http://127.0.0.1:5173/invite/…`. It only opens on *your* computer, so people elsewhere get the email but can't open the link yet.
+- **Once WorkMars is online** (for example `https://workmars.yourcompany.com`), add this line so links point there:
 
   ```
-  APP_URL=https://flowstate.yourcompany.com
+  APP_URL=https://workmars.yourcompany.com
   ```
 
   Then the link works for everyone, on any device.
@@ -72,4 +72,4 @@ The invitation contains a **Join** link pointing to wherever Flowstate is runnin
 | `Could not reach the SMTP server` | Check `SMTP_PORT`: 465 for Gmail, 587 for most others. Some office networks block these ports. |
 | `The receiving mail server rejected this address` | The recipient's address is misspelled or doesn't exist. |
 | Email arrives in **Spam** | Normal at first. Ask recipients to mark it "Not spam". For best delivery, send from your own domain via Brevo or similar. |
-| No `Email: on` line | The `SMTP_…` lines aren't in `.env`, or Flowstate wasn't restarted. |
+| No `Email: on` line | The `SMTP_…` lines aren't in `.env`, or WorkMars wasn't restarted. |

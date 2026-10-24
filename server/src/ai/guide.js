@@ -11,7 +11,7 @@ const byUrgency = (a, b) => PRIORITY_ORDER[a.priority] - PRIORITY_ORDER[b.priori
 const fmt = (iso, locale) => (iso ? new Date(iso + 'T12:00:00Z').toLocaleDateString(locale, { day: 'numeric', month: 'short' }) : 'no date');
 
 /**
- * The Flow guide: a free assistant that answers from live workspace data.
+ * The Mars guide: a free assistant that answers from live workspace data.
  * Intent handlers produce structured answers (text + follow-ups + actions);
  * an optional self-hosted model (Ollama) can rephrase open-ended answers.
  */
@@ -46,7 +46,7 @@ export function createGuide({ db, llm = null }) {
   function greet(c) {
     const mine = c.open.filter((i) => i.assigneeId === c.user.id);
     return {
-      text: `Hello ${c.user.name.split(' ')[0]} 👋 I'm your Flow guide — free, always.\n\nYou have **${mine.length} open item${mine.length === 1 ? '' : 's'}** assigned to you${c.project ? ` in ${c.project.name}` : ''}. I can plan your day, spot blockers, draft work items from a sentence, or show you around.`,
+      text: `Hello ${c.user.name.split(' ')[0]} 👋 I'm your Mars guide — free, always.\n\nYou have **${mine.length} open item${mine.length === 1 ? '' : 's'}** assigned to you${c.project ? ` in ${c.project.name}` : ''}. I can plan your day, spot blockers, draft work items from a sentence, or show you around.`,
       suggestions: ['Prioritise my day', 'What needs attention?', 'How do sprints work?', 'Create a task to update the FAQ, due Friday'],
     };
   }
@@ -375,7 +375,7 @@ export function createOllama({ url, model, timeoutMs = 12_000 }) {
           body: JSON.stringify({
             model, stream: false,
             messages: [
-              { role: 'system', content: 'You are Flow guide, the friendly assistant inside Flowstate, a free project management tool. Use British English. Be concise (under 150 words), practical and warm. Use **bold** for key terms and bullet points with •. Only use facts from the provided workspace data.' },
+              { role: 'system', content: 'You are Mars guide, the friendly assistant inside WorkMars, a free project management tool. Use British English. Be concise (under 150 words), practical and warm. Use **bold** for key terms and bullet points with •. Only use facts from the provided workspace data.' },
               { role: 'user', content: `Workspace data: ${JSON.stringify(context)}\n\nQuestion: ${question}` },
             ],
           }),

@@ -42,7 +42,7 @@ export function AcceptInvite() {
           <>
             <h1>This invitation has expired</h1>
             <p className="page-subtitle">It may have been used already or withdrawn. Ask your teammate for a fresh link.</p>
-            <Link className="btn btn-primary btn-block" to="/">Go to Flowstate</Link>
+            <Link className="btn btn-primary btn-block" to="/">Go to WorkMars</Link>
           </>
         ) : (
           <>
@@ -58,7 +58,7 @@ export function AcceptInvite() {
                 <Link className="btn btn-light btn-block" to={`/login?next=${encodeURIComponent(next)}`}>I already have an account</Link>
               </div>
             )}
-            <p className="auth-legal">Flowstate is free for unlimited users — joining costs nothing.</p>
+            <p className="auth-legal">WorkMars is free for unlimited users — joining costs nothing.</p>
           </>
         )}
       </div>

@@ -8,7 +8,7 @@ let base;
 
 /**
  * Runs against in-memory SQLite by default. Set TEST_DATABASE_URL to a
- * disposable Postgres database to run the same suite there — every Flowstate
+ * disposable Postgres database to run the same suite there — every WorkMars
  * table in it is dropped first, so never point it at real data.
  */
 async function testDatabase() {
@@ -17,7 +17,7 @@ async function testDatabase() {
   const { openPostgres } = await import('../src/db-postgres.js');
   const db = await openPostgres(url, { migrate: false });
   await db.exec(`DROP TABLE IF EXISTS measurements, entries, todos, notifications, activity, watchers, issue_links, comments, checklist_items,
-    issues, phases, sprints, statuses, projects, invites, memberships, workspaces, users, flowstate_meta CASCADE`);
+    issues, phases, sprints, statuses, projects, invites, memberships, workspaces, users, workmars_meta, flowstate_meta CASCADE`);
   await db.close();
   return openPostgres(url);
 }
@@ -37,7 +37,7 @@ function client() {
   return async (method, path, body) => {
     const res = await fetch(base + path, {
       method,
-      headers: { 'Content-Type': 'application/json', 'X-Requested-With': 'flowstate', ...(cookie && { Cookie: cookie }) },
+      headers: { 'Content-Type': 'application/json', 'X-Requested-With': 'workmars', ...(cookie && { Cookie: cookie }) },
       body: body ? JSON.stringify(body) : undefined,
     });
     const set = res.headers.get('set-cookie');
@@ -252,7 +252,7 @@ test('search finds by key and text', async () => {
   assert.ok(byText.issues.some((i) => /landing/i.test(i.title)));
 });
 
-test('Flow guide answers from live data and drafts actions', async () => {
+test('Mars guide answers from live data and drafts actions', async () => {
   const api = client();
   const { slug, ws } = await onboard(api);
   const projectId = ws.projects[0].id;
@@ -362,7 +362,7 @@ test('switching methodology keeps work and can adopt new columns', async () => {
   assert.equal(prince.phases.length, 5, 'stages are added when needed');
 });
 
-test('Flow guide recommends a methodology', async () => {
+test('Mars guide recommends a methodology', async () => {
   const api = client();
   const { slug } = await onboard(api);
   const ask = (question) => api('POST', `/ai/${slug}/ask`, { question }).then((r) => r.data);

@@ -19,7 +19,7 @@ function browserBackend(): Plugin {
     'node:path': demo('shims/node.js'),
   };
   return {
-    name: 'flowstate-browser-backend',
+    name: 'workmars-browser-backend',
     enforce: 'pre',
     async resolveId(source, importer) {
       if (swaps[source]) return swaps[source];
@@ -35,7 +35,7 @@ function browserBackend(): Plugin {
 /** Normal builds talk to the real API, so the demo backend is replaced by a stub. */
 function stubDemoBackend(): Plugin {
   return {
-    name: 'flowstate-stub-demo-backend',
+    name: 'workmars-stub-demo-backend',
     enforce: 'pre',
     resolveId: (source) => (source.endsWith('/demo/backend.js') ? demo('stub.js') : null),
   };

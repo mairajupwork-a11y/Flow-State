@@ -1,5 +1,5 @@
 /*
- * Atelier — Flowstate's warm editorial look.
+ * Atelier — WorkMars's warm editorial look.
  * A beige canvas lit by soft diagonal light, espresso ink, copper accents,
  * italic serif highlights, hairline ornaments with four-point sparkles and
  * finely outlined, rounded cards. Loaded last: it builds on the tokens in
@@ -385,3 +385,22 @@ body::before {
 
 /* Dark: the workspace badge flips to cream so its letter stays readable. */
 [data-theme="dark"] .ws-avatar { background: #e9c9a2; color: #2b160d; }
+
+/* ---------- WorkMars logo ---------- */
+.wm-logo { display: inline-flex; align-items: center; line-height: 0; }
+.wm-logo img { height: 100%; width: auto; display: block; }
+.wm-logo .wm-logo-dark { display: none; }
+.wm-logo.on-dark .wm-logo-light, [data-theme="dark"] .wm-logo .wm-logo-light { display: none; }
+.wm-logo.on-dark .wm-logo-dark, [data-theme="dark"] .wm-logo .wm-logo-dark { display: block; }
+.wm-mark { display: block; width: auto; filter: drop-shadow(0 6px 14px rgba(196, 82, 36, .25)); }
+.sidebar .brand { padding: 4px 10px 26px; }
+.shot-brand .wm-logo { vertical-align: middle; }
+
+/* Tagline from the logo: spaced capitals with orange slashes. */
+.brand-tagline { display: block; margin-top: 10px; font-size: 9.5px; font-weight: 600; letter-spacing: 4px; text-transform: uppercase; color: var(--subtext); }
+.brand-tagline i { font-style: normal; color: #ef6a2c; margin: 0 6px; }
+.auth-brand .brand-tagline { color: #e5cdb1; margin-left: 4px; }
+/* The Mars guide wears the planet. */
+.floating-ai .wm-mark, .ai-bot .wm-mark { filter: drop-shadow(0 2px 6px rgba(239, 106, 44, .45)); }
+.ai-bot { background: radial-gradient(circle at 30% 25%, #4a2716, #1d0f08 75%); }
+[data-theme="dark"] .floating-ai { background: radial-gradient(circle at 30% 25%, #4a2716, #1d0f08 75%); }

@@ -1,3 +1,4 @@
+import { Mark } from '../../components/Logo';
 import { useEffect, useRef, useState, type FormEvent } from 'react';
 import { createPortal } from 'react-dom';
 import { useNavigate, useSearchParams } from 'react-router-dom';
@@ -111,12 +112,12 @@ export function GuideDrawer({ routeKey, onClose }: { routeKey?: string; onClose:
   return createPortal(
     <>
       <div className="drawer-shade" onClick={onClose} />
-      <aside className="ai-drawer" role="dialog" aria-modal="true" aria-label="Flow guide">
+      <aside className="ai-drawer" role="dialog" aria-modal="true" aria-label="Mars guide">
         <header className="ai-header">
-          <div className="ai-bot"><Icon name="sparkles" size={20} /></div>
-          <div className="ai-head-label"><strong>Flow guide</strong><small>Free AI guide · knows your workspace{project ? ` · ${project.key}` : ''}</small></div>
+          <div className="ai-bot"><Mark size={26} /></div>
+          <div className="ai-head-label"><strong>Mars guide</strong><small>Free AI guide · knows your workspace{project ? ` · ${project.key}` : ''}</small></div>
           {messages.length > 0 && <button className="icon-btn" onClick={() => setMessages([])} title="Start a new conversation" aria-label="New conversation"><Icon name="refresh" size={17} /></button>}
-          <button className="icon-btn" onClick={onClose} aria-label="Close the Flow guide"><Icon name="close" /></button>
+          <button className="icon-btn" onClick={onClose} aria-label="Close the Mars guide"><Icon name="close" /></button>
         </header>
         <div className="ai-content" ref={scrollRef} aria-live="polite">
           {!messages.length && (
@@ -124,7 +125,7 @@ export function GuideDrawer({ routeKey, onClose }: { routeKey?: string; onClose:
               <div className="ai-welcome">
                 <span className="ai-mini">YOUR WORK COMPANION</span>
                 <h3>Hi {me.name.split(' ')[0]}, a little clarity goes a long way.</h3>
-                <p>I can plan your day, spot blockers, size a sprint, write your stand-up, create work from a sentence, or show you around Flowstate. Free, with no limits.</p>
+                <p>I can plan your day, spot blockers, size a sprint, write your stand-up, create work from a sentence, or show you around WorkMars. Free, with no limits.</p>
               </div>
               <div className="ai-chips">
                 {STARTERS.map(([q, icon]) => <button key={q} className="ai-prompt" onClick={() => ask(q)}><Icon name={icon} size={16} /><span>{q}</span></button>)}
@@ -152,11 +153,11 @@ export function GuideDrawer({ routeKey, onClose }: { routeKey?: string; onClose:
               )}
             </div>
           ))}
-          {thinking && <div className="chat-guide"><div className="ai-answer typing" aria-label="Flow guide is thinking"><i /><i /><i /></div></div>}
+          {thinking && <div className="chat-guide"><div className="ai-answer typing" aria-label="Mars guide is thinking"><i /><i /><i /></div></div>}
         </div>
         <div className="ai-bottom">
           <form className="ai-chat-input" onSubmit={(e: FormEvent) => { e.preventDefault(); ask(input); }}>
-            <input ref={inputRef} className="text-input" value={input} onChange={(e) => setInput(e.target.value)} maxLength={600} placeholder="Ask about your work…" aria-label="Ask the Flow guide" />
+            <input ref={inputRef} className="text-input" value={input} onChange={(e) => setInput(e.target.value)} maxLength={600} placeholder="Ask about your work…" aria-label="Ask the Mars guide" />
             <button className="btn btn-primary" type="submit" aria-label="Send" disabled={!input.trim() || thinking}><Icon name="send" size={16} /></button>
           </form>
           <div className="ai-disclaimer">Free forever. Answers come from your workspace data — nothing is sent to third-party AI services. Check important details.</div>

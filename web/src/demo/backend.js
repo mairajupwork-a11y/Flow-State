@@ -1,5 +1,5 @@
 /**
- * In-browser Flowstate backend for the shareable demo. Runs the real server
+ * In-browser WorkMars backend for the shareable demo. Runs the real server
  * route modules against SQLite compiled to WebAssembly (sql.js) and keeps the
  * database in this browser's local storage.
  */
@@ -109,7 +109,7 @@ export async function demoFetch(method, path, body) {
   };
   const req = {
     method, body: body ?? {}, query: Object.fromEntries(url.searchParams), params: {}, ip: 'demo',
-    cookies: { [SESSION_COOKIE]: store.get(COOKIE_KEY) }, get: () => 'flowstate',
+    cookies: { [SESSION_COOKIE]: store.get(COOKIE_KEY) }, get: () => 'workmars',
   };
   try {
     const handled = await api.handle(req, res, url.pathname);

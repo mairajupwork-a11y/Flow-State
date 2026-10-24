@@ -75,7 +75,7 @@ export default function Settings() {
               <div className="tabs">{(['light', 'dark', 'system'] as Theme[]).map((t) => <button key={t} className={`tab ${theme === t ? 'active' : ''}`} aria-pressed={theme === t} onClick={() => { setTheme(t); saveMe.mutate({ theme: t }); }} style={{ textTransform: 'capitalize' }}>{t}</button>)}</div>
             </div>
             <div className="setting-row"><div><strong>Compact cards</strong><small>Show denser work item cards on boards.</small></div><Toggle on={compact} onChange={applyCompact} label="Compact cards" /></div>
-            <div className="setting-row"><div><strong>Reduce motion</strong><small>Minimise animations across Flowstate.</small></div><Toggle on={motion} onChange={applyMotion} label="Reduce motion" /></div>
+            <div className="setting-row"><div><strong>Reduce motion</strong><small>Minimise animations across WorkMars.</small></div><Toggle on={motion} onChange={applyMotion} label="Reduce motion" /></div>
           </div>
 
           <div className="content-card">
@@ -126,10 +126,10 @@ export default function Settings() {
           </form>
 
           <div className="content-card">
-            <h3>What Flowstate stands for</h3>
+            <h3>What WorkMars stands for</h3>
             <p className="muted">Promises built into the product</p>
             <div className="setting-row"><div><strong>No user seat caps</strong><small>Free for unlimited people, every feature included.</small></div><Icon name="checkcircle" size={19} /></div>
-            <div className="setting-row"><div><strong>Free AI guidance</strong><small>The Flow guide runs on your workspace data — no paid AI, no limits.</small></div><Icon name="checkcircle" size={19} /></div>
+            <div className="setting-row"><div><strong>Free AI guidance</strong><small>The Mars guide runs on your workspace data — no paid AI, no limits.</small></div><Icon name="checkcircle" size={19} /></div>
             <div className="setting-row"><div><strong>Simple, familiar workflows</strong><small>Designed for technical and non-technical teams alike.</small></div><Icon name="checkcircle" size={19} /></div>
           </div>
         </div>

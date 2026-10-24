@@ -25,7 +25,7 @@ export function Overview() {
       <PageHeader eyebrow="Workspace / Overview" title={`${greeting()}, ${me.name.split(' ')[0]}.`}
         subtitle={overdue ? `The big picture, beautifully clear — and ${overdue} of your items could use a nudge today.` : 'The big picture, beautifully clear. Track momentum without getting lost in the details.'}
         actions={<>
-          <button className="btn btn-light" onClick={() => openGuide()}><Icon name="sparkles" size={16} /><span className="btn-label-mobile">Ask Flow guide</span></button>
+          <button className="btn btn-light" onClick={() => openGuide()}><Icon name="sparkles" size={16} /><span className="btn-label-mobile">Ask Mars guide</span></button>
           {canEdit && <button className="btn btn-primary" onClick={() => openCreate()}><Icon name="plus" size={16} /> Create task</button>}
         </>} />
 
@@ -56,7 +56,7 @@ export function Overview() {
               <div className="content-card">
                 <div className="row-12">
                   <span className="metric-symbol" style={{ background: 'var(--accent-soft)', color: 'var(--accent)' }}><Icon name="sparkles" size={18} /></span>
-                  <div><h3>Need a fresh perspective?</h3><p className="muted">Your free Flow guide can plan your day or spot what’s at risk.</p></div>
+                  <div><h3>Need a fresh perspective?</h3><p className="muted">Your free Mars guide can plan your day or spot what’s at risk.</p></div>
                 </div>
                 <div className="row-8 wrap" style={{ marginTop: 14 }}>
                   <button className="btn btn-soft btn-sm" onClick={() => openGuide('Prioritise my day')}>Plan my day</button>
@@ -155,14 +155,14 @@ function GettingStarted() {
     [mineMoved, 'Move a card on the board', 'Drag it to the next column', () => current && navigate(`${base}/p/${current.key}/board`)],
     [members.length > 1, 'Invite a teammate', 'Free for unlimited people', () => ui.set({ inviteOpen: true })],
     [!!todos.data?.items.length, 'Plan your day', 'Add a to-do in My day', () => navigate(`${base}/my-day`)],
-    [askedGuide, 'Ask the Flow guide', 'Try “prioritise my day”', () => openGuide('Prioritise my day')],
+    [askedGuide, 'Ask the Mars guide', 'Try “prioritise my day”', () => openGuide('Prioritise my day')],
   ];
   const done = steps.filter((s) => s[0]).length;
   const dismiss = () => { try { localStorage.removeItem(key); } catch { /* */ } setVisible(false); };
   return (
     <div className="content-card getting-started">
       <div className="row-between">
-        <div><h3>Getting started · {done}/{steps.length}</h3><p className="muted">Five small steps to feel at home in Flowstate.</p></div>
+        <div><h3>Getting started · {done}/{steps.length}</h3><p className="muted">Five small steps to feel at home in WorkMars.</p></div>
         <button className="icon-btn" onClick={dismiss} aria-label="Dismiss getting started"><Icon name="close" size={16} /></button>
       </div>
       <div className="sprint-progress" style={{ margin: '12px 0 4px' }}><i className="done" style={{ width: `${(done / steps.length) * 100}%` }} /></div>

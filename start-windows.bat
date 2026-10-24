@@ -1,5 +1,5 @@
 @echo off
-title Flowstate
+title WorkMars
 cd /d "%~dp0"
 where node >nul 2>nul
 if errorlevel 1 (
@@ -10,7 +10,7 @@ if errorlevel 1 (
   exit /b 1
 )
 echo.
-echo   Installing Flowstate (first run takes a minute)...
+echo   Installing WorkMars (first run takes a minute)...
 call npm install --no-audit --no-fund
 if errorlevel 1 (
   echo.
@@ -26,8 +26,8 @@ if not exist ".env" (
   )
 )
 echo.
-echo   Starting Flowstate. Your browser will open at http://127.0.0.1:5173
-echo   Keep this window open while you use the app. Close it to stop Flowstate.
+echo   Starting WorkMars. Your browser will open at http://127.0.0.1:5173
+echo   Keep this window open while you use the app. Close it to stop WorkMars.
 echo.
 start "" cmd /c "timeout /t 8 /nobreak >nul & start http://127.0.0.1:5173"
 call npm run dev

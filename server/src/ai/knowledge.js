@@ -1,5 +1,5 @@
 /**
- * Product knowledge for the Flow guide. Each article is matched by keyword
+ * Product knowledge for the Mars guide. Each article is matched by keyword
  * overlap; `to` lets the client offer a one-click "Take me there" button.
  * Paths are relative to the current workspace (`:project` = current project).
  */
@@ -35,7 +35,7 @@ export const ARTICLES = [
   { id: 'myday', title: 'Plan your day with My day', keywords: 'my day todo to-do to do list personal daily plan private checklist remind',
     to: 'my-day', body: '**My day** is your private to-do list, separate from team work. Add quick to-dos, place them in morning, afternoon or evening, star what matters, and pin project work to today. Unfinished items roll forward automatically.' },
   { id: 'invite', title: 'Invite your team (free, unlimited)', keywords: 'invite people team member add user colleague join unlimited free seat',
-    to: 'team', body: 'Go to **Team → Invite people**. Add as many emails as you like or copy a reusable invite link — Flowstate is free for unlimited users, forever. No seats, no trials.' },
+    to: 'team', body: 'Go to **Team → Invite people**. Add as many emails as you like or copy a reusable invite link — WorkMars is free for unlimited users, forever. No seats, no trials.' },
   { id: 'roles', title: 'Roles & permissions', keywords: 'role permission admin member viewer access security guest',
     to: 'team', body: 'There are three roles: **Admins** manage the workspace and people, **Members** create and edit work, **Viewers** can see everything but change nothing — ideal for stakeholders.' },
   { id: 'notifications', title: 'Notifications & mentions', keywords: 'notification notify bell alert mention @ watch watching email updates',
@@ -65,9 +65,9 @@ export const ARTICLES = [
   { id: 'flowmetrics', title: 'Flow metrics (CFD, cycle time)', keywords: 'cfd cumulative flow diagram cycle lead time throughput efficiency little law kanban lean metrics',
     to: ':project/reports', body: 'Kanban, Lean and Scrumban reports show a **cumulative flow diagram** (widening bands = bottlenecks), **cycle & lead time** with 50th/85th percentiles, weekly **throughput**, and **flow efficiency** — the share of time work is actively progressed rather than waiting.' },
   { id: 'control', title: 'Control charts & sigma level', keywords: 'control chart spc ucl lcl sigma cp cpk dpmo measurement six sigma variation',
-    to: ':project/reports', body: 'In Six Sigma projects, add CTQ measurements in **Reports**. Flowstate draws an individuals control chart (mean ± 3σ from the moving range), flags out-of-control signals, and calculates Cp, Cpk and the process sigma level from the spec limits in your charter.' },
-  { id: 'ai', title: 'About the Flow guide', keywords: 'ai assistant guide bot help free cost privacy data model',
-    body: 'I am the **Flow guide** — completely free with no usage limits. I run inside Flowstate using your workspace data and never send it to a third-party AI service. Your admin can optionally connect a self-hosted open-source model for richer conversation, still at no cost.' },
-  { id: 'mobile', title: 'Use Flowstate on mobile', keywords: 'mobile phone tablet app responsive touch',
-    body: 'Flowstate is fully responsive. On phones, use the bottom bar for Home, Board, My tasks, My day and Team. Drag cards with a long-press, or open a card to change its status.' },
+    to: ':project/reports', body: 'In Six Sigma projects, add CTQ measurements in **Reports**. WorkMars draws an individuals control chart (mean ± 3σ from the moving range), flags out-of-control signals, and calculates Cp, Cpk and the process sigma level from the spec limits in your charter.' },
+  { id: 'ai', title: 'About the Mars guide', keywords: 'ai assistant guide bot help free cost privacy data model',
+    body: 'I am the **Mars guide** — completely free with no usage limits. I run inside WorkMars using your workspace data and never send it to a third-party AI service. Your admin can optionally connect a self-hosted open-source model for richer conversation, still at no cost.' },
+  { id: 'mobile', title: 'Use WorkMars on mobile', keywords: 'mobile phone tablet app responsive touch',
+    body: 'WorkMars is fully responsive. On phones, use the bottom bar for Home, Board, My tasks, My day and Team. Drag cards with a long-press, or open a card to change its status.' },
 ];

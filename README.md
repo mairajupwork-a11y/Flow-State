@@ -1,4 +1,7 @@
-# Flowstate
+<p align="center"><img src="brand/workmars-logo.png" alt="WorkMars" width="360" /></p>
+<p align="center"><b>Build / Automate / Grow</b></p>
+
+# WorkMars
 
 **Free project management for unlimited users.** Jira-level features (boards, sprints, backlog, epics, timelines, reports) with a Trello-calm interface, a private daily to-do list ("My day"), and a free built-in AI guide.
 
@@ -16,7 +19,7 @@ Built UK-first (en-GB dates, Monday weeks, British English), with US and Asia-Pa
 | **Views** | Board, Backlog, List (sortable), Timeline (epics + dated work), Calendar (create by day) |
 | **Reports** | Sprint burndown, velocity, created vs resolved, cycle time, workload, status and priority mix — each with a table view |
 | **Personal** | My tasks (grouped by due date, across projects) and **My day**: private to-dos by time of day, stars, roll-over, "do it tomorrow", 7-day momentum, pin project work |
-| **Flow guide (free AI)** | Plans your day, spots blockers/overdue/WIP breaches, sizes the next sprint from velocity, writes your stand-up, summarises projects, shows workload, answers how-to questions with "Take me there", and turns sentences into work items or to-dos |
+| **Mars guide (free AI)** | Plans your day, spots blockers/overdue/WIP breaches, sizes the next sprint from velocity, writes your stand-up, summarises projects, shows workload, answers how-to questions with "Take me there", and turns sentences into work items or to-dos |
 | **Team** | Unlimited members, admin/member/viewer roles, designations (CEO, Project Manager, MERN Stack Developer… or your own), invitation emails (any provider, via SMTP) plus shareable invite links and reusable team links |
 | **Everywhere** | ⌘K command palette, keyboard shortcuts (`?`), notifications, realtime updates (SSE), light/dark/system themes, compact mode, reduced motion, responsive down to phones |
 
@@ -38,7 +41,7 @@ Phase gates run strictly in order: start → submit for review → approve (with
 
 ## The AI is free — how
 
-The Flow guide runs **inside the Flowstate server** using your workspace data: intent detection, a natural-language parser (dates, priorities, people, labels), and a product knowledge base. No paid API, no usage limits, and no data leaves your server.
+The Mars guide runs **inside the WorkMars server** using your workspace data: intent detection, a natural-language parser (dates, priorities, people, labels), and a product knowledge base. No paid API, no usage limits, and no data leaves your server.
 
 For richer free-form conversation you can optionally point it at a **self-hosted open-source model** via [Ollama](https://ollama.com) — still free:
 
@@ -66,7 +69,7 @@ Then open **http://localhost:5173** in your browser *on the same computer* where
 | Symptom | Fix |
 | --- | --- |
 | "This site can't be reached" | The dev servers aren't running on *this* machine. Run `npm install` then `npm run dev` in the project folder and keep that terminal open. |
-| "Flowstate needs Node.js 22.5 or newer" | Install the current LTS from [nodejs.org](https://nodejs.org), then `npm install` again. Check with `node -v`. |
+| "WorkMars needs Node.js 22.5 or newer" | Install the current LTS from [nodejs.org](https://nodejs.org), then `npm install` again. Check with `node -v`. |
 | Page loads but sign-up fails / "offline" | The API (port 4000) didn't start — read the `[api]` lines in the terminal. Another app may be using port 4000 or 5173. |
 | `npm` not found | Install Node.js (it includes npm). |
 
@@ -83,13 +86,13 @@ Shareable demo (no server needed):
 npm run build:demo -w web   # outputs web/dist-demo — a static site
 ```
 
-The demo runs the real API route code inside the browser against SQLite compiled to JavaScript, and keeps data in that browser's local storage. Host `web/dist-demo` on any static host to let people try Flowstate instantly.
+The demo runs the real API route code inside the browser against SQLite compiled to JavaScript, and keeps data in that browser's local storage. Host `web/dist-demo` on any static host to let people try WorkMars instantly.
 
 Docker:
 
 ```bash
-docker build -t flowstate .
-docker run -p 4000:4000 -e SESSION_SECRET=change-me -v flowstate-data:/data flowstate
+docker build -t workmars .
+docker run -p 4000:4000 -e SESSION_SECRET=change-me -v workmars-data:/data workmars
 ```
 
 | Variable | Default | Purpose |
@@ -100,15 +103,15 @@ docker run -p 4000:4000 -e SESSION_SECRET=change-me -v flowstate-data:/data flow
 | `GOOGLE_CLIENT_ID`, `GOOGLE_CLIENT_SECRET` | — | Turns on "Continue with Google". See [GOOGLE.md](GOOGLE.md) |
 | `SMTP_HOST`, `SMTP_PORT`, `SMTP_USER`, `SMTP_PASS`, `MAIL_FROM` | — | Sends invitation emails through any SMTP provider. See [EMAIL.md](EMAIL.md) |
 | `APP_URL` | *(request address)* | Public address used for links in emails. Set it when hosting online |
-| `TRUST_PROXY` | `1` in production, off in development | Proxy hops in front of Flowstate, used for the visitor's IP (rate limits) and HTTPS detection |
-| `DATABASE_FILE` | `server/data/flowstate.db` | SQLite file location (when `DATABASE_URL` is not set) |
-| `OLLAMA_URL`, `OLLAMA_MODEL` | — | Optional self-hosted model for the Flow guide |
+| `TRUST_PROXY` | `1` in production, off in development | Proxy hops in front of WorkMars, used for the visitor's IP (rate limits) and HTTPS detection |
+| `DATABASE_FILE` | `server/data/workmars.db` | SQLite file location (when `DATABASE_URL` is not set) |
+| `OLLAMA_URL`, `OLLAMA_MODEL` | — | Optional self-hosted model for the Mars guide |
 
 ## Quality
 
 ```bash
 npm test             # API + parser tests (node:test, in-memory SQLite)
-TEST_DATABASE_URL=postgres://… npm test   # same suite on a disposable Postgres database (it drops Flowstate tables there)
+TEST_DATABASE_URL=postgres://… npm test   # same suite on a disposable Postgres database (it drops WorkMars tables there)
 npm run typecheck    # strict TypeScript for the web app
 npm run check        # typecheck + tests + production build
 ```
@@ -122,7 +125,7 @@ server/  Node + Express 5 + node:sqlite or PostgreSQL / Supabase
   src/db-postgres.js    Postgres adapter (same API) + schema/postgres.sql
   src/routes/           auth, workspaces/invites, projects/sprints/reports, issues, personal (to-dos, notifications), ai
   src/services/         issue & project domain logic (validation, ranking, activity, notifications)
-  src/ai/               Flow guide: intents, NL parser, knowledge base, optional Ollama
+  src/ai/               Mars guide: intents, NL parser, knowledge base, optional Ollama
   src/realtime.js       SSE hub — "something changed" hints, never data
 web/     React 19 + TypeScript + Vite
   src/lib/              API client, React Query hooks (optimistic updates), stores, formatting, theme
