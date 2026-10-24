@@ -38,24 +38,6 @@ body::before {
 }
 ::selection { background: #e8c9a5; color: #2b160d; }
 
-/* Copper hairlines with sparkles framing the workspace, as in an editorial spread. */
-.main-shell { position: relative; }
-.main-shell::before, .main-shell::after {
-  content: '';
-  position: fixed;
-  width: 22px;
-  pointer-events: none;
-  z-index: 0;
-  opacity: .5;
-  background:
-    url("data:image/svg+xml,%3Csvg xmlns='http://www.w3.org/2000/svg' viewBox='0 0 24 24'%3E%3Cpath fill='%23a65a2e' d='M12 0c.6 6.6 5.4 11.4 12 12-6.6.6-11.4 5.4-12 12-.6-6.6-5.4-11.4-12-12C6.6 11.4 11.4 6.6 12 0z'/%3E%3C/svg%3E") center 38% / 18px no-repeat,
-    linear-gradient(var(--copper), var(--copper)) center / 1px 100% no-repeat;
-  -webkit-mask: linear-gradient(transparent, #000 25%, #000 75%, transparent);
-  mask: linear-gradient(transparent, #000 25%, #000 75%, transparent);
-}
-.main-shell::before { right: 12px; top: 96px; height: 240px; }
-.main-shell::after { right: 12px; bottom: 40px; height: 200px; background-position: center 62%, center; }
-@media (max-width: 1100px) { .main-shell::before, .main-shell::after { display: none; } }
 
 /* ---------- Type ---------- */
 .page-title { font-family: var(--head); font-weight: 700; letter-spacing: -1.4px; color: var(--text); }
@@ -363,24 +345,6 @@ body::before {
 /* ---------- Landing ---------- */
 .lp { background: transparent; }
 .lp-hero { position: relative; }
-/* Editorial frame: copper hairlines with sparkles either side of the headline. */
-.lp-hero::before, .lp-hero::after {
-  content: '';
-  position: absolute;
-  top: 70px;
-  width: 22px;
-  height: 300px;
-  pointer-events: none;
-  opacity: .6;
-  background:
-    url("data:image/svg+xml,%3Csvg xmlns='http://www.w3.org/2000/svg' viewBox='0 0 24 24'%3E%3Cpath fill='%23a65a2e' d='M12 0c.6 6.6 5.4 11.4 12 12-6.6.6-11.4 5.4-12 12-.6-6.6-5.4-11.4-12-12C6.6 11.4 11.4 6.6 12 0z'/%3E%3C/svg%3E") center 30% / 20px no-repeat,
-    linear-gradient(var(--copper), var(--copper)) center / 1px 100% no-repeat;
-  -webkit-mask: linear-gradient(transparent, #000 20%, #000 80%, transparent);
-  mask: linear-gradient(transparent, #000 20%, #000 80%, transparent);
-}
-.lp-hero::before { left: max(24px, calc(50% - 640px)); }
-.lp-hero::after { right: max(24px, calc(50% - 640px)); top: 150px; background-position: center 70%, center; }
-@media (max-width: 900px) { .lp-hero::before, .lp-hero::after { display: none; } }
 .lp-chip { background: rgba(255, 251, 245, .75); border: 1px solid rgba(43, 22, 13, .3); }
 [data-theme="dark"] .lp-chip { background: rgba(43, 29, 21, .72); border-color: rgba(233, 207, 174, .3); color: var(--text); }
 
