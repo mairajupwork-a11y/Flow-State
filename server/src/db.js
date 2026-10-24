@@ -1,6 +1,7 @@
 import { DatabaseSync } from 'node:sqlite';
 import { mkdirSync } from 'node:fs';
 import { dirname } from 'node:path';
+import { recolorSql } from './schema/recolor.js';
 
 /**
  * Schema is applied idempotently on boot. Each entry in MIGRATIONS runs once,
@@ -315,6 +316,8 @@ export const MIGRATIONS = [
    CREATE INDEX IF NOT EXISTS issue_links_target ON issue_links (target_id);
    CREATE INDEX IF NOT EXISTS invites_workspace ON invites (workspace_id);
    CREATE INDEX IF NOT EXISTS memberships_user ON memberships (user_id);`,
+  // v5: default colours move to the Atelier palette.
+  recolorSql(),
 ];
 
 export function openDatabase(file = process.env.DATABASE_FILE || 'data/flowstate.db') {

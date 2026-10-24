@@ -102,7 +102,7 @@ export function AuthPage({ mode }: { mode: 'login' | 'signup' }) {
       <aside className="auth-aside">
         <Brand to="/welcome" />
         <div className="auth-aside-body">
-          <h2>{isSignup ? 'Your whole team. Free. Forever.' : 'Welcome back.'}</h2>
+          <h2>{isSignup ? <>Your whole team. <span className="serif-accent">Free. Forever.</span></> : <>Welcome <span className="serif-accent">back.</span></>}</h2>
           <p>{isSignup ? 'Boards, sprints, timelines, reports, a personal to-do list and a free AI guide — for unlimited users.' : 'Pick up exactly where you left off. Your board is waiting.'}</p>
           <ul>
             <li><Icon name="checkcircle" size={17} /> Set up in under a minute</li>

@@ -1,6 +1,7 @@
 import { readFileSync } from 'node:fs';
 import { AsyncLocalStorage } from 'node:async_hooks';
 import pg from 'pg';
+import { recolorSql } from './schema/recolor.js';
 
 /**
  * PostgreSQL adapter (Supabase or any Postgres) with the same surface as
@@ -146,6 +147,7 @@ export async function migratePostgres(pool) {
      CREATE INDEX IF NOT EXISTS invites_workspace ON invites (workspace_id);
      CREATE INDEX IF NOT EXISTS memberships_user ON memberships (user_id);
      CREATE INDEX IF NOT EXISTS users_email_exact ON users (email)`,
+    recolorSql(),
   ];
   const VERSION = UPGRADES.length;
   const client = await pool.connect();

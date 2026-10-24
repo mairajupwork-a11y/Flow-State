@@ -11,9 +11,9 @@ import { MethodologyPicker } from '../../components/MethodologyPicker';
 import { METHODOLOGIES, methodologyOf } from '../../lib/methodology';
 import { SectionBar, useProjectCtx } from './ProjectLayout';
 
-const COLORS = ['#7770e7', '#30adab', '#f09d75', '#9e8bb6', '#e5789a', '#5b9be0', '#d6a347', '#4fb38a'];
+const COLORS = ['#a65a2e', '#6f8a68', '#5f7c99', '#c58f2c', '#7b4a68', '#3f7f78', '#b9563a', '#8c6d4f'];
 const CATEGORY_LABEL: Record<StatusCategory, string> = { todo: 'To do', progress: 'In progress', done: 'Done' };
-const STATUS_COLORS = ['#9698ab', '#6a8ee9', '#edaf5b', '#28b391', '#8278f4', '#e5789a', '#30adab'];
+const STATUS_COLORS = ['#a3907d', '#5f7c99', '#c58f2c', '#6f8a68', '#a65a2e', '#c4808a', '#3f7f78'];
 
 export default function ProjectSettings() {
   const { project, issues } = useProjectCtx();

@@ -8,6 +8,7 @@ import { Brand } from '../auth/Welcome';
 import type { MethodologyId, Session, Workspace } from '../../lib/types';
 import { MethodologyPicker } from '../../components/MethodologyPicker';
 import { METHODOLOGIES } from '../../lib/methodology';
+import { accentTitle } from '../../components/ui';
 import { DesignationSelect } from '../team/DesignationSelect';
 
 const ROLES = [
@@ -125,7 +126,7 @@ export function Onboarding() {
         {step === 0 && (
           <section className="onboard-step" key="s0">
             <div className="eyebrow"><span className="line" />Welcome, {first}</div>
-            <h1 className="page-title">What kind of work do you do?</h1>
+            <h1 className="page-title">{accentTitle('What kind of work do you do?')}</h1>
             <p className="page-subtitle">We’ll tailor your first project and the Flow guide’s suggestions. You can change everything later.</p>
             <div className="chip-grid" role="radiogroup" aria-label="Your role">
               {ROLES.map(([r, icon]) => (
@@ -140,7 +141,7 @@ export function Onboarding() {
         {step === 1 && (
           <section className="onboard-step" key="s1">
             <div className="eyebrow"><span className="line" />Your workspace</div>
-            <h1 className="page-title">Name your team’s home.</h1>
+            <h1 className="page-title">{accentTitle('Name your team’s home.')}</h1>
             <p className="page-subtitle">Usually your company or team name. Everyone you invite will meet here.</p>
             <label className="form-field">
               <span>Workspace name</span>
@@ -170,7 +171,7 @@ export function Onboarding() {
         {step === 2 && (
           <section className="onboard-step" key="s2">
             <div className="eyebrow"><span className="line" />Your first project</div>
-            <h1 className="page-title">How will this project be run?</h1>
+            <h1 className="page-title">{accentTitle('How will this project be run?')}</h1>
             <p className="page-subtitle">Choose the methodology that fits its scale and requirements — not sure? Use <b>Help me choose</b>. You can switch later without losing anything.</p>
             <MethodologyPicker value={methodology} onChange={(m) => setProject({ ...project, methodology: m })} />
             <div className="form-grid" style={{ marginTop: 18 }}>
@@ -193,7 +194,7 @@ export function Onboarding() {
         {step === 3 && (
           <section className="onboard-step" key="s3">
             <div className="eyebrow"><span className="line" />Bring your team</div>
-            <h1 className="page-title">Work is better together.</h1>
+            <h1 className="page-title">{accentTitle('Work is better together.')}</h1>
             <p className="page-subtitle">Invite as many people as you like — Flowstate is free for unlimited users. You can also do this later.</p>
             {/* A div, not a label: a label would forward clicks to the first chip's remove button. */}
             <div className="form-field">
@@ -215,7 +216,7 @@ export function Onboarding() {
         {step === 4 && created && (
           <section className="onboard-step ready" key="s4">
             <div className="ready-burst" aria-hidden="true"><Icon name="sparkles" size={34} /></div>
-            <h1 className="page-title">You’re all set, {first}.</h1>
+            <h1 className="page-title">{accentTitle(`You’re all set, ${first}.`)}</h1>
             <p className="page-subtitle"><b>{created.name}</b> is ready with your <b>{project.name}</b> {METHODOLOGIES[methodology].name} project{emails.length ? ` and ${emails.length} invitation${emails.length === 1 ? '' : 's'}` : ''}.{emailed ? ` We’ve emailed ${emailed === 1 ? 'your invitation' : `all ${emailed} invitations`}.` : ''}</p>
             <div className="ready-grid">
               <div><Icon name={METHODOLOGIES[methodology].icon} size={18} /><b>{METHODOLOGIES[methodology].name}, set up properly</b><span>{METHODOLOGIES[methodology].tagline}</span></div>

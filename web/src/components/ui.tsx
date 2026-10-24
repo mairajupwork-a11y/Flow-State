@@ -144,12 +144,24 @@ export function Toasts() {
 }
 
 /** Eyebrow + title + subtitle header, matching the prototype's page heading. */
+/**
+ * Sets the expressive end of a headline in the italic copper serif: the part
+ * after the last comma ("Good morning, *Mairaj.*") or else the last word.
+ */
+export function accentTitle(title: ReactNode): ReactNode {
+  if (typeof title !== 'string') return title;
+  const comma = title.lastIndexOf(', ');
+  const cut = comma > 0 ? comma + 2 : title.trimEnd().lastIndexOf(' ') + 1;
+  if (cut <= 0) return title;
+  return <>{title.slice(0, cut)}<span className="serif-accent">{title.slice(cut)}</span></>;
+}
+
 export function PageHeader({ eyebrow, title, subtitle, actions }: { eyebrow: string; title: ReactNode; subtitle?: ReactNode; actions?: ReactNode }) {
   return (
     <div className="title-section">
       <div>
         <div className="eyebrow"><span className="line" />{eyebrow}</div>
-        <h1 className="page-title">{title}</h1>
+        <h1 className="page-title">{accentTitle(title)}</h1>
         {subtitle && <p className="page-subtitle">{subtitle}</p>}
       </div>
       {actions && <div className="title-actions">{actions}</div>}

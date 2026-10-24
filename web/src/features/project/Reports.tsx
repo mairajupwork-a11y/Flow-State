@@ -28,12 +28,12 @@ export default function Reports() {
     <>
       <SectionBar title="Project insights" sub={`${m.name} metrics · live from your project data`} />
       <div className="metric-grid">
-        <Stat label="Completion" value={`${t.total ? Math.round((t.done / t.total) * 100) : 0}%`} foot={`${t.done} of ${t.total} items done`} icon="checkcircle" tone={['#e5f8f2', '#20af8b']} />
-        <Stat label="In progress" value={t.inProgress} foot="Active right now" icon="loader" tone={['#eaf3ff', '#608edb']} />
-        <Stat label="Overdue" value={t.overdue} foot={t.overdue ? 'Need a new date or owner' : 'Nothing overdue'} icon="flag" tone={['#fff0ed', '#dc8061']} />
+        <Stat label="Completion" value={`${t.total ? Math.round((t.done / t.total) * 100) : 0}%`} foot={`${t.done} of ${t.total} items done`} icon="checkcircle" tone={['#eaf3f2', '#448b82']} />
+        <Stat label="In progress" value={t.inProgress} foot="Active right now" icon="loader" tone={['#f0f5f9', '#829fb9']} />
+        <Stat label="Overdue" value={t.overdue} foot={t.overdue ? 'Need a new date or owner' : 'Nothing overdue'} icon="flag" tone={['#fdf1ef', '#ce876f']} />
         {m.phases
-          ? <Stat label={`${term(m.id, 'phases')} passed`} value={`${data.phases.filter((p) => p.state === 'complete').length}/${data.phases.length}`} foot={data.phases.find((p) => p.state === 'active' || p.state === 'review')?.name ?? 'Lifecycle complete'} icon="layers" tone={['#eeeaff', '#6f63e8']} />
-          : <Stat label={m.features.wip ? 'Cycle time (85%)' : 'Avg. cycle time'} value={fmtDays(m.features.wip ? data.cycle.p85 : t.cycleTimeDays)} foot={m.features.wip ? `85% of items finish within this` : 'Created → done, last 30 days'} icon="clock" tone={['#eeeaff', '#6f63e8']} />}
+          ? <Stat label={`${term(m.id, 'phases')} passed`} value={`${data.phases.filter((p) => p.state === 'complete').length}/${data.phases.length}`} foot={data.phases.find((p) => p.state === 'active' || p.state === 'review')?.name ?? 'Lifecycle complete'} icon="layers" tone={['#f2dcd0', '#d2895f']} />
+          : <Stat label={m.features.wip ? 'Cycle time (85%)' : 'Avg. cycle time'} value={fmtDays(m.features.wip ? data.cycle.p85 : t.cycleTimeDays)} foot={m.features.wip ? `85% of items finish within this` : 'Created → done, last 30 days'} icon="clock" tone={['#f2dcd0', '#d2895f']} />}
       </div>
       <MetricGrid data={data} />
     </>
@@ -245,7 +245,7 @@ function StatusCard({ data }: { data: ReportsData }) {
 
 function PriorityCard({ data }: { data: ReportsData }) {
   const total = data.byPriority.reduce((a, p) => a + p.count, 0);
-  const colors = { urgent: '#e76f82', high: '#f3a47e', medium: '#8880ef', low: '#4dc0a9' };
+  const colors = { urgent: '#d58c81', high: '#e6a98b', medium: '#db9b77', low: '#6aa39c' };
   return (
     <div className="content-card">
       <h3>Priority mix</h3>
@@ -343,12 +343,12 @@ function CycleScatter({ data }: { data: ReportsData }) {
   const x = (d: string) => PAD.l + 8 + ((W - PAD.l - PAD.r - 16) * (Date.parse(d) - first)) / span;
   const y = (v: number) => PAD.t + (H - PAD.t - PAD.b) * (1 - v / max);
   return (
-    <ChartCard title="Cycle time" sub={`Median ${fmtDays(c.p50)} · 85% within ${fmtDays(c.p85)} · lead time avg ${fmtDays(c.avgLead)}`} legend={[['Item', 'var(--series-1)'], ['85th percentile', '#e8875f', true], ['Median', 'var(--chart-ink)', true]]}
+    <ChartCard title="Cycle time" sub={`Median ${fmtDays(c.p50)} · 85% within ${fmtDays(c.p85)} · lead time avg ${fmtDays(c.avgLead)}`} legend={[['Item', 'var(--series-1)'], ['85th percentile', '#d98d6e', true], ['Median', 'var(--chart-ink)', true]]}
       table={<table className="list-table"><thead><tr><th>Item</th><th>Done</th><th>Cycle (d)</th><th>Lead (d)</th></tr></thead><tbody>{c.samples.map((s) => <tr key={s.key}><td>{s.key} {s.title}</td><td>{fmtDate(s.resolved, locale)}</td><td>{s.cycle}</td><td>{s.lead}</td></tr>)}</tbody></table>}>
       <div className="chart-wrap" onMouseLeave={() => setTip(null)}>
         <svg viewBox={`0 0 ${W} ${H}`} className="chart" role="img" aria-label={`Cycle time: median ${c.p50} days, 85th percentile ${c.p85} days`}>
           <Axis max={max} />
-          {c.p85 != null && <line className="line-ideal" x1={PAD.l} x2={W - PAD.r} y1={y(c.p85)} y2={y(c.p85)} style={{ stroke: '#e8875f' }} />}
+          {c.p85 != null && <line className="line-ideal" x1={PAD.l} x2={W - PAD.r} y1={y(c.p85)} y2={y(c.p85)} style={{ stroke: '#d98d6e' }} />}
           {c.p50 != null && <line className="line-ideal" x1={PAD.l} x2={W - PAD.r} y1={y(c.p50)} y2={y(c.p50)} />}
           {c.samples.map((s) => (
             <circle key={s.key} cx={x(s.resolved)} cy={y(s.cycle)} r={4.5} className="dot s1"
@@ -407,7 +407,7 @@ function Efficiency({ data }: { data: ReportsData }) {
         <div className="stack-8">
           <div className="legend-row"><span>Work in progress</span><b>{e.wip}</b></div>
           <div className="legend-row"><span>Lead time by Little’s law</span><b>{fmtDays(e.littleLeadDays)}</b></div>
-          {e.byStatus.map((s) => <div className="legend-row" key={s.name}><span><i style={{ background: s.waiting ? '#edaf5b' : 'var(--series-1)' }} />{s.name} <small className="muted">{s.waiting ? 'waiting' : 'active'}</small></span><b>{s.count}</b></div>)}
+          {e.byStatus.map((s) => <div className="legend-row" key={s.name}><span><i style={{ background: s.waiting ? '#e0b468' : 'var(--series-1)' }} />{s.name} <small className="muted">{s.waiting ? 'waiting' : 'active'}</small></span><b>{s.count}</b></div>)}
         </div>
       </div>
     </div>
@@ -428,7 +428,7 @@ function PhaseProgress({ data }: { data: ReportsData }) {
             <span>{p.state === 'complete' ? '✓ ' : ''}{p.name}{p.late && <span className="phase-state late" style={{ marginLeft: 8 }}>Late</span>}</span>
             <span>{p.done}/{p.total} · {p.endDate ? fmtDate(p.endDate, locale) : 'no date'}</span>
           </div>
-          <div className="dist-track"><div className="dist-fill" style={{ width: `${p.percent}%`, background: p.state === 'complete' ? 'var(--teal)' : p.late ? '#e35d73' : 'var(--series-1)' }} /></div>
+          <div className="dist-track"><div className="dist-fill" style={{ width: `${p.percent}%`, background: p.state === 'complete' ? 'var(--teal)' : p.late ? '#cf7e71' : 'var(--series-1)' }} /></div>
         </div>
       ))}
       {!data.phases.length && <Empty icon="layers" title="No phases" />}
@@ -482,17 +482,17 @@ function ControlChart({ data }: { data: ReportsData }) {
 
   return (
     <ChartCard title={`Control chart${charter.ctq ? ` · ${charter.ctq}` : ''}`} sub={c.mean == null ? 'Add measurements of your CTQ metric to plot the process' : `Mean ${c.mean}${unit} · UCL ${c.ucl} · LCL ${c.lcl} · σ ${c.sigma}${c.signals.length ? ` · ${c.signals.length} signal${c.signals.length === 1 ? '' : 's'}` : ' · in control'}`}
-      legend={[['Measurement', 'var(--series-1)'], ['Mean', 'var(--chart-ink)', true], ['Control limits ±3σ', '#e8875f', true], ...(c.usl != null || c.lsl != null ? [['Spec limits', '#e35d73', true] as [string, string, boolean]] : [])]}
+      legend={[['Measurement', 'var(--series-1)'], ['Mean', 'var(--chart-ink)', true], ['Control limits ±3σ', '#d98d6e', true], ...(c.usl != null || c.lsl != null ? [['Spec limits', '#cf7e71', true] as [string, string, boolean]] : [])]}
       table={<table className="list-table"><thead><tr><th>Day</th><th>Value</th><th>Note</th><th /></tr></thead><tbody>{c.points.map((p) => <tr key={p.id}><td>{fmtDate(p.day, locale)}</td><td>{p.value}</td><td>{p.note}</td><td>{canEdit && <button className="link-btn" onClick={async () => (await askConfirm({ title: 'Delete this measurement?', confirmLabel: 'Delete', danger: true })) && del.mutate(p.id)}>Delete</button>}</td></tr>)}</tbody></table>}>
       {c.points.length > 0 ? (
         <div className="chart-wrap" onMouseLeave={() => setTip(null)}>
           <svg viewBox={`0 0 ${W} ${H}`} className="chart" role="img" aria-label={`Control chart with ${c.points.length} measurements, mean ${c.mean}`}>
-            {[c.ucl, c.lcl].map((v, k) => v != null && <g key={k}><line className="line-ideal" x1={PAD.l} x2={W - PAD.r} y1={y(v)} y2={y(v)} style={{ stroke: '#e8875f' }} /><text className="axis-x" x={PAD.l - 4} y={y(v) + 3} textAnchor="end">{k ? 'LCL' : 'UCL'}</text></g>)}
-            {[c.usl, c.lsl].map((v, k) => v != null && <g key={k}><line className="line-ideal" x1={PAD.l} x2={W - PAD.r} y1={y(v)} y2={y(v)} style={{ stroke: '#e35d73' }} /><text className="axis-x" x={W - PAD.r} y={y(v) - 4} textAnchor="end">{k ? 'LSL' : 'USL'}</text></g>)}
+            {[c.ucl, c.lcl].map((v, k) => v != null && <g key={k}><line className="line-ideal" x1={PAD.l} x2={W - PAD.r} y1={y(v)} y2={y(v)} style={{ stroke: '#d98d6e' }} /><text className="axis-x" x={PAD.l - 4} y={y(v) + 3} textAnchor="end">{k ? 'LCL' : 'UCL'}</text></g>)}
+            {[c.usl, c.lsl].map((v, k) => v != null && <g key={k}><line className="line-ideal" x1={PAD.l} x2={W - PAD.r} y1={y(v)} y2={y(v)} style={{ stroke: '#cf7e71' }} /><text className="axis-x" x={W - PAD.r} y={y(v) - 4} textAnchor="end">{k ? 'LSL' : 'USL'}</text></g>)}
             {c.mean != null && <g><line className="line-ideal" x1={PAD.l} x2={W - PAD.r} y1={y(c.mean)} y2={y(c.mean)} /><text className="axis-x" x={PAD.l - 4} y={y(c.mean) + 3} textAnchor="end">x̄</text></g>}
             <path className="line s1" d={c.points.map((p, i) => `${i ? 'L' : 'M'}${x(i)},${y(p.value)}`).join('')} />
             {c.points.map((p, i) => (
-              <circle key={p.id} cx={x(i)} cy={y(p.value)} r={signal.has(i) ? 5.5 : 3.5} className="dot s1" style={signal.has(i) ? { fill: '#e35d73', stroke: '#e35d73' } : undefined}
+              <circle key={p.id} cx={x(i)} cy={y(p.value)} r={signal.has(i) ? 5.5 : 3.5} className="dot s1" style={signal.has(i) ? { fill: '#cf7e71', stroke: '#cf7e71' } : undefined}
                 onMouseMove={(e) => setTip({ x: e.nativeEvent.offsetX, y: e.nativeEvent.offsetY, lines: [fmtDate(p.day, locale), `${p.value}${unit}`, ...(p.note ? [p.note] : []), ...c.signals.filter((s) => s.index === i).map((s) => `⚠ ${s.rule}`)] })} />
             ))}
           </svg>

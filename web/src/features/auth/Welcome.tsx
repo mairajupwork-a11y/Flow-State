@@ -63,7 +63,7 @@ export function Welcome() {
           <div className="lp-wrap lp-hero-copy">
             <span className="lp-chip enter" style={{ ['--d' as string]: '0ms' }}><span className="dot" /> Free for unlimited users · forever</span>
             <h1 className="lp-h1">
-              {['Work', 'beautifully,', 'together.'].map((w, i) => <span key={w} className="enter word" style={{ ['--d' as string]: `${120 + i * 110}ms` }}>{w}&nbsp;</span>)}
+              {['Work', 'beautifully,', 'together.'].map((w, i) => <span key={w} className={`enter word ${i === 2 ? 'serif-accent' : ''}`} style={{ ['--d' as string]: `${120 + i * 110}ms` }}>{w}&nbsp;</span>)}
             </h1>
             <p className="lp-sub enter" style={{ ['--d' as string]: '480ms' }}><b>flowstate</b> runs your team’s projects in minutes. Boards, sprints, timelines and a free AI guide — in one calm space.</p>
             <div className="lp-cta enter" style={{ ['--d' as string]: '600ms' }}>
@@ -85,7 +85,7 @@ export function Welcome() {
         <section className="lp-wrap lp-stack">
           <article className="lp-card" data-stack id="what">
             <div className="lp-card-copy">
-              <h2 className="lp-h2">What is<br />Flowstate?</h2>
+              <h2 className="lp-h2">What is<br /><em>Flowstate?</em></h2>
               <p>Most project tools force you into their complex systems — and charge per seat for the privilege. Flowstate is different. Set up in a minute, invite everyone for free, and let the board, the sprints and your Flow guide keep work moving. Every department, every project, one simple workspace.</p>
             </div>
             <div className="lp-card-visual lp-type">
@@ -97,7 +97,7 @@ export function Welcome() {
 
           <article className="lp-card lp-card-grey" data-stack id="how">
             <div className="lp-card-copy">
-              <h2 className="lp-h2">How does<br />it work?</h2>
+              <h2 className="lp-h2">How does<br /><em>it work?</em></h2>
               <p>Capture work as cards, drag it across your board, plan sprints in the backlog and watch progress in reports. When you’re unsure what’s next, ask the Flow guide — it reads your real work and tells you.</p>
               <Link to="/signup" className="pill pill-solid">Try for free <Icon name="right" size={14} /></Link>
             </div>
@@ -106,7 +106,7 @@ export function Welcome() {
 
           <article className="lp-card" data-stack>
             <div className="lp-card-copy">
-              <h2 className="lp-h2">Flowstate builds<br />around you</h2>
+              <h2 className="lp-h2">Flowstate builds<br /><em>around you</em></h2>
               <p>Tell us your role, your region and how your team likes to work. We set up the right workflow — Scrum, Kanban or simple approvals — with UK, US or Asia date formats, ready in under a minute.</p>
               <Link to="/signup" className="pill pill-solid">Try for free <Icon name="right" size={14} /></Link>
             </div>
@@ -123,7 +123,7 @@ export function Welcome() {
 
         <section className="lp-section lp-grey" id="features">
           <div className="lp-wrap">
-            <h2 className="lp-h2 xl" data-reveal>You’re in<br />control</h2>
+            <h2 className="lp-h2 xl" data-reveal>You’re in<br /><em>control</em></h2>
             <div className="lp-features">
               {FEATURES.map(([icon, title, body, tone], i) => (
                 <article key={title} className="lp-feature" data-reveal style={{ ['--i' as string]: i }}>
@@ -134,7 +134,7 @@ export function Welcome() {
               ))}
             </div>
             <div className="lp-split" data-reveal>
-              <h2 className="lp-h2 xl">One platform<br />zero limits</h2>
+              <h2 className="lp-h2 xl">One platform<br /><em>zero limits</em></h2>
               <div>
                 <p className="lp-lead">An open workspace for every team you work with. Flowstate is free for unlimited users, runs on your own server if you like, and keeps your data out of third-party AI services.</p>
                 <Link to="/signup" className="pill pill-solid">Start for free</Link>
@@ -162,7 +162,7 @@ export function Welcome() {
 
         <section className="lp-section lp-final">
           <div className="lp-wrap" data-reveal>
-            <h2 className="lp-h2 xl">Ready to grow your team?</h2>
+            <h2 className="lp-h2 xl">Ready to grow <em>your team?</em></h2>
             <p className="lp-lead">Start in under a minute and let Flowstate handle the rest.</p>
             <Link to="/signup" className="pill pill-solid pill-lg">Try for free <Icon name="right" size={15} /></Link>
           </div>
@@ -220,10 +220,10 @@ function ProductShot() {
             <div className="shot-panel">
               <small>Delivered — last 8 weeks</small>
               <svg viewBox="0 0 240 90" preserveAspectRatio="none">
-                <defs><linearGradient id="shotfill" x1="0" x2="0" y1="0" y2="1"><stop offset="0" stopColor="#5b3fc4" stopOpacity=".28" /><stop offset="1" stopColor="#5b3fc4" stopOpacity="0" /></linearGradient></defs>
+                <defs><linearGradient id="shotfill" x1="0" x2="0" y1="0" y2="1"><stop offset="0" stopColor="#a66b48" stopOpacity=".28" /><stop offset="1" stopColor="#a66b48" stopOpacity="0" /></linearGradient></defs>
                 <path d={`M0,90 ${bars.map((b, i) => `L${(i * 240) / 7},${90 - b}`).join(' ')} L240,90 Z`} fill="url(#shotfill)" />
-                <path d={bars.map((b, i) => `${i ? 'L' : 'M'}${(i * 240) / 7},${90 - b}`).join(' ')} fill="none" stroke="#3a1f86" strokeWidth="1.6" />
-                {bars.map((b, i) => <circle key={i} cx={(i * 240) / 7} cy={90 - b} r="2.2" fill="#3a1f86" />)}
+                <path d={bars.map((b, i) => `${i ? 'L' : 'M'}${(i * 240) / 7},${90 - b}`).join(' ')} fill="none" stroke="#6f3e25" strokeWidth="1.6" />
+                {bars.map((b, i) => <circle key={i} cx={(i * 240) / 7} cy={90 - b} r="2.2" fill="#6f3e25" />)}
               </svg>
             </div>
             <div className="shot-panel">
@@ -234,10 +234,10 @@ function ProductShot() {
             </div>
             <div className="shot-panel shot-donut">
               <small>Status mix</small>
-              <svg viewBox="0 0 42 42"><circle cx="21" cy="21" r="15.9" fill="none" stroke="#ece9f5" strokeWidth="6" />
-                {[[67, '#3a1f86', 0], [19, '#5fa8f5', 67], [9, '#f2a65a', 86], [5, '#e5789a', 95]].map(([v, c, o]) => <circle key={c as string} cx="21" cy="21" r="15.9" fill="none" stroke={c as string} strokeWidth="6" strokeDasharray={`${v} ${100 - (v as number)}`} strokeDashoffset={25 - (o as number)} />)}
+              <svg viewBox="0 0 42 42"><circle cx="21" cy="21" r="15.9" fill="none" stroke="#f7eee2" strokeWidth="6" />
+                {[[67, '#6f3e25', 0], [19, '#88accc', 67], [9, '#e4b768', 86], [5, '#d59388', 95]].map(([v, c, o]) => <circle key={c as string} cx="21" cy="21" r="15.9" fill="none" stroke={c as string} strokeWidth="6" strokeDasharray={`${v} ${100 - (v as number)}`} strokeDashoffset={25 - (o as number)} />)}
               </svg>
-              <ul><li><i style={{ background: '#3a1f86' }} />Done 67%</li><li><i style={{ background: '#5fa8f5' }} />Doing 19%</li><li><i style={{ background: '#f2a65a' }} />Review 9%</li></ul>
+              <ul><li><i style={{ background: '#6f3e25' }} />Done 67%</li><li><i style={{ background: '#88accc' }} />Doing 19%</li><li><i style={{ background: '#e4b768' }} />Review 9%</li></ul>
             </div>
           </div>
           <div className="shot-ask"><Icon name="sparkles" size={10} /> Ask Flow guide</div>

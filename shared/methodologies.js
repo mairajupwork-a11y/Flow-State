@@ -15,7 +15,8 @@
  *  - ceremonies: the rhythm the team follows (shown as guidance)
  */
 
-const C = { grey: '#9698ab', blue: '#6a8ee9', amber: '#edaf5b', green: '#28b391', violet: '#8278f4', rose: '#e5789a', teal: '#30adab' };
+// Status colours from the Atelier palette (keys kept so existing configs stay readable).
+const C = { grey: '#a3907d', blue: '#5f7c99', amber: '#c58f2c', green: '#6f8a68', violet: '#a65a2e', rose: '#c4808a', teal: '#3f7f78' };
 
 const probability = { key: 'probability', label: 'Probability', type: 'scale', min: 1, max: 5, hint: '1 rare · 5 almost certain' };
 const impact = { key: 'impact', label: 'Impact', type: 'scale', min: 1, max: 5, hint: '1 minimal · 5 severe' };

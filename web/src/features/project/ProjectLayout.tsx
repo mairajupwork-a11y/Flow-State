@@ -1,4 +1,4 @@
-import { useMemo, useState } from 'react';
+import { useMemo, useState, type CSSProperties } from 'react';
 import { Navigate, NavLink, Outlet, useLocation, useOutletContext, useParams } from 'react-router-dom';
 import { useIssues, useProject } from '../../lib/queries';
 import { useWs } from '../../lib/workspace';
@@ -99,7 +99,7 @@ export function ProjectHero({ project, issues }: { project: ProjectDetail; issue
   }
   const people = members.filter((m) => issues.some((i) => i.assigneeId === m.id));
   return (
-    <div className="project-hero" style={{ background: `linear-gradient(105deg,#35345a 0%,${shade(project.color)} 53%,${project.color} 100%)` }}>
+    <div className="project-hero" style={{ '--project-tint': project.color } as CSSProperties}>
       <div className="hero-content">
         <div className="hero-overline"><Icon name="bolt" size={13} /> {phase}</div>
         <h2>{project.name}</h2>
@@ -114,11 +114,6 @@ export function ProjectHero({ project, issues }: { project: ProjectDetail; issue
 }
 
 /** Mixes a project colour towards the prototype's deep indigo for the hero gradient midpoint. */
-function shade(hex: string) {
-  const n = parseInt(hex.slice(1), 16);
-  const mix = (c: number, t: number) => Math.round(c * 0.62 + t * 0.38);
-  return `rgb(${mix(n >> 16, 0x35)},${mix((n >> 8) & 255, 0x34)},${mix(n & 255, 0x8a)})`;
-}
 
 export function Metrics({ issues }: { issues: Issue[] }) {
   const work = issues.filter((i) => i.type !== 'epic');
@@ -128,10 +123,10 @@ export function Metrics({ issues }: { issues: Issue[] }) {
   const overdue = work.filter((x) => x.dueDate && x.dueDate < today && x.statusCategory !== 'done').length;
   const weekDone = work.filter((x) => x.resolvedAt && daysBetween(x.resolvedAt.slice(0, 10), today) <= 7).length;
   const m: [string, number, string, string, string, string][] = [
-    ['Total work items', work.length, 'All tracked tasks', 'grid', '#eeeaff', '#6f63e8'],
-    ['Completed', done, weekDone ? `${weekDone} finished this week` : 'Moving forward', 'checkcircle', '#e5f8f2', '#20af8b'],
-    ['In progress', progress, 'Active workstream', 'loader', '#eaf3ff', '#608edb'],
-    ['Need attention', overdue, overdue ? 'Overdue items' : 'Nothing overdue', 'flag', '#fff0ed', '#dc8061'],
+    ['Total work items', work.length, 'All tracked tasks', 'grid', '#f2dcd0', '#d2895f'],
+    ['Completed', done, weekDone ? `${weekDone} finished this week` : 'Moving forward', 'checkcircle', '#eaf3f2', '#448b82'],
+    ['In progress', progress, 'Active workstream', 'loader', '#f0f5f9', '#829fb9'],
+    ['Need attention', overdue, overdue ? 'Overdue items' : 'Nothing overdue', 'flag', '#fdf1ef', '#ce876f'],
   ];
   return (
     <div className="metric-grid">
