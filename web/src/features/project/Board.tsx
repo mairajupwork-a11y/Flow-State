@@ -68,7 +68,7 @@ export function Board() {
         { key: 'urgent', label: flow ? 'Expedite' : 'Urgent', color: '#cf7e71', patch: { priority: 'urgent' as const }, expedite: flow },
         { key: 'high', label: 'High priority', color: '#d98d6e', patch: { priority: 'high' as const } },
         { key: 'medium', label: flow ? 'Standard' : 'Medium priority', color: '#c89b4c', patch: { priority: 'medium' as const } },
-        { key: 'low', label: 'Low priority', color: '#417f77', patch: { priority: 'low' as const } },
+        { key: 'low', label: 'Low priority', color: '#6f8a68', patch: { priority: 'low' as const } },
       ].filter((l) => l.expedite || cards.some((c) => c.priority === l.key));
     }
     if (laneMode === 'assignee') {

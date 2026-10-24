@@ -66,7 +66,7 @@ export default function Timeline() {
           <Empty icon="timeline" title="Nothing on the roadmap yet">Add start and due dates to work items (or create an epic) and they’ll appear here.</Empty>
         ) : (
           <div className="timeline-scroll">
-            <div className="tl" style={{ width: 240 + SPAN * DAY_W }}>
+            <div className="tl" style={{ width: `calc(var(--tl-label) + ${SPAN * DAY_W}px)` }}>
               <div className="tl-header">
                 <div className="tl-label tl-th">Work</div>
                 <div className="tl-days">
@@ -78,7 +78,7 @@ export default function Timeline() {
                 </div>
               </div>
               <div className="tl-body">
-                {todayX > 0 && todayX < SPAN * DAY_W && <div className="tl-today" style={{ left: 240 + todayX }} aria-hidden="true" />}
+                {todayX > 0 && todayX < SPAN * DAY_W && <div className="tl-today" style={{ left: `calc(var(--tl-label) + ${todayX}px)` }} aria-hidden="true" />}
                 {groups.map(({ epic, items }) => {
                   const e = epic ? epicRange(epic, items) : null;
                   const eb = e ? bar(e) : null;

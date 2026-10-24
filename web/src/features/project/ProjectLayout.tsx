@@ -1,5 +1,5 @@
 import { sceneFor, sceneStyle } from '../../lib/scenes';
-import { useMemo, useState, type CSSProperties } from 'react';
+import { useEffect, useMemo, useRef, useState, type CSSProperties } from 'react';
 import { Navigate, NavLink, Outlet, useLocation, useOutletContext, useParams } from 'react-router-dom';
 import { useIssues, useProject } from '../../lib/queries';
 import { useWs } from '../../lib/workspace';
@@ -146,8 +146,14 @@ export function ViewTabs() {
   const { project } = useProjectCtx();
   const m = methodologyOf(project);
   const tabs = m.views.map((v) => [v, viewMeta(m, v).icon, viewMeta(m, v).label] as const);
+  // When the tab bar scrolls (many views, narrow screens), keep the current tab in view.
+  const navRef = useRef<HTMLElement>(null);
+  const { pathname } = useLocation();
+  useEffect(() => {
+    navRef.current?.querySelector<HTMLElement>('.tab.active')?.scrollIntoView({ block: 'nearest', inline: 'center' });
+  }, [pathname]);
   return (
-    <nav className="tabs" aria-label="Project views">
+    <nav className="tabs" aria-label="Project views" ref={navRef}>
       {tabs.map(([to, icon, label]) => (
         <NavLink key={to} to={`../${to}`} relative="path" className={({ isActive }) => `tab ${isActive ? 'active' : ''}`}>
           <Icon name={icon} size={14} />{label}

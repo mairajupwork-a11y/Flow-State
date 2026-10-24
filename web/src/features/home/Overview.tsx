@@ -40,7 +40,7 @@ export function Overview() {
           <div className="two-col">
             <div className="content-card">
               <div className="section-bar" style={{ marginTop: 0 }}>
-                <div><h3>Up next for you</h3><p className="muted">Your open work across every project, soonest first</p></div>
+                <div><h3>Up next for you</h3><p className="muted hide-phone">Your open work across every project, soonest first</p></div>
                 <Link className="btn btn-soft btn-sm" to={`${base}/my-tasks`}>All my tasks <Icon name="right" size={13} /></Link>
               </div>
               {upNext.map((t) => (

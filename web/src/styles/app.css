@@ -266,7 +266,7 @@ button.notification:hover { background: var(--row-hover); }
 .calendar-chip { border: 0; }
 .calendar-chip.prio-urgent, .calendar-chip.prio-high { background: #fdf4f2; color: #be7468; }
 .calendar-chip.prio-medium { background: #f2dbcd; color: #af795a; }
-.calendar-chip.prio-low { background: #edf5f4; color: #417f77; }
+.calendar-chip.prio-low { background: #edf5f4; color: #4f6b49; }
 .calendar-chip.is-done { opacity: .55; text-decoration: line-through; }
 .cal-more { font-size: 9px; color: var(--muted); margin-top: 4px; font-weight: 700; }
 

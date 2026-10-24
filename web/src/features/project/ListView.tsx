@@ -48,7 +48,7 @@ export function ListView() {
       <SectionBar title={`Work items`} sub={`${rows.length} in view`} />
       <FilterBar count={rows.length} />
       <div className="content-card table-wrap" style={{ padding: '7px 8px' }}>
-        <table className="list-table">
+        <table className="list-table list-view">
           <thead><tr>{th('title', 'Work item')}{th('status', 'Status')}{th('priority', 'Priority')}{th('assignee', 'Owner')}{th('due', 'Due')}{th('points', 'Pts')}{th('updated', 'Updated')}</tr></thead>
           <tbody>
             {rows.map((t) => {

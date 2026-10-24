@@ -43,4 +43,4 @@ export const gateWord = (m: Methodology) => (m.features.phases === 'dmaic' ? 'to
 export const lower = (s: string) => s.replace(/\b(?![A-Z0-9]{2,}\b)\w+/g, (w) => w.toLowerCase());
 export const sprintWord = (m: Methodology) => term(m.id, 'sprint');
 
-export const FAMILY_COLOR: Record<string, string> = { Agile: '#8dabc6', Hybrid: '#da9a75', Predictive: '#4f8e85', Quality: '#e0b468', Governance: '#d59388', Simple: '#b29f8f' };
+export const FAMILY_COLOR: Record<string, string> = { Agile: '#8dabc6', Hybrid: '#da9a75', Predictive: '#6f8a68', Quality: '#e0b468', Governance: '#d59388', Simple: '#b29f8f' };

@@ -33,7 +33,7 @@
 .phase-state { display: inline-flex; align-items: center; font-size: 10.5px; font-weight: 700; padding: 4px 10px; border-radius: 999px; background: var(--surface-2); color: var(--subtext); margin-right: 6px; }
 .phase-state.active { background: var(--accent-soft); color: var(--accent); }
 .phase-state.review { background: #faf0df; color: #ad833b; }
-.phase-state.complete { background: #e8f1f0; color: #39726b; }
+.phase-state.complete { background: #e8f1f0; color: #4f6b49; }
 .phase-state.late { background: #fbedeb; color: #bd6a5e; }
 .phase-dates { display: flex; gap: 10px; flex-wrap: wrap; }
 .phase-progress { display: flex; align-items: center; gap: 12px; margin: 16px 0 6px; font-size: 11.5px; color: var(--muted); }
@@ -64,7 +64,7 @@
 .gate-log-row p { font-size: 12px; color: var(--subtext); margin: 3px 0; line-height: 1.5; }
 .gate-log-row small { font-size: 10.5px; color: var(--muted); }
 .gate-badge { flex: 0 0 28px; height: 28px; border-radius: 9px; display: grid; place-items: center; background: #faf0df; color: #ad833b; }
-.gate-badge.complete { background: #e8f1f0; color: #39726b; }
+.gate-badge.complete { background: #e8f1f0; color: #4f6b49; }
 .ceremony-list { list-style: none; padding: 0; margin: 14px 0 0; display: grid; gap: 8px; font-size: 12.5px; color: var(--subtext); }
 .ceremony-list li { display: flex; align-items: center; gap: 8px; }
 
@@ -80,10 +80,10 @@
 .score-chip.big { min-height: 40px; font-size: 14px; width: 100%; justify-content: start; padding: 0 12px; }
 .score-chip.high { background: #fae8e6; color: #b45d4f; }
 .score-chip.medium { background: #fbf0dc; color: #a97c2d; }
-.score-chip.low { background: #e5f0ee; color: #39726b; }
+.score-chip.low { background: #e5f0ee; color: #4f6b49; }
 .register-status { display: inline-block; font-size: 10.5px; font-weight: 700; padding: 4px 9px; border-radius: 999px; background: var(--accent-soft); color: var(--accent); white-space: nowrap; }
 .register-status.new { background: #fbf0dc; color: #a97c2d; }
-.register-status.closed { background: #e5f0ee; color: #39726b; }
+.register-status.closed { background: #e5f0ee; color: #4f6b49; }
 .heatmap { display: grid; gap: 4px; margin-top: 14px; }
 .heat-row { display: grid; grid-template-columns: 22px repeat(5, 1fr); gap: 4px; }
 .heat-axis { display: grid; place-items: center; font-size: 10.5px; color: var(--muted); font-weight: 600; }
@@ -146,7 +146,7 @@
 .board-scope { display: flex; align-items: center; gap: 12px; flex-wrap: wrap; margin-bottom: 14px; }
 .scope-select { align-items: center; color: var(--muted); }
 .lane-select { margin-left: auto; }
-.trigger-chip { display: inline-flex; align-items: center; gap: 6px; font-size: 11.5px; font-weight: 600; padding: 6px 12px; border-radius: 999px; background: #e5f0ee; color: #39726b; }
+.trigger-chip { display: inline-flex; align-items: center; gap: 6px; font-size: 11.5px; font-weight: 600; padding: 6px 12px; border-radius: 999px; background: #e5f0ee; color: #4f6b49; }
 .trigger-chip.low { background: #fbf0dc; color: #a97c2d; }
 .trigger-chip a { color: inherit; font-weight: 700; }
 .swimlanes { display: grid; grid-template-columns: minmax(0, 1fr); gap: 10px; }
@@ -166,7 +166,7 @@
 .capability > div { padding: 8px 12px; border-radius: 12px; background: var(--surface-2); min-width: 86px; }
 .capability small { display: block; font-size: 10px; color: var(--muted); font-weight: 700; text-transform: uppercase; letter-spacing: 1px; }
 .capability b { font-size: 17px; }
-.capability b.ok { color: #39726b; }
+.capability b.ok { color: #4f6b49; }
 .capability b.warn { color: #a97c2d; }
 .capability b.bad { color: #b45d4f; }
 .measure-form .text-input { width: auto; flex: 1 1 120px; }
@@ -210,10 +210,10 @@
 .auth-divider::before, .auth-divider::after { content: ''; flex: 1; height: 1px; background: var(--border); }
 
 /* ---------- Invitation emails ---------- */
-.form-success { display: flex; align-items: center; gap: 8px; padding: 10px 14px; border-radius: 12px; background: #e5f0ee; color: #39726b; font-size: 12.5px; font-weight: 600; margin-bottom: 12px; }
+.form-success { display: flex; align-items: center; gap: 8px; padding: 10px 14px; border-radius: 12px; background: #e5f0ee; color: #4f6b49; font-size: 12.5px; font-weight: 600; margin-bottom: 12px; }
 [data-theme="dark"] .form-success { background: #213431; color: #89beb7; }
 .invite-status { font-size: 11px; font-weight: 700; margin-left: 6px; }
-.invite-status.ok { color: #39726b; }
+.invite-status.ok { color: #4f6b49; }
 .invite-status.bad { color: #b45d4f; }
 .invite-designation { font-size: 12px; font-weight: 600; color: var(--muted, #7a6655); }
 .invite-error { display: block; color: #b45d4f; font-size: 11px; margin-top: 2px; }

@@ -18,9 +18,18 @@ const MAPS = {
   },
 };
 
-export function recolorSql() {
-  return Object.entries(MAPS).map(([table, map]) => {
+/** v6: the last cool tones (slate, teal, plum) move to earth tones. */
+const MAPS_V6 = {
+  projects: { '#5f7c99': '#9c6b4e', '#3f7f78': '#c48a64', '#7b4a68': '#7d7a4a' },
+  users: { '#5f7c99': '#9c6b4e', '#3f7f78': '#c48a64', '#7b4a68': '#7d7a4a' },
+  statuses: { '#5f7c99': '#b86a3e', '#3f7f78': '#8c6d4f' },
+};
+
+export function recolorSql(maps = MAPS) {
+  return Object.entries(maps).map(([table, map]) => {
     const cases = Object.entries(map).map(([from, to]) => `WHEN '${from}' THEN '${to}'`).join(' ');
     return `UPDATE ${table} SET color = CASE lower(color) ${cases} ELSE color END WHERE lower(color) IN (${Object.keys(map).map((c) => `'${c}'`).join(', ')});`;
   }).join('\n');
 }
+
+export const recolorSqlV6 = () => recolorSql(MAPS_V6);

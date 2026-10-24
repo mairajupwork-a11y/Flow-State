@@ -16,7 +16,7 @@
  */
 
 // Status colours from the Atelier palette (keys kept so existing configs stay readable).
-const C = { grey: '#a3907d', blue: '#5f7c99', amber: '#c58f2c', green: '#6f8a68', violet: '#a65a2e', rose: '#c4808a', teal: '#3f7f78' };
+const C = { grey: '#a3907d', blue: '#b86a3e', amber: '#c58f2c', green: '#6f8a68', violet: '#a65a2e', rose: '#c4808a', teal: '#8c6d4f' };
 
 const probability = { key: 'probability', label: 'Probability', type: 'scale', min: 1, max: 5, hint: '1 rare · 5 almost certain' };
 const impact = { key: 'impact', label: 'Impact', type: 'scale', min: 1, max: 5, hint: '1 minimal · 5 severe' };

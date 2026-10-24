@@ -30,13 +30,13 @@
   --espresso: #2b160d;
   /* Supporting palette: status, priority, projects and charts. */
   --sage: #6f8a68;
-  --sea: #3f7f78;
-  --dusk: #5f7c99;
+  --sea: #6f8a68;
+  --dusk: #9c6b4e;
   --ochre: #c58f2c;
   --terracotta: #b9563a;
-  --plum: #7b4a68;
+  --plum: #7d7a4a;
   --rose: #c4808a;
-  --teal: #3f7f78;
+  --teal: #5e7f57;
   --shadow: 0 1px 2px rgba(60, 33, 15, .05), 0 10px 30px rgba(92, 54, 26, .07);
   --shadow-lift: 0 2px 4px rgba(60, 33, 15, .05), 0 24px 50px rgba(92, 54, 26, .13);
   --shadow-lg: 0 30px 80px rgba(43, 22, 13, .22);
@@ -51,7 +51,7 @@
   --series-1: #a65a2e;
   --series-2: #6f8a68;
   --series-3: #c58f2c;
-  --series-4: #5f7c99;
+  --series-4: #9c6b4e;
   --ring: #c48a5a;
   --row-hover: rgba(240, 223, 203, .55);
   --menu-bg: #fbf5ec;
@@ -80,7 +80,7 @@
   --series-1: #e0a16a;
   --series-2: #9bb592;
   --series-3: #e2b55a;
-  --series-4: #8fa9c4;
+  --series-4: #c9a088;
   --row-hover: rgba(58, 38, 24, .6);
   --menu-bg: #2a1c14;
 }

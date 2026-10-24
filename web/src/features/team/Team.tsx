@@ -70,6 +70,12 @@ export default function Team() {
             </div>
           </div>
         ))}
+        {isAdmin && (
+          <button className="content-card person-card invite-slot" onClick={() => ui.set({ inviteOpen: true })}>
+            <span className="invite-slot-icon"><Icon name="plus" size={18} /></span>
+            <div><b>Invite a teammate</b><small>Free for everyone — no seat limits.</small></div>
+          </button>
+        )}
       </div>
 
       {isAdmin && !!invites.data?.length && (
