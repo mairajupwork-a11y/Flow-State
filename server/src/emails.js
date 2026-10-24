@@ -19,7 +19,7 @@ export function inviteEmail({ to, inviter, workspace, role, designation = '', ur
     `If you weren't expecting this, you can ignore this email.`,
   ].join('\n');
   const html = `<!doctype html>
-<html><body style="margin:0;background:#f4f3f7;font-family:Segoe UI,Helvetica,Arial,sans-serif;color:#1b1d29">
+<html><body style="margin:0;background:#f4f3f7;font-family:'Plus Jakarta Sans',Segoe UI,Helvetica,Arial,sans-serif;color:#1b1d29">
   <table role="presentation" width="100%" cellpadding="0" cellspacing="0" style="padding:32px 12px">
     <tr><td align="center">
       <table role="presentation" width="100%" cellpadding="0" cellspacing="0" style="max-width:520px;background:#ffffff;border-radius:16px;padding:32px">

@@ -449,3 +449,18 @@ html.reduce-motion .auth-photo { animation: none; }
 .auth-aside.has-photo .auth-aside-body .icon { color: #f3b27c; }
 .auth-aside.has-photo .auth-quote { background: rgba(43, 22, 13, .55); border-color: rgba(240, 192, 141, .22); -webkit-backdrop-filter: blur(10px); backdrop-filter: blur(10px); }
 .auth-aside.has-photo .auth-aside-body h2 { text-shadow: 0 2px 22px rgba(20, 10, 5, .6), 0 1px 3px rgba(20, 10, 5, .35); }
+
+/* ---------- Type tuning for Plus Jakarta Sans + Fraunces ----------
+   Jakarta is already compact, so the tight tracking used elsewhere would
+   crowd words together; give it natural spacing and lighter negative
+   tracking on large headings. Fraunces reads best a touch lighter. */
+body { letter-spacing: 0; word-spacing: .05em; }
+.page-title { letter-spacing: -.7px; }
+.lp-h1 { letter-spacing: -.035em; }
+.lp-h2 { letter-spacing: -.025em; }
+.auth-aside-body h2, .auth-card h1, .modal-header h2 { letter-spacing: -.4px; }
+.serif-accent, .lp-h2 em, .lp-h1 .serif-accent, .hero-content h2, .hero-metric strong, .ai-welcome h3, .free-banner strong {
+  font-weight: 500;
+  font-optical-sizing: auto;
+  letter-spacing: -.01em;
+}
