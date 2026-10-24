@@ -406,39 +406,26 @@ body::before {
 [data-theme="dark"] .floating-ai { background: radial-gradient(circle at 30% 25%, #4a2716, #1d0f08 75%); }
 
 /* ---------- Sign-in panel: an explorer on Mars ---------- */
-.auth-aside.has-photo { background: #1d0f08; justify-content: flex-start; isolation: isolate; }
-.auth-aside.has-photo::after {
-  /* Fades the photo into the page on the right, so the screen reads as one
-     scene rather than two panels. Kept off .auth-photo so the drift doesn't
-     scale the fade and reveal a hard edge. */
-  content: '';
-  display: block;
-  position: absolute;
-  inset: 0;
-  width: auto;
-  height: auto;
-  border: 0;
-  border-radius: 0;
-  z-index: -1;
-  pointer-events: none;
-  background: linear-gradient(90deg,
-    transparent 66%,
-    color-mix(in srgb, var(--bg) 25%, transparent) 76%,
-    color-mix(in srgb, var(--bg) 62%, transparent) 87%,
-    color-mix(in srgb, var(--bg) 90%, transparent) 95%,
-    var(--bg) 100%);
+.auth-aside.has-photo { justify-content: flex-start; isolation: isolate; }
+.auth-aside.has-photo::after { display: none; }
+/* The panel itself fades to transparent on the right (a smoothstep curve,
+   so the eye finds no edge where the fade starts or ends), so the page's own
+   background shows through and there is no seam to match. The mask sits on
+   the panel (not the drifting photo) so the drift can't reveal an edge. */
+.auth-aside.has-photo {
+  background: transparent;
+  -webkit-mask-image: linear-gradient(90deg, rgba(0, 0, 0, 1.000) 58.0%, rgba(0, 0, 0, 0.972) 62.2%, rgba(0, 0, 0, 0.896) 66.4%, rgba(0, 0, 0, 0.784) 70.6%, rgba(0, 0, 0, 0.648) 74.8%, rgba(0, 0, 0, 0.500) 79.0%, rgba(0, 0, 0, 0.352) 83.2%, rgba(0, 0, 0, 0.216) 87.4%, rgba(0, 0, 0, 0.104) 91.6%, rgba(0, 0, 0, 0.028) 95.8%, rgba(0, 0, 0, 0.000) 100.0%);
+  mask-image: linear-gradient(90deg, rgba(0, 0, 0, 1.000) 58.0%, rgba(0, 0, 0, 0.972) 62.2%, rgba(0, 0, 0, 0.896) 66.4%, rgba(0, 0, 0, 0.784) 70.6%, rgba(0, 0, 0, 0.648) 74.8%, rgba(0, 0, 0, 0.500) 79.0%, rgba(0, 0, 0, 0.352) 83.2%, rgba(0, 0, 0, 0.216) 87.4%, rgba(0, 0, 0, 0.104) 91.6%, rgba(0, 0, 0, 0.028) 95.8%, rgba(0, 0, 0, 0.000) 100.0%);
 }
-/* The form side picks up the photo's warm haze where the two meet. */
-.auth-aside.has-photo + .auth-main {
-  background:
-    radial-gradient(60% 70% at 0% 40%, rgba(214, 160, 110, .22), transparent 70%),
-    radial-gradient(40% 50% at 0% 100%, rgba(120, 66, 34, .12), transparent 70%);
+/* One warm haze across the whole screen, centred where photo and page meet. */
+.auth-shell:has(.auth-aside.has-photo) {
+  background: radial-gradient(45% 70% at 42% 45%, rgba(214, 160, 110, .2), transparent 72%);
 }
-[data-theme="dark"] .auth-aside.has-photo + .auth-main {
-  background: radial-gradient(60% 70% at 0% 40%, rgba(224, 161, 106, .12), transparent 70%);
+[data-theme="dark"] .auth-shell:has(.auth-aside.has-photo) {
+  background: radial-gradient(45% 70% at 42% 45%, rgba(224, 161, 106, .1), transparent 72%);
 }
-/* Copy stays on the photo, clear of the fade (which starts at 66% of the panel). */
-.auth-aside.has-photo .auth-aside-body, .auth-aside.has-photo .auth-quote { max-width: min(470px, 64%); }
+/* Copy stays on the photo, clear of the fade (which starts at 58% of the panel). */
+.auth-aside.has-photo .auth-aside-body, .auth-aside.has-photo .auth-quote { max-width: min(470px, 60%); }
 .auth-photo {
   position: absolute;
   inset: 0;
@@ -461,3 +448,4 @@ html.reduce-motion .auth-photo { animation: none; }
 .auth-aside.has-photo .auth-aside-body p { color: #ead8c4; }
 .auth-aside.has-photo .auth-aside-body .icon { color: #f3b27c; }
 .auth-aside.has-photo .auth-quote { background: rgba(43, 22, 13, .55); border-color: rgba(240, 192, 141, .22); -webkit-backdrop-filter: blur(10px); backdrop-filter: blur(10px); }
+.auth-aside.has-photo .auth-aside-body h2 { text-shadow: 0 2px 22px rgba(20, 10, 5, .6), 0 1px 3px rgba(20, 10, 5, .35); }
