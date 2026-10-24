@@ -1,4 +1,5 @@
-import { useState, type FormEvent } from 'react';
+import { useState, type CSSProperties, type FormEvent } from 'react';
+import { SCENES, sceneStyle } from '../../lib/scenes';
 import { useMutation, useQueryClient } from '@tanstack/react-query';
 import { Icon } from '../../components/Icon';
 import { PageHeader, Toggle } from '../../components/ui';
@@ -126,8 +127,10 @@ export default function Settings() {
           </form>
 
           <div className="content-card">
-            <h3>What WorkMars stands for</h3>
-            <p className="muted">Promises built into the product</p>
+            <div className="card-scene scene" style={sceneStyle(SCENES[1]) as CSSProperties}>
+              <h3>What WorkMars stands for</h3>
+              <p className="muted">Promises built into the product</p>
+            </div>
             <div className="setting-row"><div><strong>No user seat caps</strong><small>Free for unlimited people, every feature included.</small></div><Icon name="checkcircle" size={19} /></div>
             <div className="setting-row"><div><strong>Free AI guidance</strong><small>The Mars guide runs on your workspace data — no paid AI, no limits.</small></div><Icon name="checkcircle" size={19} /></div>
             <div className="setting-row"><div><strong>Simple, familiar workflows</strong><small>Designed for technical and non-technical teams alike.</small></div><Icon name="checkcircle" size={19} /></div>

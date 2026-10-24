@@ -541,27 +541,27 @@ html.reduce-motion .scene::before { animation: none; }
 .ready-scene::after { background: linear-gradient(180deg, transparent 40%, rgba(28, 13, 6, .45)); }
 .onboard-step.ready .ready-burst { margin-top: -62px; position: relative; z-index: 1; box-shadow: 0 0 0 6px var(--surface-solid); }
 
-/* Landing: an immersive photo band and two image tiles */
-.lp-scene-band { width: min(1240px, calc(100% - 32px)); margin: clamp(40px, 6vw, 80px) auto; display: grid; gap: 16px; }
-.lp-scene { min-height: clamp(380px, 46vw, 560px); border-radius: 32px; display: flex; align-items: flex-end; padding: clamp(26px, 5vw, 64px); box-shadow: var(--shadow-lift); }
-.lp-scene::after { background: linear-gradient(0deg, rgba(24, 11, 5, .82) 0%, rgba(24, 11, 5, .3) 38%, transparent 62%), linear-gradient(90deg, rgba(24, 11, 5, .35), transparent 55%); }
-/* scroll parallax: the photo eases up as the band passes (data-scroll sets --p) */
-.lp-scene::before { animation: none; transform: scale(1.12) translate3d(0, calc((var(--p, .5) - .5) * -6%), 0); transition: transform .2s linear; }
-.lp-scene-copy { max-width: 560px; color: #fbf1e3; }
-.lp-scene-copy .lp-h2 { color: #fbf1e3; margin: 10px 0 12px; }
-.lp-scene-copy .lp-h2 em { background: linear-gradient(100deg, #f6d3a8, #e0a16a 55%, #f3c592); -webkit-background-clip: text; background-clip: text; color: transparent; }
-.lp-scene-copy p { color: #e6d2bb; font-size: 16px; line-height: 1.6; margin: 0; }
-.lp-scene-kicker { font-size: 11px; font-weight: 700; letter-spacing: 4px; color: #f3b27c; }
-.lp-scene-pair { display: grid; grid-template-columns: 1fr 1fr; gap: 16px; }
-.lp-scene-tile { min-height: 240px; border-radius: 26px; padding: 26px; display: flex; flex-direction: column; justify-content: flex-end; gap: 6px; color: #fbf1e3; transition: transform .6s var(--ease), box-shadow .6s var(--ease); }
-.lp-scene-tile::after { background: linear-gradient(0deg, rgba(24, 11, 5, .85), rgba(24, 11, 5, .1) 70%); }
-.lp-scene-tile::before { animation: none; transition: transform 1.2s var(--ease); }
-.lp-scene-tile:hover { transform: translateY(-4px); box-shadow: var(--shadow-lift); }
-.lp-scene-tile:hover::before { transform: scale(1.08); }
-.lp-scene-tile span { font-size: 11px; font-weight: 700; letter-spacing: 3px; text-transform: uppercase; color: #f3b27c; }
-.lp-scene-tile b { font-family: var(--serif); font-style: italic; font-weight: 500; font-size: clamp(20px, 2vw, 26px); line-height: 1.25; }
 @media (max-width: 760px) {
-  .lp-scene-pair { grid-template-columns: 1fr; }
-  .lp-scene { border-radius: 24px; }
   .ready-scene { height: 120px; }
 }
+
+/* Dashboard cards with a Martian photo: the whole card (.scene-card) or a
+   photo header band at the top of a card (.card-scene). */
+.scene-card, .card-scene { color: #fbf1e3; }
+.scene-card h3, .card-scene h3 { color: #fbf1e3; font-family: var(--serif); font-style: italic; font-weight: 500; font-size: 21px; letter-spacing: -.01em; }
+.scene-card .muted, .card-scene .muted { color: #e6d2bb !important; }
+.scene-card { border: 0; }
+.scene-card .metric-symbol { background: rgba(251, 241, 227, .14) !important; border-color: rgba(251, 241, 227, .35); color: #f3c592 !important; }
+.scene-card .btn-soft { background: rgba(251, 241, 227, .16); color: #fbf1e3; -webkit-backdrop-filter: blur(6px); backdrop-filter: blur(6px); }
+.scene-card .btn-soft:hover { background: rgba(251, 241, 227, .28); }
+.card-scene { margin: -19px -19px 14px; padding: 22px 19px 20px; border-radius: 21px 21px 0 0; min-height: 104px; align-items: flex-start; display: flex; flex-direction: column; justify-content: flex-end; }
+.card-scene.row-between { flex-direction: row; justify-content: space-between; align-items: flex-end; }
+.card-scene::after { background: linear-gradient(0deg, rgba(28, 13, 6, .86), rgba(28, 13, 6, .35) 70%, rgba(28, 13, 6, .2)); }
+.card-scene .icon-btn { color: #fbf1e3; align-self: flex-start; }
+.card-scene .icon-btn:hover { background: rgba(251, 241, 227, .16); color: #fff; }
+/* Mars guide welcome */
+.ai-welcome.scene { border: 0; padding: 24px 22px; }
+.ai-welcome.scene::after { background: linear-gradient(0deg, rgba(28, 13, 6, .9), rgba(28, 13, 6, .55) 60%, rgba(28, 13, 6, .3)); }
+.ai-welcome.scene h3 { color: #fbf1e3; }
+.ai-welcome.scene p { color: #e6d2bb; }
+.ai-welcome.scene .ai-mini { color: #f3b27c; }

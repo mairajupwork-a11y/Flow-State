@@ -1,5 +1,4 @@
-import { SCENES, sceneStyle } from '../../lib/scenes';
-import { useRef, type CSSProperties } from 'react';
+import { useRef } from 'react';
 import { Link, Navigate } from 'react-router-dom';
 import { Icon } from '../../components/Icon';
 import { Logo, Mark } from '../../components/Logo';
@@ -167,24 +166,6 @@ export function Welcome() {
                 <p className="lp-lead">An open workspace for every team you work with. WorkMars is free for unlimited users, runs on your own server if you like, and keeps your data out of third-party AI services.</p>
                 <Link to="/signup" className="pill pill-solid">Start for free</Link>
               </div>
-            </div>
-          </div>
-        </section>
-
-        <section className="lp-scene-band" aria-label="Built for teams going further">
-          <div className="lp-scene scene" style={sceneStyle(SCENES[0]) as CSSProperties} data-scroll>
-            <div className="lp-scene-copy" data-reveal>
-              <span className="lp-scene-kicker">BUILD · AUTOMATE · GROW</span>
-              <h2 className="lp-h2">Every big mission starts <em>with one step.</em></h2>
-              <p>Plan the climb, track every step, and arrive together — without the per-seat price tag.</p>
-            </div>
-          </div>
-          <div className="lp-scene-pair">
-            <div className="lp-scene-tile scene" style={sceneStyle(SCENES[1]) as CSSProperties} data-reveal>
-              <span>Clear ground ahead</span><b>See every risk before it slows you down.</b>
-            </div>
-            <div className="lp-scene-tile scene" style={{ ...sceneStyle(SCENES[0]), '--scene-pos': '50% 92%' } as CSSProperties} data-reveal>
-              <span>Room for everyone</span><b>Unlimited people. Every feature. Free.</b>
             </div>
           </div>
         </section>

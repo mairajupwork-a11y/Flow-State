@@ -1,5 +1,6 @@
 import { Mark } from '../../components/Logo';
-import { useEffect, useRef, useState, type FormEvent } from 'react';
+import { useEffect, useRef, useState, type CSSProperties, type FormEvent } from 'react';
+import { SCENES, sceneStyle } from '../../lib/scenes';
 import { createPortal } from 'react-dom';
 import { useNavigate, useSearchParams } from 'react-router-dom';
 import { useQueryClient } from '@tanstack/react-query';
@@ -122,7 +123,7 @@ export function GuideDrawer({ routeKey, onClose }: { routeKey?: string; onClose:
         <div className="ai-content" ref={scrollRef} aria-live="polite">
           {!messages.length && (
             <>
-              <div className="ai-welcome">
+              <div className="ai-welcome scene" style={sceneStyle(SCENES[0]) as CSSProperties}>
                 <span className="ai-mini">YOUR WORK COMPANION</span>
                 <h3>Hi {me.name.split(' ')[0]}, a little clarity goes a long way.</h3>
                 <p>I can plan your day, spot blockers, size a sprint, write your stand-up, create work from a sentence, or show you around WorkMars. Free, with no limits.</p>

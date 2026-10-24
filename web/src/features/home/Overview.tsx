@@ -1,4 +1,5 @@
-import { useState } from 'react';
+import { useState, type CSSProperties } from 'react';
+import { SCENES, sceneStyle } from '../../lib/scenes';
 import { Link, useNavigate, useSearchParams } from 'react-router-dom';
 import { Icon } from '../../components/Icon';
 import { Avatar, Empty, PageHeader, PriorityPill, TypeIcon } from '../../components/ui';
@@ -53,9 +54,9 @@ export function Overview() {
             </div>
             <div className="stack-16">
               <ProjectsCard />
-              <div className="content-card">
+              <div className="content-card scene scene-card" style={sceneStyle(SCENES[1]) as CSSProperties}>
                 <div className="row-12">
-                  <span className="metric-symbol" style={{ background: 'var(--accent-soft)', color: 'var(--accent)' }}><Icon name="sparkles" size={18} /></span>
+                  <span className="metric-symbol"><Icon name="sparkles" size={18} /></span>
                   <div><h3>Need a fresh perspective?</h3><p className="muted">Your free Mars guide can plan your day or spot what’s at risk.</p></div>
                 </div>
                 <div className="row-8 wrap" style={{ marginTop: 14 }}>
@@ -161,7 +162,7 @@ function GettingStarted() {
   const dismiss = () => { try { localStorage.removeItem(key); } catch { /* */ } setVisible(false); };
   return (
     <div className="content-card getting-started">
-      <div className="row-between">
+      <div className="row-between card-scene scene" style={sceneStyle(SCENES[0]) as CSSProperties}>
         <div><h3>Getting started · {done}/{steps.length}</h3><p className="muted">Five small steps to feel at home in WorkMars.</p></div>
         <button className="icon-btn" onClick={dismiss} aria-label="Dismiss getting started"><Icon name="close" size={16} /></button>
       </div>
