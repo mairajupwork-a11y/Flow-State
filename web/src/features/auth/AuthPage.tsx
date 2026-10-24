@@ -99,7 +99,8 @@ export function AuthPage({ mode }: { mode: 'login' | 'signup' }) {
 
   return (
     <div className="auth-shell">
-      <aside className="auth-aside">
+      <aside className="auth-aside has-photo">
+        <div className="auth-photo" aria-hidden="true" />
         <div className="auth-brand">
           <Brand to="/welcome" onDark height={34} />
           <span className="brand-tagline">Build <i>/</i> Automate <i>/</i> Grow</span>

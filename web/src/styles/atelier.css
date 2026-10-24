@@ -404,3 +404,29 @@ body::before {
 .floating-ai .wm-mark, .ai-bot .wm-mark { filter: drop-shadow(0 2px 6px rgba(239, 106, 44, .45)); }
 .ai-bot { background: radial-gradient(circle at 30% 25%, #4a2716, #1d0f08 75%); }
 [data-theme="dark"] .floating-ai { background: radial-gradient(circle at 30% 25%, #4a2716, #1d0f08 75%); }
+
+/* ---------- Sign-in panel: an explorer on Mars ---------- */
+.auth-aside.has-photo { background: #1d0f08; justify-content: flex-start; isolation: isolate; }
+.auth-aside.has-photo::after { display: none; }
+.auth-photo {
+  position: absolute;
+  inset: 0;
+  z-index: -1;
+  background:
+    /* top shade keeps the logo crisp against the bright haze */
+    linear-gradient(180deg, rgba(29, 15, 8, .78) 0%, rgba(29, 15, 8, .3) 20%, transparent 36%),
+    /* the copy sits on the dark Martian ground, deepened into espresso */
+    linear-gradient(0deg, rgba(24, 12, 6, .96) 0%, rgba(24, 12, 6, .86) 26%, rgba(24, 12, 6, .38) 46%, transparent 62%),
+    /* a warm wash so the photo belongs to the palette */
+    linear-gradient(135deg, rgba(166, 90, 46, .14), rgba(239, 106, 44, .08)),
+    url('../assets/mars-explorer.webp') center 38% / cover no-repeat;
+  animation: mars-drift 40s ease-in-out infinite alternate;
+  transform-origin: 50% 40%;
+}
+@keyframes mars-drift { from { transform: scale(1); } to { transform: scale(1.07); } }
+@media (prefers-reduced-motion: reduce) { .auth-photo { animation: none; } }
+html.reduce-motion .auth-photo { animation: none; }
+.auth-aside.has-photo .auth-aside-body { margin-top: auto; text-shadow: 0 2px 18px rgba(0, 0, 0, .35); }
+.auth-aside.has-photo .auth-aside-body p { color: #ead8c4; }
+.auth-aside.has-photo .auth-aside-body .icon { color: #f3b27c; }
+.auth-aside.has-photo .auth-quote { background: rgba(43, 22, 13, .55); border-color: rgba(240, 192, 141, .22); -webkit-backdrop-filter: blur(10px); backdrop-filter: blur(10px); }
