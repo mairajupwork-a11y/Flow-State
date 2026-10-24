@@ -565,3 +565,46 @@ html.reduce-motion .scene::before { animation: none; }
 .ai-welcome.scene h3 { color: #fbf1e3; }
 .ai-welcome.scene p { color: #e6d2bb; }
 .ai-welcome.scene .ai-mini { color: #f3b27c; }
+
+/* =====================================================================
+   Design QA polish — consistency fixes across light and dark themes
+   ===================================================================== */
+
+/* "Complete" reads as sage everywhere (phase checks, gate log, DMAIC,
+   sprint progress) instead of the leftover sea-green. */
+:root { --teal: #5e7f57; }
+[data-theme="dark"] { --teal: #8fa883; --series-2: #8fa883; --border-strong: rgba(224, 161, 106, .55); }
+.sprint-progress .prog { background: #c58f2c; }
+.gantt-bar { box-shadow: 0 4px 10px rgba(92, 54, 26, .18); }
+.gantt-bar.tone-done { background: linear-gradient(90deg, #5e7f57, #8fa883); }
+.heat-cell.low { background: #e6ecdf; }
+.issue-type.feature { background: #f6ead2; color: #8f6413; }
+
+/* ---- dark mode ---- */
+[data-theme="dark"] .list-table thead th { background: #31221a; color: #d8bfa3; border-bottom: 1px solid #43301f; }
+[data-theme="dark"] .gantt-bar { box-shadow: 0 4px 10px rgba(0, 0, 0, .35); }
+[data-theme="dark"] .gantt-bar.tone-todo { background: linear-gradient(90deg, #4a3527, #5a4230); color: #e9d5bf; }
+[data-theme="dark"] .gantt-bar.tone-progress { background: linear-gradient(90deg, #b8703f, #e0a16a); color: #2b160d; }
+[data-theme="dark"] .gantt-bar.tone-done { background: linear-gradient(90deg, #4f5e45, #6f8a68); color: #eef3e8; }
+[data-theme="dark"] .sprint-progress .prog { background: #e0a16a; }
+[data-theme="dark"] .toggle { background: #3a2a1d; box-shadow: inset 0 0 0 1px #4a3524; }
+[data-theme="dark"] .toggle::after { background: #c4ab93; }
+[data-theme="dark"] .toggle.on::after { background: #2b160d; }
+[data-theme="dark"] .heat-cell.low { background: #2b3527; }
+[data-theme="dark"] .heat-cell.medium { background: #43341a; }
+[data-theme="dark"] .heat-cell.high { background: #4a2219; }
+[data-theme="dark"] .nav-link.active .side-counter { background: rgba(43, 22, 13, .16); color: #5a2e17; }
+[data-theme="dark"] .register-tab.on { background: #e9c9a2; border-color: #e9c9a2; color: #2b160d; }
+[data-theme="dark"] .register-tab.on .side-counter { background: rgba(43, 22, 13, .15); color: #5a2e17; }
+[data-theme="dark"] .issue-type.story { background: #2b3527; color: #a9c39f; }
+[data-theme="dark"] .issue-type.feature { background: #43341a; color: #e6c27a; }
+[data-theme="dark"] .btn-danger { background: #4a2219; color: #f0a48c; }
+[data-theme="dark"] .danger-zone { border-color: #5a2a1e; }
+[data-theme="dark"] .phase-progress-bar, [data-theme="dark"] .dist-track { background: #3a2a1d; }
+[data-theme="dark"] .phase-step.focused button, [data-theme="dark"] .region-card.selected {
+  border-color: rgba(224, 161, 106, .55); box-shadow: 0 0 0 3px rgba(224, 161, 106, .12);
+}
+[data-theme="dark"] .detail-aside, [data-theme="dark"] .gate-card, [data-theme="dark"] .content-card .content-card { background: #31221a; border-color: #43301f; }
+[data-theme="dark"] .calendar-day.outside .day-num { color: #b39a83; }
+[data-theme="dark"] .week-bars span { min-height: 6px; }
+[data-theme="dark"] .floating-ai { box-shadow: 0 0 0 1px #43301f, 0 12px 28px rgba(0, 0, 0, .5); }

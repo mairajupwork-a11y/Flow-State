@@ -245,7 +245,7 @@ function StatusCard({ data }: { data: ReportsData }) {
 
 function PriorityCard({ data }: { data: ReportsData }) {
   const total = data.byPriority.reduce((a, p) => a + p.count, 0);
-  const colors = { urgent: '#d58c81', high: '#e6a98b', medium: '#db9b77', low: '#6aa39c' };
+  const colors = { urgent: '#b9563a', high: '#c97a44', medium: '#c58f2c', low: 'var(--series-2)' };
   return (
     <div className="content-card">
       <h3>Priority mix</h3>
