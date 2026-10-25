@@ -1,4 +1,4 @@
-import canyon from '../assets/mars-canyon.webp';
+import desert from '../assets/mars-desert.webp';
 import dunes from '../assets/mars-dunes.webp';
 
 /**
@@ -7,7 +7,7 @@ import dunes from '../assets/mars-dunes.webp';
  * `focus` is the background-position that keeps each photo's subject in view.
  */
 export const SCENES = [
-  { src: canyon, focus: '50% 92%' }, // explorer walking beneath a red canyon wall
+  { src: desert, focus: '50% 36%' }, // rocky desert dunes and distant ridges under a soft sky
   { src: dunes, focus: '50% 55%' }, // rocky desert ridges under a hazy sky
 ] as const;
 
