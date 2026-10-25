@@ -145,7 +145,7 @@ export function AuthPage({ mode }: { mode: 'login' | 'signup' }) {
             <input className="text-input" type="email" autoComplete="email" required value={form.email} onChange={(e) => setForm({ ...form, email: e.target.value })} placeholder="you@company.com" autoFocus={!isSignup} />
           </label>
           <label className="form-field">
-            <span>Password</span>
+            <span className="label-row">Password {!isSignup && !DEMO && <Link className="forgot-link" to={`/forgot-password${form.email ? `?email=${encodeURIComponent(form.email)}` : ''}`}>Forgot password?</Link>}</span>
             <div className="input-affix">
               <input className="text-input" type={showPw ? 'text' : 'password'} autoComplete={isSignup ? 'new-password' : 'current-password'} required minLength={isSignup ? 8 : 1}
                 value={form.password} onChange={(e) => setForm({ ...form, password: e.target.value })} placeholder={isSignup ? 'At least 8 characters' : 'Your password'} />

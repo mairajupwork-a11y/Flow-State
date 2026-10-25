@@ -351,6 +351,7 @@ export const CardBody = memo(function CardBody({ issue, overlay = false }: { iss
           {issue.dueDate && <span className={overdue ? 'overdue' : ''} title={`Due ${fmtDate(issue.dueDate, locale, true)}`}><Icon name="calendar" size={13} />{fmtDate(issue.dueDate, locale)}</span>}
           {issue.checklistTotal > 0 && <span title="Checklist progress"><Icon name="checkcircle" size={13} /> {issue.checklistDone}/{issue.checklistTotal}</span>}
           {issue.commentCount > 0 && <span title="Comments"><Icon name="message" size={13} />{issue.commentCount}</span>}
+          {(issue.attachmentCount ?? 0) > 0 && <span title="Attachments"><Icon name="attachment" size={13} />{issue.attachmentCount}</span>}
           {issue.subtaskCount > 0 && <span title="Sub-tasks"><Icon name="list" size={13} />{issue.subtaskCount}</span>}
           {issue.storyPoints != null && <span className="points" title={estimateLabel(m)}>{issue.storyPoints}{m.features.estimation === 'hours' ? 'h' : ''}</span>}
         </div>

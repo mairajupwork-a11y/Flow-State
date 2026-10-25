@@ -11,16 +11,20 @@ Built UK-first (en-GB dates, Monday weeks, British English), with US and Asia-Pa
 
 | Area | Features |
 | --- | --- |
-| **Onboarding** | Landing page → sign-up (email or Google) → 5-step setup (role, workspace & region, methodology with "Help me choose", invite team, ready) with optional example work |
+| **Onboarding** | Landing page → sign-up (email or Google) → 5-step setup (role, workspace & region, methodology with "Help me choose", invite team, ready) starting from a clean, empty project |
 | **Methodologies** | Waterfall, Scrum, Kanban, Lean, Six Sigma, PRINCE2 and Scrumban (hybrid), plus a simple workflow. Each one sets its own board columns and WIP limits, work item types and terms, views, reports and rhythm. Switch at any time without losing data. See the table below |
 | **Boards** | Drag & drop with mouse, touch (long-press) and keyboard; inline quick-add; WIP limits; sprint/all-work scope; filters (text, assignee, priority, type, label, "only mine") |
 | **Planning** | Backlog with sprints: create, drag to plan, reorder, start (goal + length), complete (move leftovers to backlog / next / new sprint) |
-| **Work items** | Epic, feature, story, task, bug, sub-task; status, priority, assignee, reporter, sprint, epic, story points, start/due dates, labels, checklist, sub-tasks, links (blocks / is blocked by / relates / duplicates), comments with @mentions, full history, watching |
+| **Work items** | Epic, feature, story, task, bug, sub-task; status, priority, assignee, reporter, sprint, epic, story points, start/due dates, labels, checklist, sub-tasks, links (blocks / is blocked by / relates / duplicates), comments with @mentions, full history, watching, **file attachments** (drag, drop or paste; previews), **custom fields** (text, number, date, dropdown, multi-select, checkbox, link, person) |
 | **Views** | Board, Backlog, List (sortable), Timeline (epics + dated work), Calendar (create by day) |
 | **Reports** | Sprint burndown, velocity, created vs resolved, cycle time, workload, status and priority mix — each with a table view |
 | **Personal** | My tasks (grouped by due date, across projects) and **My day**: private to-dos by time of day, stars, roll-over, "do it tomorrow", 7-day momentum, pin project work |
 | **Mars guide (free AI)** | Plans your day, spots blockers/overdue/WIP breaches, sizes the next sprint from velocity, writes your stand-up, summarises projects, shows workload, answers how-to questions with "Take me there", and turns sentences into work items or to-dos |
 | **Team** | Unlimited members, admin/member/viewer roles, designations (CEO, Project Manager, MERN Stack Developer… or your own), invitation emails (any provider, via SMTP) plus shareable invite links and reusable team links |
+| **Automations** | Per-project rules: *when* an item is created, moves column, is assigned, changes priority, gets a comment, is due soon or overdue (optionally only for a type, priority or label) *then* notify people, assign, set priority, add a label, move, comment or set a due date. Rules never chain into loops |
+| **Notifications** | In-app bell, **email** (mentions, assignments, automations, or everything) and **push** to phones and computers. Each person picks what they get |
+| **Calendar** | Private calendar feed of your due work for **Google Calendar**, Outlook and Apple Calendar, plus “Add to Google Calendar” on any item |
+| **Account** | Email + password or Google; **forgot-password** emails with one-time links; sign out everywhere |
 | **Everywhere** | ⌘K command palette, keyboard shortcuts (`?`), notifications, realtime updates (SSE), light/dark/system themes, compact mode, reduced motion, responsive down to phones |
 
 ## Methodologies
@@ -140,6 +144,9 @@ web/     React 19 + TypeScript + Vite
 
 ## Honest limits (next steps)
 
-- Invitation emails need an SMTP account (see EMAIL.md); without one, invites are shareable links.
-- File attachments, custom fields, automations and SSO are not built yet.
+- Emails (invitations, password resets, notifications) need an SMTP account (see EMAIL.md); without one, invites are shareable links and resets are unavailable.
+- Push notifications need https (or localhost). On iPhone/iPad they work once WorkMars is added to the Home Screen (iOS 16.4+).
+- The Google Calendar feed is read by Google's servers, so it needs WorkMars online at a public address. Google refreshes subscribed calendars every few hours.
+- Attachments are stored in the database (10 MB per file). Supabase's free plan includes 500 MB.
+- SSO (SAML) is not built yet.
 - SQLite suits teams up to thousands of users on one server. For hosted or multi-instance setups, set `DATABASE_URL` to Postgres / Supabase ([SUPABASE.md](SUPABASE.md)). The realtime hub is per-process, so multiple instances would also need a shared broadcast channel.

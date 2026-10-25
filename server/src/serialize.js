@@ -10,7 +10,7 @@ export function user(u) {
 }
 
 export function me(u) {
-  return { ...user(u), locale: u.locale, theme: u.theme, hasPassword: u.password_hash !== NO_PASSWORD };
+  return { ...user(u), locale: u.locale, theme: u.theme, hasPassword: u.password_hash !== NO_PASSWORD, notifyEmail: u.notify_email ?? 'important', notifyPush: u.notify_push ?? 'important' };
 }
 
 export function workspace(w, role) {
@@ -67,7 +67,7 @@ export function issue(i) {
     parentId: i.parent_id, phaseId: i.phase_id ?? null, storyPoints: i.story_points, startDate: i.start_date, dueDate: i.due_date,
     labels: JSON.parse(i.labels || '[]'), rank: i.rank, createdAt: i.created_at, updatedAt: i.updated_at, resolvedAt: i.resolved_at,
     checklistTotal: i.checklist_total ?? 0, checklistDone: i.checklist_done ?? 0, commentCount: i.comment_count ?? 0,
-    subtaskCount: i.subtask_count ?? 0,
+    subtaskCount: i.subtask_count ?? 0, attachmentCount: i.attachment_count ?? 0,
   };
 }
 
@@ -76,7 +76,8 @@ export const ISSUE_SELECT = `
     (SELECT COUNT(*) FROM checklist_items c WHERE c.issue_id = i.id) AS checklist_total,
     (SELECT COUNT(*) FROM checklist_items c WHERE c.issue_id = i.id AND c.done = 1) AS checklist_done,
     (SELECT COUNT(*) FROM comments c WHERE c.issue_id = i.id) AS comment_count,
-    (SELECT COUNT(*) FROM issues k WHERE k.parent_id = i.id) AS subtask_count
+    (SELECT COUNT(*) FROM issues k WHERE k.parent_id = i.id) AS subtask_count,
+    (SELECT COUNT(*) FROM attachments f WHERE f.issue_id = i.id) AS attachment_count
   FROM issues i
   JOIN projects p ON p.id = i.project_id
   JOIN statuses s ON s.id = i.status_id`;
@@ -93,6 +94,19 @@ export function notification(n) {
     id: n.id, kind: n.kind, text: n.text, read: !!n.read, createdAt: n.created_at, issueId: n.issue_id,
     issueKey: n.issue_key ?? null, actor: n.actor_name ? { name: n.actor_name, color: n.actor_color, initials: initials(n.actor_name) } : null,
   };
+}
+
+export function attachment(a) {
+  return { id: a.id, issueId: a.issue_id, name: a.name, mime: a.mime, size: a.size, uploaderId: a.uploader_id, uploaderName: a.uploader_name ?? null, createdAt: a.created_at, url: `/api/attachments/${a.id}` };
+}
+
+export function customField(f) {
+  return { id: f.id, projectId: f.project_id, name: f.name, type: f.type, options: parseJson(f.options, []), position: f.position };
+}
+
+export function automation(a) {
+  return { id: a.id, projectId: a.project_id, name: a.name, when: parseJson(a.when_json, {}), then: parseJson(a.then_json, {}), enabled: !!a.enabled,
+    runCount: a.run_count, lastRunAt: a.last_run_at, createdBy: a.created_by, createdAt: a.created_at };
 }
 
 export function activity(a) {

@@ -10,7 +10,8 @@ export type Theme = 'light' | 'dark' | 'system';
 export type TimeBlock = 'morning' | 'afternoon' | 'evening' | 'anytime';
 
 export interface User { id: number; name: string; email: string; initials: string; color: string; jobTitle: string }
-export interface Me extends User { locale: Locale; theme: Theme; hasPassword?: boolean }
+export type NotifyPref = 'all' | 'important' | 'off';
+export interface Me extends User { locale: Locale; theme: Theme; hasPassword?: boolean; notifyEmail?: NotifyPref; notifyPush?: NotifyPref }
 export interface Member extends User { role: Role; joinedAt: string }
 
 export interface Workspace {
@@ -41,7 +42,17 @@ export interface Entry {
   id: number; projectId: number; kind: string; title: string; status: string; ownerId: number | null; data: FieldValues;
   createdBy: number | null; createdAt: string; updatedAt: string;
 }
-export interface ProjectDetail extends Project { statuses: Status[]; sprints: Sprint[]; phases: Phase[] }
+export type FieldType = 'text' | 'number' | 'date' | 'select' | 'multiselect' | 'checkbox' | 'url' | 'person';
+export interface CustomField { id: number; projectId: number; name: string; type: FieldType; options: string[]; position: number }
+export type CustomValue = string | number | boolean | string[] | null;
+export interface ProjectDetail extends Project { statuses: Status[]; sprints: Sprint[]; phases: Phase[]; fields: CustomField[] }
+export interface Attachment { id: number; issueId: number; name: string; mime: string; size: number; uploaderId: number | null; uploaderName: string | null; createdAt: string; url: string }
+export type TriggerEvent = 'created' | 'status' | 'assigned' | 'priority' | 'comment' | 'due_soon' | 'overdue';
+export type ActionKind = 'notify' | 'assign' | 'priority' | 'label' | 'move' | 'comment' | 'due';
+export interface AutomationWhen { event: TriggerEvent; statusId?: number; userId?: number; priority?: Priority; days?: number; filter?: { type?: string; priority?: Priority; label?: string } }
+export interface AutomationAction { action: ActionKind; to?: (number | 'assignee' | 'reporter' | 'watchers')[]; message?: string; userId?: number | 'reporter' | null; priority?: Priority; label?: string; statusId?: number; text?: string; days?: number }
+export interface Automation { id: number; projectId: number; name: string; when: AutomationWhen; then: AutomationAction[]; enabled: boolean; runCount: number; lastRunAt: string | null; createdBy: number | null; createdAt: string }
+export interface NotifySettings { email: NotifyPref; push: NotifyPref; devices: number; emailAvailable: boolean; pushAvailable: boolean; pushKey: string | null; calendarUrl: string | null; calendarReachable: boolean }
 
 export interface WorkspaceDetail { workspace: Workspace; members: Member[]; projects: Project[] }
 
@@ -51,7 +62,7 @@ export interface Issue {
   assigneeId: number | null; reporterId: number | null; sprintId: number | null; epicId: number | null; parentId: number | null;
   phaseId: number | null; storyPoints: number | null; startDate: string | null; dueDate: string | null; labels: string[]; rank: number;
   createdAt: string; updatedAt: string; resolvedAt: string | null;
-  checklistTotal: number; checklistDone: number; commentCount: number; subtaskCount: number;
+  checklistTotal: number; checklistDone: number; commentCount: number; subtaskCount: number; attachmentCount?: number;
 }
 
 export interface Comment { id: number; body: string; createdAt: string; editedAt: string | null; authorId: number | null; author: User | null }
@@ -60,6 +71,7 @@ export interface IssueLink { id: number; kind: 'blocks' | 'relates' | 'duplicate
 export interface IssueDetail extends Issue {
   checklist: { id: number; text: string; done: boolean }[];
   comments: Comment[]; subtasks: Issue[]; children: Issue[]; links: IssueLink[]; activity: Activity[]; watchers: number[];
+  attachments: Attachment[]; fields: Record<string, CustomValue>;
 }
 
 export interface Todo {

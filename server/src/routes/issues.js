@@ -5,6 +5,7 @@ import { HttpError, parse, notFound } from '../http.js';
 import { loadIssue } from '../access.js';
 import { issue as serializeIssue } from '../serialize.js';
 import { updateIssue, moveIssue, issueDetail, issueKey } from '../services/issues.js';
+import { runAutomations } from '../services/automations.js';
 import { ISO_DATE } from '../dates.js';
 
 const nullableId = z.number().int().positive().nullable();
@@ -74,6 +75,7 @@ export function issueRoutes({ db, events }) {
       await events.notify({ workspaceId: project.workspace_id, issueId: issue.id, actorId: req.user.id, kind: 'mention', recipients: mentioned, text: `${req.user.name} mentioned you on ${key}: “${body.slice(0, 90)}”` });
       const watchers = (await db.all('SELECT user_id FROM watchers WHERE issue_id = ?', issue.id)).map((w) => w.user_id).filter((id) => !mentioned.includes(id));
       await events.notify({ workspaceId: project.workspace_id, issueId: issue.id, actorId: req.user.id, kind: 'comment', recipients: watchers, text: `${req.user.name} commented on ${key}: “${body.slice(0, 90)}”` });
+      await runAutomations(db, { project, issueId: issue.id, event: 'comment', actor: req.user, events });
     });
     events.changed(project.workspace_id, [`issue:${issue.id}`, `project:${project.id}`, 'issues'], req.user.id);
     res.status(201).json(await issueDetail(db, issue.id));

@@ -1,6 +1,8 @@
 import { HttpError, notFound } from '../http.js';
 import { methodology, term } from '../../../shared/methodologies.js';
-import { ISSUE_SELECT, issue as serializeIssue, user as serializeUser, activity as serializeActivity } from '../serialize.js';
+import { ISSUE_SELECT, issue as serializeIssue, user as serializeUser, activity as serializeActivity, attachment as serializeAttachment, customField as serializeField } from '../serialize.js';
+import { runAutomations, rearmTimed } from './automations.js';
+import { readFieldValue } from './fields.js';
 
 export const PRIORITY_ORDER = { urgent: 0, high: 1, medium: 2, low: 3 };
 const TRACKED = ['title', 'description', 'type', 'statusId', 'priority', 'assigneeId', 'sprintId', 'epicId', 'parentId', 'phaseId', 'storyPoints', 'startDate', 'dueDate', 'labels'];
@@ -85,6 +87,7 @@ export async function createIssue(db, { projectId, actor, input, events, silent 
           text: `${actor.name} assigned ${key} to you: “${data.title}”` });
       }
       events.changed(project.workspace_id, ['issues', `project:${projectId}`], actor.id);
+      await runAutomations(db, { project, issueId: id, event: 'created', actor, events });
     }
     return await getIssueRow(db, id);
   });
@@ -93,7 +96,7 @@ export async function createIssue(db, { projectId, actor, input, events, silent 
 const cleanLabels = (labels) => [...new Set((labels ?? []).map((l) => String(l).trim()).filter(Boolean))].slice(0, 12);
 
 /** Applies a partial update, logging one activity entry per changed field. */
-export async function updateIssue(db, { issueRow, project, actor, input, events }) {
+export async function updateIssue(db, { issueRow, project, actor, input, events, automation = false }) {
   return await db.tx(async () => {
     const current = serializeIssue(await getIssueRow(db, issueRow.id));
     const patch = {};
@@ -138,7 +141,9 @@ export async function updateIssue(db, { issueRow, project, actor, input, events 
     // An epic that becomes something else no longer groups its children.
     if (current.type === 'epic' && type !== 'epic') await db.run('UPDATE issues SET epic_id = NULL WHERE epic_id = ?', current.id);
 
+    if ('dueDate' in patch) await rearmTimed(db, current.id);
     if (events) await logChanges(db, { project, actor, current, patch, events });
+    if (events && !automation) await runAutomations(db, { project, issueId: current.id, event: 'updated', patch, actor, events });
     return await getIssueRow(db, issueRow.id);
   });
 }
@@ -228,5 +233,12 @@ export async function issueDetail(db, issueId) {
   for (const l of linkRows) if (others.has(l.other)) links.push({ id: l.id, kind: l.kind, direction: l.dir, issue: serializeIssue(others.get(l.other)) });
   const activity = (await db.all('SELECT * FROM activity WHERE issue_id = ? ORDER BY id DESC LIMIT 60', issueId)).map(serializeActivity);
   const watchers = (await db.all('SELECT user_id FROM watchers WHERE issue_id = ?', issueId)).map((w) => w.user_id);
-  return { ...serializeIssue(row), checklist, comments, subtasks, children, links, activity, watchers };
+  const attachments = (await db.all(`SELECT a.id, a.issue_id, a.name, a.mime, a.size, a.uploader_id, a.created_at, u.name AS uploader_name
+    FROM attachments a LEFT JOIN users u ON u.id = a.uploader_id WHERE a.issue_id = ? ORDER BY a.id`, issueId)).map(serializeAttachment);
+  const defs = new Map((await db.all('SELECT * FROM custom_fields WHERE project_id = ?', row.project_id)).map((f) => [f.id, serializeField(f)]));
+  const fields = {};
+  for (const v of await db.all('SELECT field_id, value FROM issue_field_values WHERE issue_id = ?', issueId)) {
+    if (defs.has(v.field_id)) fields[v.field_id] = readFieldValue(defs.get(v.field_id), v.value);
+  }
+  return { ...serializeIssue(row), checklist, comments, subtasks, children, links, activity, watchers, attachments, fields };
 }

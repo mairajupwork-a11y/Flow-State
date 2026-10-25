@@ -1,0 +1,14 @@
+{
+  "name": "WorkMars",
+  "short_name": "WorkMars",
+  "description": "Free project management for unlimited users.",
+  "start_url": "/",
+  "scope": "/",
+  "display": "standalone",
+  "background_color": "#f3e9da",
+  "theme_color": "#2b160d",
+  "icons": [
+    { "src": "/apple-touch-icon.png", "sizes": "180x180", "type": "image/png" },
+    { "src": "/icon-512.png", "sizes": "512x512", "type": "image/png", "purpose": "any" }
+  ]
+}

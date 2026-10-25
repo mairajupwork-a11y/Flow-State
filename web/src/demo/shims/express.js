@@ -1,6 +1,6 @@
 /**
  * Just enough of Express's Router for the WorkMars route modules to run in
- * the browser demo: use(mw), use(router), use(prefix, router), get/post/patch/delete with
+ * the browser demo: use(mw), use(path | paths, mw), use(router), use(prefix, router), get/post/put/patch/delete with
  * :params, and synchronous-next middleware. Mirrors Express 5 error flow.
  */
 function compile(path) {
@@ -29,7 +29,9 @@ export function Router() {
   const stack = [];
   const router = {
     use(a, b) {
-      if (typeof a === 'string') stack.push({ prefix: compile(a), sub: b });
+      const paths = Array.isArray(a) ? a : typeof a === 'string' ? [a] : null;
+      if (paths && typeof b === 'function') stack.push({ mw: b, scope: paths.map(compile) }); // path-scoped middleware
+      else if (typeof a === 'string') stack.push({ prefix: compile(a), sub: b });
       else if (typeof a?.handle === 'function') stack.push({ prefix: compile(''), sub: a }); // mounted router
       else stack.push({ mw: a });
       return router;
@@ -37,6 +39,7 @@ export function Router() {
     async handle(req, res, path) {
       for (const layer of stack) {
         if (layer.mw) {
+          if (layer.scope && !layer.scope.some((c) => c.prefix.test(path))) continue;
           if (!(await step(layer.mw, req, res))) return true;
         } else if (layer.sub) {
           const m = path.match(layer.prefix.prefix);
@@ -52,7 +55,7 @@ export function Router() {
       return false;
     },
   };
-  for (const method of ['get', 'post', 'patch', 'delete']) {
+  for (const method of ['get', 'post', 'put', 'patch', 'delete']) {
     router[method] = (path, ...fns) => { stack.push({ method: method.toUpperCase(), route: compile(path), fns }); return router; };
   }
   return router;

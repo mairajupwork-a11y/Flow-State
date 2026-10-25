@@ -3,6 +3,7 @@ import { AsyncLocalStorage } from 'node:async_hooks';
 import pg from 'pg';
 import { recolorSql, recolorSqlV6 } from './schema/recolor.js';
 import { removeSamplesSql } from './schema/remove-samples.js';
+import { v8Postgres } from './schema/v8.js';
 
 /**
  * PostgreSQL adapter (Supabase or any Postgres) with the same surface as
@@ -22,7 +23,7 @@ pg.types.setTypeParser(1700, (v) => (v === null ? null : Number(v)));
 
 const NOW = "to_char(now() AT TIME ZONE 'utc', 'YYYY-MM-DD HH24:MI:SS')";
 /** Tables whose primary key is not an `id` column. */
-const NO_ID = new Set(['memberships', 'watchers', 'invites']);
+const NO_ID = new Set(['memberships', 'watchers', 'invites', 'app_kv', 'issue_field_values', 'automation_runs']);
 const cache = new Map();
 
 export function translate(original) {
@@ -151,6 +152,7 @@ export async function migratePostgres(pool) {
     recolorSql(),
     recolorSqlV6(),
     removeSamplesSql(),
+    v8Postgres(),
   ];
   const VERSION = UPGRADES.length;
   const client = await pool.connect();

@@ -9,6 +9,7 @@ import { Toasts } from './components/ui';
 import { ConfirmHost } from './components/ConfirmHost';
 import { App } from './App';
 import { ErrorBoundary } from './components/ErrorBoundary';
+import { registerServiceWorker } from './lib/push';
 import './lib/theme';
 import './styles/prototype.css';
 import './styles/app.css';
@@ -18,6 +19,7 @@ import './styles/atelier.css';
 
 // The demo lives inside a hosted frame with no server routes, so it keeps the URL in memory.
 const Router = IS_DEMO ? MemoryRouter : BrowserRouter;
+registerServiceWorker();
 
 createRoot(document.getElementById('root')!).render(
   <StrictMode>

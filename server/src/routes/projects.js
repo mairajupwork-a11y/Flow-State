@@ -5,6 +5,7 @@ import { HttpError, parse, notFound } from '../http.js';
 import { loadProject, lockRow } from '../access.js';
 import { ISSUE_SELECT, issue as serializeIssue, project as serializeProject, status as serializeStatus, sprint as serializeSprint,
   phase as serializePhase, entry as serializeEntry, measurement as serializeMeasurement } from '../serialize.js';
+import { customField as serializeField } from '../serialize.js';
 import { createIssue } from '../services/issues.js';
 import { createPhases } from '../services/projects.js';
 import { flowMetrics, phaseMetrics, controlChart } from '../services/metrics.js';
@@ -410,7 +411,8 @@ export async function projectPayload(db, p) {
   const statuses = (await db.all('SELECT * FROM statuses WHERE project_id = ? ORDER BY position', p.id)).map(serializeStatus);
   const sprints = (await db.all("SELECT * FROM sprints WHERE project_id = ? ORDER BY CASE state WHEN 'active' THEN 0 WHEN 'planned' THEN 1 ELSE 2 END, id", p.id)).map(serializeSprint);
   const phases = (await db.all('SELECT * FROM phases WHERE project_id = ? ORDER BY position', p.id)).map(serializePhase);
-  return { ...serializeProject(p), statuses, sprints, phases };
+  const fields = (await db.all('SELECT * FROM custom_fields WHERE project_id = ? ORDER BY position, id', p.id)).map(serializeField);
+  return { ...serializeProject(p), statuses, sprints, phases, fields };
 }
 
 /**

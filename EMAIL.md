@@ -1,6 +1,14 @@
-# Turning on invitation emails
+# Turning on emails
 
-When you invite someone, WorkMars can email them a **"Join your workspace"** invitation automatically. Recipients can use any email provider: Gmail, Outlook/Hotmail, Yahoo, iCloud or a company address.
+One email account powers everything WorkMars sends:
+
+- **Invitations**: a "Join your workspace" email when you invite someone.
+- **Password resets**: the "Forgot password?" link on the sign-in page emails a one-time reset link.
+- **Notifications**: emails when someone mentions you, assigns you work, or an automation notifies you. Everyone chooses *Important*, *Everything* or *Off* in **Settings → Notifications**.
+
+Recipients can use any email provider: Gmail, Outlook/Hotmail, Yahoo, iCloud or a company address.
+
+Once WorkMars is online, also set `APP_URL` to its public address (for example `APP_URL=https://work.example.com`) so links in emails open the right site. Password resets refuse to send without it on a live server, so a stranger can't make reset links point somewhere else.
 
 To send email, WorkMars needs an email account to send *from*. Two free options are below. Option A takes 5 minutes.
 

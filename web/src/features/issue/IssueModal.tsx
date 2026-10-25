@@ -10,6 +10,7 @@ import { askConfirm, copyText, openCreate, toast, toastError } from '../../lib/s
 import { PRIORITIES, PRIORITY_LABEL, fmtDate, timeAgo, todayISO } from '../../lib/format';
 import { estimateLabel, methodologyOf, term, typeLabel } from '../../lib/methodology';
 import type { Activity, IssueDetail, IssueType, Priority } from '../../lib/types';
+import { Attachments, CustomFields, googleCalendarLink } from './IssueExtras';
 
 export function IssueModal({ issueRef, onClose }: { issueRef: string; onClose: () => void }) {
   const { data: issue, error, isLoading } = useIssue(issueRef);
@@ -101,6 +102,7 @@ function IssueDetailView({ issue, onClose }: { issue: IssueDetail; onClose: () =
             <button className="btn btn-light btn-sm" onClick={() => copyText(`${location.origin}/w/${workspace.slug}/p/${project?.key}/board?issue=${issue.key}`, 'Link copied.')}><Icon name="link" size={13} /> Copy link</button>
             <button className="btn btn-light btn-sm" onClick={() => post.mutate({ path: '/watch', body: { watching: !watching } })} aria-pressed={watching}><Icon name="eye" size={13} /> {watching ? 'Watching' : 'Watch'}</button>
             <button className="btn btn-light btn-sm" onClick={() => addToDay.mutate()}><Icon name="sun" size={13} /> Add to My day</button>
+            {issue.dueDate && <a className="btn btn-light btn-sm" target="_blank" rel="noopener noreferrer" href={googleCalendarLink(issue, `${location.origin}/w/${workspace.slug}?issue=${issue.key}`)}><Icon name="calendar" size={13} /> Add to Google Calendar</a>}
           </span>
         </div>
 
@@ -141,6 +143,8 @@ function IssueDetailView({ issue, onClose }: { issue: IssueDetail; onClose: () =
                 {canEdit && <button className="link-btn" onClick={() => openCreate({ epicId: issue.id, projectId: issue.projectId })}><Icon name="plus" size={13} /> Add work to this {typeLabel(m, 'epic').toLowerCase()}</button>}
               </div>
             )}
+
+            <Attachments issue={issue} canEdit={canEdit} />
 
             <Links issue={issue} canEdit={canEdit} onOpen={openOther} onAdd={(target, kind) => post.mutateAsync({ path: '/links', body: { target, kind } })} onRemove={(id) => remove.mutate(`/links/${id}`)} />
 
@@ -215,6 +219,7 @@ function IssueDetailView({ issue, onClose }: { issue: IssueDetail; onClose: () =
               </label>
               <Labels labels={issue.labels} onChange={(labels) => patch.mutate({ labels })} canEdit={canEdit} />
             </fieldset>
+            <CustomFields issue={issue} fields={project?.fields ?? []} canEdit={canEdit} />
             <div className="aside-meta">
               <div><span>Reporter</span><span className="row-8"><Avatar user={member(issue.reporterId)} size="sm" />{member(issue.reporterId)?.name ?? 'Former member'}</span></div>
               <div><span>Created</span><span>{fmtDate(issue.createdAt.slice(0, 10), locale, true)}</span></div>
@@ -337,9 +342,9 @@ function Comments({ issue, canEdit, onPost, onEdit, onDelete }: { issue: IssueDe
     <div>
       {issue.comments.map((c) => (
         <div className="comment" key={c.id}>
-          <Avatar user={c.author} />
+          {!c.author && c.body.startsWith('🤖') ? <span className="avatar bot-avatar" aria-hidden="true"><Icon name="zap" size={14} /></span> : <Avatar user={c.author} />}
           <div style={{ flex: 1, minWidth: 0 }}>
-            <b>{c.author?.name ?? 'Former member'}</b> <span className="tiny-note">{timeAgo(c.createdAt, locale)}{c.editedAt ? ' · edited' : ''}</span>
+            <b>{c.author?.name ?? (c.body.startsWith('🤖') ? 'Automation' : 'Former member')}</b> <span className="tiny-note">{timeAgo(c.createdAt, locale)}{c.editedAt ? ' · edited' : ''}</span>
             {editing?.id === c.id ? (
               <form onSubmit={(e) => { e.preventDefault(); onEdit(c.id, editing.body); setEditing(null); }} className="stack-8" style={{ marginTop: 6 }}>
                 <textarea className="text-input field-textarea" style={{ minHeight: 70 }} value={editing.body} onChange={(e) => setEditing({ ...editing, body: e.target.value })} autoFocus />
@@ -388,14 +393,18 @@ function History({ activity }: { activity: Activity[] }) {
   return (
     <ul className="history">
       {activity.map((a) => {
-        const who = member(a.actorId)?.name ?? 'Someone';
-        const d = a.data as { field?: string; from?: unknown; to?: unknown; kind?: string; target?: string; excerpt?: string };
+        const who = member(a.actorId)?.name ?? (a.verb === 'automation' || a.actorId == null ? 'Automation' : 'Someone');
+        const d = a.data as { field?: string; from?: unknown; to?: unknown; kind?: string; target?: string; excerpt?: string; name?: string };
         const val = (v: unknown) => (v == null || v === '' ? 'none' : Array.isArray(v) ? v.join(', ') || 'none' : String(v));
         let text: string;
         if (a.verb === 'created') text = 'created this work item';
         else if (a.verb === 'commented') text = `commented: “${d.excerpt}”`;
         else if (a.verb === 'linked') text = `linked ${d.target} (${String(d.kind).replace(/_/g, ' ')})`;
         else if (d.field === 'description') text = 'updated the description';
+        else if (a.verb === 'attached') text = `attached ${d.name}`;
+        else if (a.verb === 'detached') text = `removed the file ${d.name}`;
+        else if (a.verb === 'automation') text = `ran the automation “${d.name}”`;
+        else if (d.field === 'custom') text = `changed ${d.name} from ${val(d.from)} to ${val(d.to)}`;
         else text = `changed ${FIELD_LABEL[d.field ?? ''] ?? d.field} from ${val(d.from)} to ${val(d.to)}`;
         return <li key={a.id}><span className="history-dot" /><span><b>{who}</b> {text}</span><small>{timeAgo(a.createdAt, locale)}</small></li>;
       })}

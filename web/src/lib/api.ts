@@ -30,8 +30,29 @@ async function request<T>(method: string, path: string, body?: unknown): Promise
   return data as T;
 }
 
+/** Sends one file as the raw request body (attachments). */
+async function upload<T>(path: string, file: File): Promise<T> {
+  if (IS_DEMO) throw new ApiError(400, 'File uploads aren’t available in the demo.');
+  let res: Response;
+  try {
+    res = await fetch(`/api${path}`, {
+      method: 'POST',
+      credentials: 'same-origin',
+      headers: { 'Content-Type': file.type || 'application/octet-stream', 'X-File-Name': encodeURIComponent(file.name), 'X-Requested-With': 'workmars' },
+      body: file,
+    });
+  } catch {
+    throw new ApiError(0, 'You appear to be offline. Check your connection and try again.');
+  }
+  const data = await res.json().catch(() => null);
+  if (!res.ok) throw new ApiError(res.status, data?.error ?? (res.status === 413 ? 'That file is too large (10 MB max).' : `Upload failed (${res.status}).`));
+  return data as T;
+}
+
 export const api = {
   get: <T>(path: string) => request<T>('GET', path),
+  put: <T>(path: string, body: unknown) => request<T>('PUT', path, body),
+  upload,
   post: <T>(path: string, body: unknown = {}) => request<T>('POST', path, body),
   patch: <T>(path: string, body: unknown) => request<T>('PATCH', path, body),
   del: <T>(path: string, body?: unknown) => request<T>('DELETE', path, body),

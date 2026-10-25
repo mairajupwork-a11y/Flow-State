@@ -16,7 +16,7 @@ async function testDatabase() {
   if (!url) return openDatabase(':memory:');
   const { openPostgres } = await import('../src/db-postgres.js');
   const db = await openPostgres(url, { migrate: false });
-  await db.exec(`DROP TABLE IF EXISTS measurements, entries, todos, notifications, activity, watchers, issue_links, comments, checklist_items,
+  await db.exec(`DROP TABLE IF EXISTS automation_runs, automations, issue_field_values, custom_fields, attachments, password_resets, push_subscriptions, app_kv, measurements, entries, todos, notifications, activity, watchers, issue_links, comments, checklist_items,
     issues, phases, sprints, statuses, projects, invites, memberships, workspaces, users, workmars_meta, flowstate_meta CASCADE`);
   await db.close();
   return openPostgres(url);

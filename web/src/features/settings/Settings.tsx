@@ -9,6 +9,7 @@ import { useWs } from '../../lib/workspace';
 import { askConfirm, toast } from '../../lib/store';
 import { useTheme } from '../../lib/theme';
 import type { Locale, Session, Theme } from '../../lib/types';
+import { CalendarCard, NotificationsCard } from './NotifySettings';
 
 const LOCALES: [Locale, string, string][] = [
   ['en-GB', 'United Kingdom', '14 Oct 2026'], ['en-US', 'United States', 'Oct 14, 2026'], ['en-IN', 'India', '14 Oct 2026'],
@@ -109,6 +110,9 @@ export default function Settings() {
               <button className="btn btn-primary" style={{ marginTop: 14 }} disabled={saveWs.isPending}>Save workspace</button>
             </form>
           )}
+
+          <NotificationsCard />
+          <CalendarCard />
 
           <form className="content-card" onSubmit={(e: FormEvent) => { e.preventDefault(); savePw.mutate(); }}>
             <h3>Security</h3>

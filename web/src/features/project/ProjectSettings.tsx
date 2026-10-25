@@ -10,6 +10,7 @@ import type { MethodologyId, Status, StatusCategory } from '../../lib/types';
 import { MethodologyPicker } from '../../components/MethodologyPicker';
 import { METHODOLOGIES, methodologyOf } from '../../lib/methodology';
 import { SectionBar, useProjectCtx } from './ProjectLayout';
+import { AutomationsCard, CustomFieldsCard } from './ProjectExtensions';
 
 const COLORS = ['#a65a2e', '#6f8a68', '#9c6b4e', '#c58f2c', '#7d7a4a', '#c48a64', '#b9563a', '#8c6d4f'];
 const CATEGORY_LABEL: Record<StatusCategory, string> = { todo: 'To do', progress: 'In progress', done: 'Done' };
@@ -86,6 +87,11 @@ export default function ProjectSettings() {
             </form>
           )}
         </div>
+      </div>
+
+      <div className="two-col" style={{ marginTop: 16 }}>
+        <CustomFieldsCard project={project} />
+        <AutomationsCard project={project} />
       </div>
 
       {isAdmin && (

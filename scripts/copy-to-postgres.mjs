@@ -29,7 +29,8 @@ if (!existsSync(file)) { console.error(`No SQLite database at ${file}`); process
 
 // Parents before children so foreign keys are satisfied.
 const TABLES = ['users', 'workspaces', 'memberships', 'invites', 'projects', 'statuses', 'sprints', 'phases', 'issues', 'checklist_items',
-  'comments', 'issue_links', 'watchers', 'activity', 'notifications', 'todos', 'entries', 'measurements'];
+  'comments', 'issue_links', 'watchers', 'activity', 'notifications', 'todos', 'entries', 'measurements',
+  'app_kv', 'password_resets', 'attachments', 'custom_fields', 'issue_field_values', 'automations', 'automation_runs', 'push_subscriptions'];
 
 const lite = new DatabaseSync(file, { readOnly: true });
 const version = lite.prepare('PRAGMA user_version').get().user_version;

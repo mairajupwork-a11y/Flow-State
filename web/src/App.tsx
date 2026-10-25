@@ -5,6 +5,7 @@ import { PageLoader } from './components/ui';
 import { AuthPage } from './features/auth/AuthPage';
 import { Welcome } from './features/auth/Welcome';
 import { AcceptInvite } from './features/auth/AcceptInvite';
+import { ForgotPassword, ResetPassword } from './features/auth/PasswordReset';
 import { Onboarding } from './features/onboarding/Onboarding';
 import { AppShell } from './layout/AppShell';
 import { Overview } from './features/home/Overview';
@@ -59,6 +60,8 @@ export function App() {
       <Route path="/welcome" element={<Welcome />} />
       <Route path="/login" element={<AuthPage mode="login" />} />
       <Route path="/signup" element={<AuthPage mode="signup" />} />
+      <Route path="/forgot-password" element={<ForgotPassword />} />
+      <Route path="/reset-password" element={<ResetPassword />} />
       <Route path="/invite/:token" element={<AcceptInvite />} />
       <Route path="/onboarding" element={<RequireAuth><Onboarding /></RequireAuth>} />
       <Route path="/w/:slug" element={<RequireAuth><AppShell /></RequireAuth>}>

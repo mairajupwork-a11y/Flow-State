@@ -16,6 +16,7 @@ import { projectRoutes } from '../../../server/src/routes/projects.js';
 import { issueRoutes } from '../../../server/src/routes/issues.js';
 import { todoRoutes, notificationRoutes } from '../../../server/src/routes/personal.js';
 import { aiRoutes } from '../../../server/src/routes/ai.js';
+import { extensionRoutes } from '../../../server/src/routes/extensions.js';
 import { createSigner, sessionMiddleware, SESSION_COOKIE } from './auth.js';
 import { Router } from './shims/express.js';
 
@@ -88,6 +89,7 @@ function boot() {
     api.use('/todos', todoRoutes(ctx));
     api.use('/notifications', notificationRoutes(ctx));
     api.use('/ai', aiRoutes(ctx));
+    api.use(extensionRoutes(ctx));
     return { api, save, onError: errorHandler({ error: (e) => console.error(e) }) };
   });
   return ready;

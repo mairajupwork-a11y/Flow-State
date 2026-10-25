@@ -5,6 +5,8 @@ import { dirname, join } from 'node:path';
 import { openDatabase } from './db.js';
 import { createApp } from './app.js';
 import { createMailer, mailHint } from './mail.js';
+import { createPush } from './push.js';
+import { runScheduledAutomations } from './services/automations.js';
 
 const here = dirname(fileURLToPath(import.meta.url));
 // Settings such as DATABASE_URL can live in a .env file at the repo root.
@@ -78,10 +80,20 @@ if (mailer) {
     : `Email: on (${mailer.host}, from ${mailer.from})`));
 }
 
+// Browser / phone push notifications (keys are generated once and kept in the database).
+let push = null;
+try {
+  push = await createPush(db, { appUrl: process.env.APP_URL || null });
+  console.log('Push notifications: on');
+} catch (err) {
+  console.warn(`Push notifications are off: ${err.message}`);
+}
+
 const trustEnv = process.env.TRUST_PROXY?.trim();
 const app = createApp({
   ...(trustEnv && { trustProxy: /^\d+$/.test(trustEnv) ? Number(trustEnv) : trustEnv === 'true' ? 1 : false }),
   mailer,
+  push,
   appUrl: process.env.APP_URL || null,
   db,
   secret,
@@ -94,6 +106,12 @@ const app = createApp({
 });
 
 const server = app.listen(port, () => console.log(`WorkMars API listening on http://localhost:${port}`));
+
+// Time-based automations ("due soon", "overdue") run every 15 minutes.
+const runTimed = () => runScheduledAutomations(db, { events: app.locals.events })
+  .catch((err) => console.warn(`Scheduled automations failed: ${err.message}`));
+setTimeout(runTimed, 20_000).unref();
+setInterval(runTimed, 15 * 60_000).unref();
 
 function shutdown() {
   app.locals.hub.closeAll();
