@@ -6,6 +6,7 @@ import { WorkspaceProvider, useRealtime } from '../lib/workspace';
 import { ui, useUi, openCreate, openGuide } from '../lib/store';
 import { ErrorState, PageLoader } from '../components/ui';
 import { Sidebar } from './Sidebar';
+import { SidebarResizer } from './SidebarResizer';
 import { Topbar } from './Topbar';
 import { MobileNav } from './MobileNav';
 import { CommandPalette } from './CommandPalette';
@@ -87,6 +88,7 @@ function Shell() {
     <div className="app-shell">
       <div className={`sidebar-shade ${sidebarOpen ? 'visible' : ''}`} onClick={() => ui.set({ sidebarOpen: false })} />
       <Sidebar activeKey={routeKey} />
+      <SidebarResizer />
       <div className="main-shell">
         <Topbar activeKey={routeKey} />
         <main id="page" className="page">

@@ -743,3 +743,59 @@ input[type="date"]::-webkit-calendar-picker-indicator { opacity: .6; cursor: poi
 .section-heading { white-space: nowrap; flex-shrink: 0; }
 .page > .metric-grid { margin-bottom: 20px; }
 .issue-type.story { background: #e6ecdf; color: #4f6b49; }
+
+/* ---------- Scrollbars: slim translucent copper thumbs, no arrow buttons ---------- */
+:root { --sb-thumb: rgba(166, 90, 46, .28); --sb-thumb-hover: rgba(166, 90, 46, .5); --sb-edge: rgba(255, 250, 243, .55); }
+[data-theme="dark"] { --sb-thumb: rgba(224, 161, 106, .26); --sb-thumb-hover: rgba(224, 161, 106, .48); --sb-edge: rgba(255, 235, 210, .12); }
+@supports selector(::-webkit-scrollbar) {
+  /* Chromium ignores the ::-webkit-scrollbar styling below on elements that set these. */
+  .kanban, .kanban-col, nav.tabs, .phase-stepper { scrollbar-width: auto; scrollbar-color: auto; }
+  ::-webkit-scrollbar { width: 10px; height: 10px; background: transparent; }
+  ::-webkit-scrollbar-track, ::-webkit-scrollbar-corner { background: transparent; }
+  ::-webkit-scrollbar-button { display: none; width: 0; height: 0; }
+  ::-webkit-scrollbar-thumb {
+    border: 2.5px solid transparent; border-radius: 999px; background-clip: padding-box;
+    background-color: var(--sb-thumb);
+    box-shadow: inset 0 0 0 1px var(--sb-edge), inset 0 1px 0 var(--sb-edge);
+  }
+  ::-webkit-scrollbar-thumb:hover { background-color: var(--sb-thumb-hover); }
+  ::-webkit-scrollbar-thumb:active { background-color: var(--copper); }
+  /* sidebar: the thumb only shows while the pointer is over it */
+  .sidebar::-webkit-scrollbar { width: 8px; }
+  .sidebar::-webkit-scrollbar-thumb { background-color: transparent; box-shadow: none; }
+  .sidebar:hover::-webkit-scrollbar-thumb { background-color: var(--sb-thumb); box-shadow: inset 0 0 0 1px var(--sb-edge); }
+  .sidebar:hover::-webkit-scrollbar-thumb:hover { background-color: var(--sb-thumb-hover); }
+  nav.tabs::-webkit-scrollbar { height: 6px; }
+}
+@supports not selector(::-webkit-scrollbar) {
+  * { scrollbar-width: thin; scrollbar-color: var(--sb-thumb) transparent; }
+}
+
+/* ---------- Resizable sidebar (desktop) ---------- */
+@media (min-width: 761px) {
+  .sidebar { width: var(--sidebar-w, 251px); flex: 0 0 var(--sidebar-w, 251px); overflow-x: hidden; overflow-y: auto; }
+  .sidebar > * { min-width: 0; }
+  .sidebar .workspace-switch, .sidebar .nav-link, .sidebar .side-project { min-width: 0; }
+  .sidebar .nav-link > span:not(.side-counter), .sidebar .side-project > span { overflow: hidden; text-overflow: ellipsis; white-space: nowrap; }
+}
+@media (min-width: 761px) and (max-width: 1350px) {
+  .sidebar { width: var(--sidebar-w, 225px); flex-basis: var(--sidebar-w, 225px); }
+}
+.sidebar-resizer {
+  position: fixed; top: 0; bottom: 0; width: 12px; margin-left: -6px; z-index: 16;
+  cursor: col-resize; touch-action: none; outline: none;
+}
+.sidebar-resizer::after {
+  content: ''; position: absolute; top: 50%; left: 50%; width: 4px; height: 44px; margin: -22px 0 0 -2px; border-radius: 999px;
+  background: rgba(255, 250, 243, .55); border: 1px solid rgba(166, 90, 46, .28);
+  -webkit-backdrop-filter: blur(10px); backdrop-filter: blur(10px);
+  box-shadow: 0 4px 14px rgba(43, 22, 13, .12);
+  opacity: 0; transition: opacity .2s, height .2s, margin .2s, background .2s;
+}
+.sidebar-resizer::before { content: ''; position: absolute; top: 0; bottom: 0; left: 50%; width: 2px; margin-left: -1px; background: var(--copper); opacity: 0; transition: opacity .2s; }
+.sidebar-resizer:hover::after, .sidebar-resizer:focus-visible::after, .sidebar-resizer.dragging::after { opacity: 1; height: 64px; margin-top: -32px; }
+.sidebar-resizer:hover::before, .sidebar-resizer.dragging::before { opacity: .35; }
+.sidebar-resizer:focus-visible::after { background: var(--copper); }
+[data-theme="dark"] .sidebar-resizer::after { background: rgba(58, 38, 24, .6); border-color: rgba(224, 161, 106, .35); }
+html.sidebar-resizing, html.sidebar-resizing * { cursor: col-resize !important; user-select: none !important; }
+@media (max-width: 760px) { .sidebar-resizer { display: none; } }
