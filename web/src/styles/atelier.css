@@ -684,7 +684,7 @@ input[type="date"]::-webkit-calendar-picker-indicator { opacity: .6; cursor: poi
 .invite-slot-icon { width: 42px; height: 42px; border-radius: 50%; display: grid; place-items: center; border: 1px solid rgba(166, 90, 46, .4); color: var(--copper); flex: 0 0 42px; }
 [data-theme="dark"] .invite-slot { border-color: #4a3524; background: rgba(43, 29, 21, .4); }
 
-/* Sidebar card: the dunes photo has no subject to collide with the copy. */
+/* Sidebar card: frame the desert photo on its open sand, clear of the copy. */
 .free-banner.scene { --scene-pos: 60% 70%; }
 
 /* Floating guide: a little smaller so it covers less of the rows beneath it. */

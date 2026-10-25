@@ -1,5 +1,5 @@
 import desert from '../assets/mars-desert.webp';
-import dunes from '../assets/mars-dunes.webp';
+import hills from '../assets/mars-explorer-hills.webp';
 
 /**
  * Martian landscape photos used as backdrops for banner-style panels
@@ -8,7 +8,7 @@ import dunes from '../assets/mars-dunes.webp';
  */
 export const SCENES = [
   { src: desert, focus: '50% 36%' }, // rocky desert dunes and distant ridges under a soft sky
-  { src: dunes, focus: '50% 55%' }, // rocky desert ridges under a hazy sky
+  { src: hills, focus: '50% 44%' }, // explorer standing between two rust-coloured hills
 ] as const;
 
 /** A stable scene per id, so each project keeps the same photo. */
