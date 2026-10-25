@@ -19,7 +19,7 @@ export function CreateProjectModal({ onClose }: { onClose: () => void }) {
   const { workspace, base } = useWs();
   const qc = useQueryClient();
   const navigate = useNavigate();
-  const [form, setForm] = useState({ name: '', key: '', keyTouched: false, description: '', methodology: 'scrum' as MethodologyId, withSamples: false });
+  const [form, setForm] = useState({ name: '', key: '', keyTouched: false, description: '', methodology: 'scrum' as MethodologyId });
   const [error, setError] = useState('');
   const [busy, setBusy] = useState(false);
   const key = form.keyTouched ? form.key : suggestKey(form.name);
@@ -31,7 +31,7 @@ export function CreateProjectModal({ onClose }: { onClose: () => void }) {
     setBusy(true);
     setError('');
     try {
-      const p = await api.post<Project>(`/workspaces/${workspace.slug}/projects`, { name: form.name.trim(), key, description: form.description.trim(), methodology: form.methodology, withSamples: form.withSamples });
+      const p = await api.post<Project>(`/workspaces/${workspace.slug}/projects`, { name: form.name.trim(), key, description: form.description.trim(), methodology: form.methodology });
       await qc.invalidateQueries({ queryKey: ['ws'] });
       toast(`${p.name} is ready.`);
       onClose();
@@ -56,7 +56,6 @@ export function CreateProjectModal({ onClose }: { onClose: () => void }) {
             <MethodologyPicker compact value={form.methodology} onChange={(methodology) => setForm({ ...form, methodology })} />
           </div>
           <label className="form-field"><span>Description</span><textarea className="text-input field-textarea" rows={3} maxLength={500} value={form.description} onChange={(e) => setForm({ ...form, description: e.target.value })} placeholder="Optional — what’s this project for?" /></label>
-          <label className="check-row"><input type="checkbox" checked={form.withSamples} onChange={(e) => setForm({ ...form, withSamples: e.target.checked })} /> Add example work to explore</label>
         </div>
         <div className="modal-footer">
           <button type="button" className="btn btn-light" onClick={onClose}>Cancel</button>

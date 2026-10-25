@@ -2,6 +2,7 @@ import { readFileSync } from 'node:fs';
 import { AsyncLocalStorage } from 'node:async_hooks';
 import pg from 'pg';
 import { recolorSql, recolorSqlV6 } from './schema/recolor.js';
+import { removeSamplesSql } from './schema/remove-samples.js';
 
 /**
  * PostgreSQL adapter (Supabase or any Postgres) with the same surface as
@@ -149,6 +150,7 @@ export async function migratePostgres(pool) {
      CREATE INDEX IF NOT EXISTS users_email_exact ON users (email)`,
     recolorSql(),
     recolorSqlV6(),
+    removeSamplesSql(),
   ];
   const VERSION = UPGRADES.length;
   const client = await pool.connect();

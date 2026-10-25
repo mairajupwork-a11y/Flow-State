@@ -51,10 +51,34 @@ async function onboard(api, email = `user${Math.random()}@example.com`, name = '
   await api('POST', '/auth/signup', { name, email, password: 'correct-horse' });
   const { data } = await api('POST', '/workspaces', {
     name: 'Studio North', region: 'uk', teamSize: '11-50', useCase: 'software',
-    project: { name: 'Website Redesign', key: 'WEB', methodology: 'scrum', withSamples: true },
+    project: { name: 'Website Redesign', key: 'WEB', methodology: 'scrum' },
   });
   const ws = await api('GET', `/workspaces/${data.workspace.slug}`);
   return { slug: data.workspace.slug, ws: ws.data, email };
+}
+
+// Projects start empty, so tests that need work on the board add their own.
+async function addWork(api, pid) {
+  const p = (await api('GET', `/projects/${pid}`)).data;
+  const me = (await api('GET', '/auth/me')).data.user;
+  const sprint = p.sprints.find((s) => s.state === 'active');
+  const done = p.statuses.find((s) => s.category === 'done');
+  const rows = [
+    ['Design new landing page layout', 'story', true, false, 5],
+    ['Fix sign-in validation errors', 'bug', true, false, 3],
+    ['Write onboarding welcome content', 'task', true, true, 2],
+    ['Audit current user journeys', 'task', false, false, 3],
+    ['Define mobile breakpoints', 'story', false, false, 2],
+    ['Map navigation structure', 'story', false, false, 1],
+  ];
+  const out = [];
+  for (const [title, type, inSprint, isDone, storyPoints] of rows) {
+    out.push((await api('POST', `/projects/${pid}/issues`, {
+      title, type, storyPoints, assigneeId: me.id, priority: 'high', dueDate: new Date(Date.now() + 864e5).toISOString().slice(0, 10),
+      sprintId: inSprint && sprint ? sprint.id : null, ...(isDone && { statusId: done.id }),
+    })).data);
+  }
+  return out;
 }
 
 test('signup validates input and rejects duplicates', async () => {
@@ -83,7 +107,7 @@ test('login, session and logout', async () => {
   assert.equal((await api('GET', '/auth/me')).data.user.name, 'Lee');
 });
 
-test('onboarding creates workspace, scrum project, statuses, sprint and sample work', async () => {
+test('onboarding creates workspace, scrum project, statuses and sprint, with no example work', async () => {
   const api = client();
   const { ws } = await onboard(api);
   assert.equal(ws.workspace.locale, 'en-GB');
@@ -92,8 +116,8 @@ test('onboarding creates workspace, scrum project, statuses, sprint and sample w
   assert.deepEqual(project.statuses.map((s) => s.name), ['To do', 'In progress', 'In review', 'Done']);
   assert.equal(project.sprints[0].state, 'active');
   const issues = (await api('GET', `/projects/${project.id}/issues`)).data;
-  assert.ok(issues.length >= 10);
-  assert.ok(issues.every((i) => i.key.startsWith('WEB-')));
+  assert.equal(issues.length, 0);
+  assert.equal(project.sprints[0].goal, '');
 });
 
 test('issue lifecycle: create, update, move, comment, checklist, link, delete', async () => {
@@ -170,6 +194,7 @@ test('sprints: start requires work, complete records velocity and moves leftover
   const api = client();
   const { ws } = await onboard(api);
   const pid = ws.projects[0].id;
+  await addWork(api, pid);
   let project = (await api('GET', `/projects/${pid}`)).data;
   const active = project.sprints.find((s) => s.state === 'active');
   const next = (await api('POST', `/projects/${pid}/sprints`, {})).data;
@@ -187,6 +212,7 @@ test('move: drag between sprint and backlog with project-wide ranking', async ()
   const api = client();
   const { ws } = await onboard(api);
   const pid = ws.projects[0].id;
+  await addWork(api, pid);
   const issues = (await api('GET', `/projects/${pid}/issues`)).data;
   const inSprint = issues.find((i) => i.sprintId && i.type !== 'epic');
   const backlog = issues.filter((i) => !i.sprintId && i.type !== 'epic');
@@ -245,7 +271,8 @@ test('notifications: assignment and @mention notify the right people', async () 
 
 test('search finds by key and text', async () => {
   const api = client();
-  const { slug } = await onboard(api);
+  const { slug, ws } = await onboard(api);
+  await addWork(api, ws.projects[0].id);
   const byKey = (await api('GET', `/workspaces/${slug}/search?q=WEB-102`)).data;
   assert.equal(byKey.issues[0].key, 'WEB-102');
   const byText = (await api('GET', `/workspaces/${slug}/search?q=landing`)).data;
@@ -256,6 +283,7 @@ test('Mars guide answers from live data and drafts actions', async () => {
   const api = client();
   const { slug, ws } = await onboard(api);
   const projectId = ws.projects[0].id;
+  await addWork(api, projectId);
   const ask = (question) => api('POST', `/ai/${slug}/ask`, { question, projectId }).then((r) => r.data);
 
   const focus = await ask('Prioritise my day');
@@ -283,37 +311,30 @@ test('Mars guide answers from live data and drafts actions', async () => {
   assert.match((await ask('plan the next sprint')).text, /points/);
 });
 
-test('every methodology creates a project with the right structure and samples', async () => {
+test('every methodology creates a project with the right structure and no example work', async () => {
   const api = client();
   const { slug } = await onboard(api);
   const keys = { waterfall: 'WF', scrum: 'SC', kanban: 'KB', lean: 'LN', sixsigma: 'SS', prince2: 'PR', scrumban: 'SB', business: 'BZ' };
   for (const [methodology, key] of Object.entries(keys)) {
-    const created = await api('POST', `/workspaces/${slug}/projects`, { name: `${methodology} project`, key, methodology, withSamples: true });
+    const created = await api('POST', `/workspaces/${slug}/projects`, { name: `${methodology} project`, key, methodology });
     assert.equal(created.status, 201, methodology);
     assert.equal(created.data.methodology, methodology);
     const p = (await api('GET', `/projects/${created.data.id}`)).data;
     const issues = (await api('GET', `/projects/${p.id}/issues`)).data;
-    assert.ok(issues.length >= 4, `${methodology} has sample work`);
+    assert.equal(issues.length, 0, `${methodology} starts empty`);
     const reports = (await api('GET', `/projects/${p.id}/reports`)).data;
     assert.equal(reports.cfd.days.length, 30);
     if (['waterfall', 'sixsigma', 'prince2'].includes(methodology)) {
       assert.ok(p.phases.length >= 5, `${methodology} has phases`);
-      assert.equal(p.phases[0].state, 'complete');
-      assert.equal(p.phases[1].state, 'active');
-      assert.ok(issues.some((i) => i.phaseId), `${methodology} items are placed in phases`);
+      assert.equal(p.phases[0].state, 'active');
+      assert.ok(p.phases.slice(1).every((ph) => ph.state === 'pending'));
     } else {
       assert.equal(p.phases.length, 0);
     }
     if (methodology === 'scrum') assert.equal(p.sprints[0].state, 'active');
-    if (methodology === 'scrumban') assert.match(p.sprints[0].name, /Iteration/);
     if (methodology === 'kanban') assert.equal(p.sprints.length, 0);
-    if (methodology === 'sixsigma') {
-      assert.ok(reports.control.points.length > 5);
-      assert.ok(reports.control.ucl > reports.control.mean);
-      assert.equal(typeof p.settings.charter.ctq, 'string');
-    }
-    if (methodology === 'prince2') assert.deepEqual(reports.registers.map((r) => r.kind).sort(), ['issue', 'lesson', 'quality', 'risk']);
-    if (['kanban', 'lean', 'scrumban'].includes(methodology)) assert.ok(reports.cycle.samples.length > 0, `${methodology} cycle time`);
+    assert.deepEqual(p.settings, {});
+    assert.deepEqual(reports.registers, []);
   }
 });
 

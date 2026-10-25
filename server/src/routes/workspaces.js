@@ -21,7 +21,6 @@ const projectInput = z.object({
   methodology: z.enum(METHODOLOGY_IDS).optional(),
   template: z.enum(['scrum', 'kanban', 'business']).optional(),
   color: z.string().regex(/^#[0-9a-fA-F]{6}$/).optional(),
-  withSamples: z.boolean().default(false),
 });
 
 async function slugify(db, name) {
@@ -246,8 +245,7 @@ export function workspaceRoutes({ db, events, hub, mailer, appUrl, production })
   r.post('/:ws/projects', async (req, res) => {
     const { ws } = await loadWorkspace(db, req.user, req.params.ws, 'member');
     const body = parse(projectInput, req.body);
-    const memberIds = body.withSamples ? (await db.all('SELECT user_id FROM memberships WHERE workspace_id = ? ORDER BY joined_at, user_id', ws.id)).map((m) => m.user_id) : [];
-    const project = await createProject(db, { workspaceId: ws.id, actor: req.user, ...body, memberIds });
+    const project = await createProject(db, { workspaceId: ws.id, actor: req.user, ...body });
     await events.record({ workspaceId: ws.id, projectId: project.id, actorId: req.user.id, verb: 'project_created', data: { name: project.name } });
     events.changed(ws.id, ['workspace'], req.user.id);
     res.status(201).json(serializeProject(project));

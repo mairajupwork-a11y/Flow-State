@@ -2,6 +2,7 @@ import { DatabaseSync } from 'node:sqlite';
 import { mkdirSync } from 'node:fs';
 import { dirname } from 'node:path';
 import { recolorSql, recolorSqlV6 } from './schema/recolor.js';
+import { removeSamplesSql } from './schema/remove-samples.js';
 
 /**
  * Schema is applied idempotently on boot. Each entry in MIGRATIONS runs once,
@@ -320,6 +321,8 @@ export const MIGRATIONS = [
   recolorSql(),
   // v6: remaining cool tones move to earth tones.
   recolorSqlV6(),
+  // v7: example work is no longer seeded; remove what earlier versions added.
+  removeSamplesSql(),
 ];
 
 export function openDatabase(file = process.env.DATABASE_FILE || 'data/workmars.db') {

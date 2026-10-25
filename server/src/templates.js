@@ -5,7 +5,8 @@ export const PROJECT_COLORS = ['#a65a2e', '#6f8a68', '#9c6b4e', '#c58f2c', '#7d7
 export const USER_COLORS = ['#8a4a24', '#9c6b4e', '#6f8a68', '#b9563a', '#7d7a4a', '#c58f2c', '#c48a64', '#a0705a'];
 
 /**
- * Starter work per methodology.
+ * Example work earlier versions seeded into new projects, per methodology. No
+ * longer created; kept so schema/remove-samples.js can find and delete it.
  * [type, title, statusIndex, priority, label, dueOffsetDays, estimate, checklist[], description, phaseIndex?, inSprint?]
  * Status indexes refer to the methodology's default columns; phase indexes to its phases.
  */
@@ -100,7 +101,7 @@ export const SAMPLE_WORK = {
   ],
 };
 
-/** Register entries, charter values and measurements seeded with example work. */
+/** Register entries, charter values and measurements that came with the example work (see above). */
 export const SAMPLE_GOVERNANCE = {
   waterfall: {
     charter: { objective: 'Launch a self-service customer portal that cuts support calls by 30%.', scope: 'Account management, billing, support tickets', outOfScope: 'Mobile apps', budget: 180000 },

@@ -44,7 +44,7 @@ export function Onboarding() {
   const [step, setStep] = useState(0);
   const [role, setRole] = useState('');
   const [ws, setWs] = useState({ name: '', region: 'uk', teamSize: '' });
-  const [project, setProject] = useState({ name: '', key: '', keyTouched: false, methodology: '' as MethodologyId | '', withSamples: true });
+  const [project, setProject] = useState({ name: '', key: '', keyTouched: false, methodology: '' as MethodologyId | '' });
   const [emails, setEmails] = useState<string[]>([]);
   const [draft, setDraft] = useState('');
   const [inviteDesignation, setInviteDesignation] = useState('');
@@ -82,7 +82,7 @@ export function Onboarding() {
     try {
       const res = await api.post<Session & { workspace: Workspace; invites?: { email: string; emailed: boolean }[] }>('/workspaces', {
         name: ws.name.trim(), region: ws.region, teamSize: ws.teamSize, useCase: role, jobTitle: role === 'Something else' ? undefined : role,
-        project: { name: project.name.trim(), key, methodology, withSamples: project.withSamples },
+        project: { name: project.name.trim(), key, methodology },
         invites: draft.trim() ? [...emails, ...draft.split(/[\s,;]+/).filter((s) => s.includes('@'))] : emails,
         inviteDesignation: inviteDesignation.trim(),
       });
@@ -185,10 +185,6 @@ export function Onboarding() {
                 <input className="text-input mono" maxLength={6} value={key} onChange={(e) => setProject({ ...project, key: e.target.value.toUpperCase().replace(/[^A-Z0-9]/g, ''), keyTouched: true })} aria-invalid={!/^[A-Z][A-Z0-9]{1,5}$/.test(key)} />
               </label>
             </div>
-            <label className="check-row big">
-              <input type="checkbox" checked={project.withSamples} onChange={(e) => setProject({ ...project, withSamples: e.target.checked })} />
-              <span><b>Add example work</b> so I can explore straight away <small>(easy to delete later)</small></span>
-            </label>
           </section>
         )}
 
