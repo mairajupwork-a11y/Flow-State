@@ -1,7 +1,7 @@
 import { DatabaseSync } from 'node:sqlite';
 import { mkdirSync } from 'node:fs';
 import { dirname } from 'node:path';
-import { recolorSql, recolorSqlV6 } from './schema/recolor.js';
+import { recolorSql, recolorSqlV6, recolorSqlV9 } from './schema/recolor.js';
 import { removeSamplesSql } from './schema/remove-samples.js';
 import { v8Sqlite } from './schema/v8.js';
 
@@ -326,6 +326,8 @@ export const MIGRATIONS = [
   removeSamplesSql(),
   // v8: password resets, attachments, custom fields, automations, push, notification settings, calendar feeds.
   v8Sqlite(),
+  // v9: default colours move to the Paddock palette.
+  recolorSqlV9(),
 ];
 
 export function openDatabase(file = process.env.DATABASE_FILE || 'data/workmars.db') {

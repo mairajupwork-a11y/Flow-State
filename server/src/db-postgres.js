@@ -1,7 +1,7 @@
 import { readFileSync } from 'node:fs';
 import { AsyncLocalStorage } from 'node:async_hooks';
 import pg from 'pg';
-import { recolorSql, recolorSqlV6 } from './schema/recolor.js';
+import { recolorSql, recolorSqlV6, recolorSqlV9 } from './schema/recolor.js';
 import { removeSamplesSql } from './schema/remove-samples.js';
 import { v8Postgres } from './schema/v8.js';
 
@@ -153,6 +153,7 @@ export async function migratePostgres(pool) {
     recolorSqlV6(),
     removeSamplesSql(),
     v8Postgres(),
+    recolorSqlV9(),
   ];
   const VERSION = UPGRADES.length;
   const client = await pool.connect();

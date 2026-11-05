@@ -1,11 +1,22 @@
-import { useRef } from 'react';
+import { useEffect, useRef, useState, type CSSProperties, type ReactNode, type RefObject } from 'react';
 import { Link, Navigate } from 'react-router-dom';
 import { Icon } from '../../components/Icon';
 import { Logo, Mark } from '../../components/Logo';
-import { FloatingRocks, type Rock } from '../../components/FloatingRocks';
 import { useSession } from '../../lib/queries';
 import { useTheme } from '../../lib/theme';
-import { useReveal, useScrollVars, useTypewriter } from '../../lib/motion';
+import { prefersReducedMotion, useReveal } from '../../lib/motion';
+import explorer from '../../assets/mars-explorer.webp';
+import hills from '../../assets/mars-explorer-hills.webp';
+import desert from '../../assets/mars-desert.webp';
+import boulder from '../../assets/rocks/boulder.webp';
+import slab from '../../assets/rocks/slab.webp';
+import shotBoard from '../../assets/shots/board.webp';
+import shotOverview from '../../assets/shots/overview.webp';
+import shotIssue from '../../assets/shots/issue.webp';
+import shotDay from '../../assets/shots/myday.webp';
+import shotReports from '../../assets/shots/reports.webp';
+import shotAutomations from '../../assets/shots/automations.webp';
+import shotGuide from '../../assets/shots/guide.webp';
 
 export function Brand({ to = '/', onDark = false, height = 28 }: { to?: string; onDark?: boolean; height?: number }) {
   return (
@@ -15,276 +26,389 @@ export function Brand({ to = '/', onDark = false, height = 28 }: { to?: string; 
   );
 }
 
-/* Martian rocks drifting around the public page (see FloatingRocks). Kept to
-   the margins so they frame the copy rather than cover it. */
-const HERO_ROCKS: Rock[] = [
-  { art: 'boulder', x: '2%', y: '22%', size: 200, depth: .55, rot: -10, float: 9, phone: { x: '-52px', y: '300px' } },
-  { art: 'pebbleA', x: '13%', y: '9%', size: 56, depth: .95, rot: 12, float: 6.5 },
-  { art: 'pebbleD', x: '17%', y: '47%', size: 34, depth: .2, rot: -30, float: 10, far: true },
-  { art: 'slab', x: '84%', y: '10%', size: 180, depth: .4, rot: 16, float: 11, phone: { x: 'calc(100% - 40px)', y: '0px' } },
-  { art: 'pebbleB', x: '91%', y: '45%', size: 62, depth: .85, rot: -18, float: 7.5 },
-  { art: 'pebbleC', x: '78%', y: '38%', size: 40, depth: .25, rot: 24, float: 9.5, far: true },
-  { art: 'shard', x: '87%', y: '70%', size: 160, depth: .7, rot: -12, float: 8.5 },
-  { art: 'pebbleA', x: '5%', y: '74%', size: 48, depth: .75, rot: 40, float: 7 },
-];
-const FINAL_ROCKS: Rock[] = [
-  { art: 'shard', x: '6%', y: '8%', size: 150, depth: .6, rot: 20, float: 9, phone: { x: '-44px', y: '0px' } },
-  { art: 'pebbleC', x: '20%', y: '62%', size: 50, depth: .9, rot: -14, float: 7 },
-  { art: 'boulder', x: '82%', y: '30%', size: 170, depth: .5, rot: 8, float: 10.5 },
-  { art: 'pebbleD', x: '74%', y: '6%', size: 38, depth: .3, rot: 30, float: 8, far: true },
-  { art: 'pebbleB', x: '93%', y: '74%', size: 46, depth: .8, rot: -26, float: 6.5 },
-];
-const FEATURE_ROCKS: Rock[] = [
-  { art: 'slab', x: '-2%', y: '6%', size: 140, depth: .45, rot: -24, float: 10 },
-  { art: 'pebbleA', x: '95%', y: '18%', size: 44, depth: .8, rot: 18, float: 7 },
+/**
+ * Sets --p (0 → 1) on a tall section as its sticky stage scrolls through the
+ * viewport, so CSS can scale, slide and fade things with the scroll.
+ */
+function useStage(ref: RefObject<HTMLElement | null>) {
+  useEffect(() => {
+    const el = ref.current;
+    if (!el) return;
+    let frame = 0;
+    const update = () => {
+      frame = 0;
+      const r = el.getBoundingClientRect();
+      const span = Math.max(1, r.height - innerHeight);
+      el.style.setProperty('--p', Math.min(1, Math.max(0, -r.top / span)).toFixed(4));
+    };
+    const onScroll = () => { if (!frame) frame = requestAnimationFrame(update); };
+    update();
+    addEventListener('scroll', onScroll, { passive: true });
+    addEventListener('resize', onScroll);
+    return () => { removeEventListener('scroll', onScroll); removeEventListener('resize', onScroll); cancelAnimationFrame(frame); };
+  }, [ref]);
+}
+
+/** Uppercase sans with serif words swapped in: pass serif words wrapped in *asterisks*. */
+function Mixed({ text, className = '' }: { text: string; className?: string }) {
+  return (
+    <span className={className}>
+      {text.split(/(\*[^*]+\*)/g).map((part, i) => (part.startsWith('*') ? <em key={i} className="pd-serif">{part.slice(1, -1)}</em> : part))}
+    </span>
+  );
+}
+
+const MANIFESTO = ['*Redefining* how', 'teams plan *and* ship.', 'Boards, sprints and', 'reports — *free* for', 'every person, *forever*.', 'Built to *win*.'];
+
+const STORY: { img: string; cap: string; w: number; x: number; y: number; tone?: 'full' }[] = [
+  { img: desert, cap: 'Backlog, week 01', w: 300, x: 0, y: 8 },
+  { img: shotBoard, cap: 'Board, week 02', w: 640, x: 360, y: 26, tone: 'full' },
+  { img: hills, cap: 'Review, week 03', w: 280, x: 1060, y: 4 },
+  { img: shotReports, cap: 'Reports, week 04', w: 420, x: 1390, y: 40 },
+  { img: explorer, cap: 'Shipped, week 05', w: 300, x: 1870, y: 10 },
 ];
 
-const TEAMS = ['Product teams', 'Engineering', 'Marketing', 'Operations', 'People & HR', 'Finance', 'Agencies', 'Founders', 'Schools', 'Charities', 'Consultancies', 'Creative studios'];
-const TYPE_PHRASES = ['More clarity', 'More focus', 'More done'];
-
-const FEATURES: [string, string, string, string][] = [
-  ['sparkles', 'Mars guide — your free AI', 'Plans your day, spots blockers, sizes sprints and turns a sentence into a work item. No limits, no bill.', 'violet'],
-  ['board', 'Boards that bend to you', 'Rename, reorder and colour columns, set WIP limits, and drag work with mouse, touch or keyboard.', 'blue'],
-  ['inbox', 'Sprints & backlog', 'Plan, start and complete sprints. Unfinished work rolls forward and velocity is recorded for you.', 'amber'],
-  ['timeline', 'Timeline & calendar', 'See epics and deadlines across the weeks ahead, then drag your attention to what is due next.', 'green'],
-  ['chart', 'Reports that answer questions', 'Burndown, velocity, cycle time and workload — live, honest, and with a table view for every chart.', 'rose'],
-  ['sun', 'My day, just for you', 'A private to-do list beside team work. Morning, afternoon, evening — and gentle roll-over.', 'teal'],
+const METHODS: { name: string; year: string; glyph: ReactNode }[] = [
+  { name: 'Scrum', year: '1995', glyph: <GlyphScrum /> },
+  { name: 'Kanban', year: '1953', glyph: <GlyphKanban /> },
+  { name: 'Waterfall', year: '1970', glyph: <GlyphWaterfall /> },
+  { name: 'Lean', year: '1988', glyph: <GlyphLean /> },
+  { name: 'Six Sigma', year: '1986', glyph: <GlyphSigma /> },
+  { name: 'PRINCE2', year: '1996', glyph: <GlyphPrince /> },
+  { name: 'Scrumban', year: '2009', glyph: <GlyphScrumban /> },
+  { name: 'Your own', year: 'Today', glyph: <GlyphSimple /> },
 ];
+
+const DECK: { img: string; label: string; serif: string }[] = [
+  { img: shotDay, label: 'My', serif: 'day' },
+  { img: shotReports, label: 'Live', serif: 'reports' },
+  { img: shotGuide, label: 'Mars', serif: 'guide' },
+  { img: shotBoard, label: 'Team', serif: 'board' },
+  { img: shotAutomations, label: 'Auto', serif: 'mations' },
+  { img: shotIssue, label: 'Every', serif: 'detail' },
+  { img: shotOverview, label: 'Big', serif: 'picture' },
+];
+
+const TOOLS = ['Google Calendar', 'Gmail', 'Outlook', 'Apple Calendar', 'Supabase', 'PostgreSQL', 'Google sign-in', 'Ollama', 'Any SMTP', 'Web push'];
 
 export function Welcome() {
   const { data } = useSession();
   const root = useRef<HTMLDivElement>(null);
+  const hero = useRef<HTMLElement>(null);
+  const manifesto = useRef<HTMLElement>(null);
+  const story = useRef<HTMLElement>(null);
+  const [menu, setMenu] = useState(false);
+  const [ground, setGround] = useState<'light' | 'dark'>('light');
   const [, setTheme, dark] = useTheme();
   useReveal(root);
-  useScrollVars(root);
-  const typed = useTypewriter(TYPE_PHRASES);
+  useStage(hero);
+  useStage(manifesto);
+  useStage(story);
+
+  // The floating chrome reads the ground beneath it and flips its colours to match.
+  useEffect(() => {
+    let frame = 0;
+    const check = () => {
+      frame = 0;
+      const el = document.elementsFromPoint(innerWidth / 2, 46).map((n) => n.closest<HTMLElement>('[data-ground]')).find(Boolean);
+      // The hero turns from cream to olive as it shrinks, so it reports its own ground.
+      const heroP = Number(hero.current?.style.getPropertyValue('--p') || 0);
+      const inHero = !!el && !!hero.current?.contains(el);
+      setGround(inHero ? (heroP > 0.3 ? 'dark' : 'light') : ((el?.dataset.ground as 'light' | 'dark') ?? 'light'));
+    };
+    const onScroll = () => { if (!frame) frame = requestAnimationFrame(check); };
+    check();
+    addEventListener('scroll', onScroll, { passive: true });
+    return () => { removeEventListener('scroll', onScroll); cancelAnimationFrame(frame); };
+  }, []);
+
+  useEffect(() => {
+    if (!menu) return;
+    const onKey = (e: KeyboardEvent) => e.key === 'Escape' && setMenu(false);
+    addEventListener('keydown', onKey);
+    document.body.style.overflow = 'hidden';
+    return () => { removeEventListener('keydown', onKey); document.body.style.overflow = ''; };
+  }, [menu]);
 
   if (data?.user) return <Navigate to="/" replace />;
+  const go = (id: string) => { setMenu(false); requestAnimationFrame(() => document.getElementById(id)?.scrollIntoView({ behavior: prefersReducedMotion() ? 'auto' : 'smooth' })); };
 
   return (
-    <div className="lp" ref={root}>
-      <div className="lp-progress" aria-hidden="true" />
-      <header className="lp-nav">
-        <div className="lp-wrap lp-nav-in">
-          <Brand to="/welcome" />
-          <nav className="lp-links" aria-label="Main">
-            <a href="#what">About</a>
-            <a href="#how">Product</a>
-            <a href="#features">Features</a>
-            <a href="#guide">AI guide</a>
-          </nav>
-          <div className="lp-actions">
-            <button className="lp-icon" onClick={() => setTheme(dark ? 'light' : 'dark')} aria-label={dark ? 'Switch to light theme' : 'Switch to dark theme'}><Icon name={dark ? 'sun' : 'moon'} size={17} /></button>
-            <Link to="/signup" className="pill pill-ghost lp-hide-sm"><Icon name="play" size={12} /> Try demo</Link>
-            <Link to="/login" className="lp-login">Log in</Link>
-            <Link to="/signup" className="pill pill-solid"><Icon name="sparkles" size={14} /> Get started</Link>
-          </div>
+    <div className="pd" ref={root}>
+      {/* ---------- Floating chrome ---------- */}
+      <header className={`pd-chrome on-${menu ? 'dark' : ground}`}>
+        <Brand to="/welcome" onDark={menu || ground === 'dark'} height={34} />
+        <button className="pd-mono" onClick={() => go('top')} aria-label="Back to top"><Mark size={40} /></button>
+        <div className="pd-chrome-right">
+          <Link to="/login" className="pd-login">Log in</Link>
+          <Link to="/signup" className="pd-btn"><Icon name="bolt" size={16} /> Start free</Link>
+          <button className={`pd-menu-btn ${menu ? 'open' : ''}`} onClick={() => setMenu(!menu)} aria-expanded={menu} aria-controls="pd-menu" aria-label={menu ? 'Close menu' : 'Open menu'}><i /><i /></button>
         </div>
       </header>
 
-      <main>
-        {/* Hero: the headline recedes as the product rises into place */}
-        <section className="lp-hero" data-scroll="exit">
-          <FloatingRocks rocks={HERO_ROCKS} />
-          <div className="lp-wrap lp-hero-copy">
-            <span className="lp-chip enter" style={{ ['--d' as string]: '0ms' }}><span className="dot" /> Free for unlimited users · forever</span>
-            <h1 className="lp-h1">
-              {['Work', 'beautifully,', 'together.'].map((w, i) => <span key={w} className={`enter word ${i === 2 ? 'serif-accent' : ''}`} style={{ ['--d' as string]: `${120 + i * 110}ms` }}>{w}&nbsp;</span>)}
-            </h1>
-            <p className="lp-sub enter" style={{ ['--d' as string]: '480ms' }}><b>WorkMars</b> runs your team’s projects in minutes. Boards, sprints, timelines and a free AI guide — in one calm space.</p>
-            <div className="lp-cta enter" style={{ ['--d' as string]: '600ms' }}>
-              <Link to="/signup" className="pill pill-solid pill-lg">Get started free <Icon name="right" size={15} /></Link>
-              <a href="#how" className="pill pill-ghost pill-lg">See how it works</a>
+      <nav id="pd-menu" className={`pd-menu ${menu ? 'open' : ''}`} aria-hidden={!menu}>
+        <div className="pd-menu-in">
+          <ul>
+            {[['features', 'Features'], ['methods', 'Methods'], ['pricing', 'Pricing'], ['tools', 'Works with'], ['deck', 'Inside WorkMars']].map(([id, label], i) => (
+              <li key={id} style={{ '--i': i } as CSSProperties}><button tabIndex={menu ? 0 : -1} onClick={() => go(id)}><span>0{i + 1}</span>{label}</button></li>
+            ))}
+          </ul>
+          <div className="pd-menu-side">
+            <p className="pd-quote">the workflow tool for teams who would <b>rather ship</b> than <b>pay per seat.</b></p>
+            <div className="row-8">
+              <Link to="/signup" className="pd-btn" tabIndex={menu ? 0 : -1}>Create a free account <Hook size={16} /></Link>
+              <Link to="/login" className="pd-btn ghost" tabIndex={menu ? 0 : -1}>Log in</Link>
             </div>
+            <button className="pd-theme" tabIndex={menu ? 0 : -1} onClick={() => setTheme(dark ? 'light' : 'dark')}><Icon name={dark ? 'sun' : 'moon'} size={15} /> {dark ? 'Light' : 'Dark'} app theme</button>
           </div>
-          <div className="lp-wrap">
-            <div className="lp-shot enter" style={{ ['--d' as string]: '760ms' }}><ProductShot /></div>
-          </div>
-        </section>
+        </div>
+      </nav>
 
-        <section className="lp-trust" aria-label="Who WorkMars is for">
-          <p className="lp-kicker">BUILT FOR EVERY KIND OF TEAM</p>
-          <div className="lp-marquee"><div className="lp-marquee-track">{[...TEAMS, ...TEAMS].map((t, i) => <span key={i}>{t}</span>)}</div></div>
-        </section>
-
-        {/* Stacked sticky cards */}
-        <section className="lp-wrap lp-stack">
-          <article className="lp-card" data-stack id="what">
-            <div className="lp-card-copy">
-              <h2 className="lp-h2">What is<br /><em>WorkMars?</em></h2>
-              <p>Most project tools force you into their complex systems — and charge per seat for the privilege. WorkMars is different. Set up in a minute, invite everyone for free, and let the board, the sprints and your Mars guide keep work moving. Every department, every project, one simple workspace.</p>
-            </div>
-            <div className="lp-card-visual lp-type">
-              <p>More <em>people</em></p>
-              <p>More <em>projects</em></p>
-              <p className="typed" aria-live="polite">{typed}<span className="caret" aria-hidden="true" /></p>
-            </div>
-          </article>
-
-          <article className="lp-card lp-card-grey" data-stack id="how">
-            <div className="lp-card-copy">
-              <h2 className="lp-h2">How does<br /><em>it work?</em></h2>
-              <p>Capture work as cards, drag it across your board, plan sprints in the backlog and watch progress in reports. When you’re unsure what’s next, ask the Mars guide — it reads your real work and tells you.</p>
-              <Link to="/signup" className="pill pill-solid">Try for free <Icon name="right" size={14} /></Link>
-            </div>
-            <div className="lp-card-visual"><MiniBoard /></div>
-          </article>
-
-          <article className="lp-card" data-stack>
-            <div className="lp-card-copy">
-              <h2 className="lp-h2">WorkMars builds<br /><em>around you</em></h2>
-              <p>Tell us your role, your region and how your team likes to work. We set up the right workflow — Scrum, Kanban or simple approvals — with UK, US or Asia date formats, ready in under a minute.</p>
-              <Link to="/signup" className="pill pill-solid">Try for free <Icon name="right" size={14} /></Link>
-            </div>
-            <div className="lp-card-visual lp-idea">
-              <Mark size={34} />
-              <small>ZERO TO RUNNING</small>
-              <p className="serif">From idea<br /><i>to workspace</i></p>
-              <ol className="lp-steps">
-                {['Your role', 'Workspace & region', 'Workflow', 'Invite team'].map((s, i) => <li key={s} style={{ ['--i' as string]: i }}><span>{i + 1}</span>{s}</li>)}
-              </ol>
-            </div>
-          </article>
-        </section>
-
-        <section className="lp-section lp-grey" id="features">
-          <FloatingRocks rocks={FEATURE_ROCKS} />
-          <div className="lp-wrap">
-            <h2 className="lp-h2 xl" data-reveal>You’re in<br /><em>control</em></h2>
-            <div className="lp-features">
-              {FEATURES.map(([icon, title, body, tone], i) => (
-                <article key={title} className="lp-feature" data-reveal style={{ ['--i' as string]: i }}>
-                  <span className={`lp-ficon ${tone}`}><Icon name={icon} size={18} /></span>
-                  <h3>{title}</h3>
-                  <p>{body}</p>
-                </article>
-              ))}
-            </div>
-            <div className="lp-split" data-reveal>
-              <h2 className="lp-h2 xl">One platform<br /><em>zero limits</em></h2>
-              <div>
-                <p className="lp-lead">An open workspace for every team you work with. WorkMars is free for unlimited users, runs on your own server if you like, and keeps your data out of third-party AI services.</p>
-                <Link to="/signup" className="pill pill-solid">Start for free</Link>
+      <main id="top">
+        {/* ---------- Hero: the explorer assembles, then shrinks into an inset card ---------- */}
+        <section className="pd-hero" ref={hero} data-ground="light">
+          <div className="pd-hero-stage" data-ground="light">
+            <div className="pd-marquee" aria-hidden="true">
+              <div className="pd-marquee-track">
+                {[0, 1].map((k) => <span key={k}><Mixed text="Work *beautifully* — together — at *zero* cost — " /></span>)}
               </div>
             </div>
+            <div className="pd-portrait">
+              <div className="pd-bands" aria-hidden="true">
+                {Array.from({ length: 7 }, (_, i) => <span key={i} style={{ '--i': i, backgroundImage: `url(${hills})` } as CSSProperties} />)}
+              </div>
+              <img src={hills} alt="An explorer in a spacesuit between two red hills" className="pd-portrait-img" />
+              <span className="pd-scribble" aria-hidden="true"><Scribble /></span>
+            </div>
+            <h1 className="sr-only">WorkMars: workflow management for unlimited people, at zero cost</h1>
+            <Ticket />
+            <div className="pd-scroll-hint" aria-hidden="true"><span>Scroll</span><i /></div>
           </div>
         </section>
 
-        <section className="lp-section" id="guide">
-          <div className="lp-wrap lp-guide">
-            <div data-reveal>
-              <div className="lp-avatars"><span>AM</span><span>SC</span><span>JW</span><span className="ai"><Icon name="sparkles" size={15} /></span></div>
-              <h2 className="lp-h2">Meet your <em>Mars guide</em></h2>
-              <p className="lp-lead">Ask in plain English. It reads your real board and answers — then does the work when you say yes.</p>
-            </div>
-            <div className="lp-chat" data-reveal style={{ ['--i' as string]: 1 }}>
-              <div className="lp-msg me">Create an urgent bug: checkout fails on Safari, assign to me, due Friday</div>
-              <div className="lp-msg ai"><b>Here’s the draft for WEB.</b><br />Checkout fails on Safari · Bug · Urgent<br />Assignee: you · Due: Fri 17 Oct<span className="lp-msg-btn">Create work item</span></div>
-              <div className="lp-msg me">What needs attention today?</div>
-              <div className="lp-msg ai typing" aria-label="Mars guide is typing"><i /><i /><i /></div>
-              <div className="lp-chat-input"><Icon name="plus" size={14} /> Ask about your work… <span>Free · no limits</span></div>
+        {/* ---------- Manifesto ---------- */}
+        <section className="pd-manifesto" ref={manifesto} data-ground="dark" id="features">
+          <div className="pd-manifesto-stage">
+            <p className="pd-statement" aria-label={MANIFESTO.join(' ').replace(/\*/g, '')}>
+              {(() => {
+                let n = 0;
+                const total = MANIFESTO.join(' ').split(' ').length;
+                return MANIFESTO.map((line, li) => (
+                  <span className="pd-line" key={li} aria-hidden="true">
+                    {line.split(' ').map((word, wi) => {
+                      const serif = word.startsWith('*') || word.endsWith('*') || /^\*.*\*[.,—]*$/.test(word);
+                      const clean = word.replace(/\*/g, '');
+                      const style = { '--i': n++, '--n': total } as CSSProperties;
+                      return <span key={wi} className={`pd-word ${serif ? 'pd-serif' : ''}`} style={style}>{clean} </span>;
+                    })}
+                  </span>
+                ));
+              })()}
+            </p>
+            <div className="pd-callout">
+              <p className="pd-quote light">“we built workmars so <b>every team</b> gets the tools the big teams have, <b>without the invoice.</b>”</p>
+              <span className="pd-sign"><Scribble /></span>
             </div>
           </div>
         </section>
 
-        <section className="lp-section lp-final">
-          <FloatingRocks rocks={FINAL_ROCKS} />
-          <div className="lp-wrap" data-reveal>
-            <h2 className="lp-h2 xl">Ready to grow <em>your team?</em></h2>
-            <p className="lp-lead">Start in under a minute and let WorkMars handle the rest.</p>
-            <Link to="/signup" className="pill pill-solid pill-lg">Try for free <Icon name="right" size={15} /></Link>
+        {/* ---------- Scattered story, pinned and scrolled sideways ---------- */}
+        <section className="pd-story" ref={story} data-ground="light">
+          <div className="pd-story-stage">
+            <div className="pd-story-head">
+              <p className="pd-eyebrow">The season</p>
+              <h2 className="pd-title"><Mixed text="From *idea*" /><br /><Mixed text="to *done*." /></h2>
+              <p className="pd-body">Capture it in the backlog, pull it across the board, review it, ship it. Every step lives in one calm place your whole team can see.</p>
+            </div>
+            <div className="pd-story-viewport"><div className="pd-story-track">
+              {STORY.map((f) => (
+                <figure key={f.cap} className={`pd-frag ${f.tone === 'full' ? 'full' : ''}`} style={{ width: f.w, left: f.x, top: `${f.y}%` } as CSSProperties}>
+                  <figcaption>{f.cap}</figcaption>
+                  <img src={f.img} alt="" loading="lazy" />
+                </figure>
+              ))}
+            </div></div>
+          </div>
+        </section>
+
+        {/* ---------- Team board / My day ---------- */}
+        <section className="pd-teaser" data-ground="light">
+          <img className="pd-cut left" src={boulder} alt="" aria-hidden="true" />
+          <img className="pd-cut right" src={slab} alt="" aria-hidden="true" />
+          <div className="pd-teaser-cols">
+            <div className="pd-teaser-col" data-reveal>
+              <h2 className="pd-split"><em className="pd-serif">Team</em><span>Board</span></h2>
+              <p className="pd-body">Boards, sprints, timelines and reports for the whole team, with as many people as you like. Drag work across, set limits, and see it all move live.</p>
+              <Link to="/signup" className="pd-tile" aria-label="Start a team board"><Hook size={22} /></Link>
+            </div>
+            <div className="pd-teaser-col" data-reveal style={{ '--d': '120ms' } as CSSProperties}>
+              <h2 className="pd-split"><em className="pd-serif">My</em><span>Day</span></h2>
+              <p className="pd-body">A private to-do list next to team work. Morning, afternoon, evening, with gentle roll-over and a free AI guide that plans it for you.</p>
+              <Link to="/signup" className="pd-tile" aria-label="Plan my day"><Hook size={22} /></Link>
+            </div>
+          </div>
+        </section>
+
+        {/* ---------- Full-bleed portrait with a quote ---------- */}
+        <section className="pd-bleed" data-ground="dark">
+          <img src={explorer} alt="An explorer kneeling on a rocky Mars-like plain" loading="lazy" />
+          <div className="pd-bleed-copy" data-reveal>
+            <p className="pd-eyebrow light">Mars guide · free AI</p>
+            <h2 className="pd-title light"><Mixed text="Your *co-pilot*" /><br /><Mixed text="for the *day*." /></h2>
+            <p className="pd-body light">Ask it to plan your day and it reads your real board. Describe a task in plain English and it becomes a work item. No paid AI, no limits.</p>
+          </div>
+        </section>
+
+        {/* ---------- Method hall of fame ---------- */}
+        <section className="pd-hall" id="methods" data-ground="dark">
+          <div className="pd-hall-head" data-reveal>
+            <p className="pd-eyebrow light">Every way of working</p>
+            <h2 className="pd-title light"><Mixed text="Method" /> <Mixed text="*hall of fame*" /></h2>
+          </div>
+          <div className="pd-hall-grid">
+            {METHODS.map((m, i) => (
+              <article key={m.name} className="pd-hcard" data-reveal style={{ '--d': `${(i % 4) * 90}ms` } as CSSProperties}>
+                <div className="pd-hcard-art">{m.glyph}</div>
+                <div className="pd-hcard-tab"><b>{m.name}</b><span>{m.year}</span></div>
+              </article>
+            ))}
+          </div>
+          <div className="pd-hall-cta" data-reveal>
+            <p>Each one sets up the right board, views and reports. Switch any time without losing work.</p>
+            <Link to="/signup" className="pd-btn">Pick your method <Hook size={16} /></Link>
+          </div>
+        </section>
+
+        {/* ---------- Pricing (the "store") ---------- */}
+        <section className="pd-store" id="pricing" data-ground="light">
+          <div className="pd-store-copy" data-reveal>
+            <p className="pd-eyebrow"><Icon name="diamond" size={14} /> WorkMars plan</p>
+            <h2 className="pd-title big"><Mixed text="Every feature" /><br /><Mixed text="*free.*" /></h2>
+            <p className="pd-body">Unlimited people, projects, boards, automations, attachments, custom fields and the AI guide. No seat prices, no hidden tiers, no trial that runs out.</p>
+            <div className="pd-price"><b>$0</b><span>per person<br />per month, forever</span></div>
+            <Link to="/signup" className="pd-btn">Start free <Hook size={16} /></Link>
+          </div>
+          <div className="pd-collage" aria-hidden="true">
+            <img className="c1" src={shotOverview} alt="" loading="lazy" data-reveal />
+            <img className="c2" src={shotIssue} alt="" loading="lazy" data-reveal />
+            <img className="c3" src={shotDay} alt="" loading="lazy" data-reveal />
+          </div>
+        </section>
+
+        {/* ---------- Works with ---------- */}
+        <section className="pd-tools" id="tools" data-ground="light">
+          <div className="pd-tools-head">
+            <span className="pd-brush" aria-hidden="true">Connected</span>
+            <h2 className="pd-title"><Mixed text="Works with *your* tools" /></h2>
+          </div>
+          <div className="pd-logos" aria-label="Works with">
+            <div className="pd-logos-track">
+              {[...TOOLS, ...TOOLS].map((t, i) => <span key={i} aria-hidden={i >= TOOLS.length}>{t}</span>)}
+            </div>
+          </div>
+        </section>
+
+        {/* ---------- Fanned deck ---------- */}
+        <section className="pd-deck" id="deck" data-ground="light">
+          <h2 className="pd-title center"><Mixed text="What's up" /> <Mixed text="*inside*" /></h2>
+          <div className="pd-fan">
+            {DECK.map((c, i) => (
+              <figure key={c.serif} className={`pd-fan-card ${i === (DECK.length - 1) / 2 ? 'center' : ''}`} style={{ '--k': i - (DECK.length - 1) / 2, '--ak': Math.abs(i - (DECK.length - 1) / 2) } as CSSProperties}>
+                <img src={c.img} alt="" loading="lazy" />
+                <figcaption><span>{c.label}</span><em className="pd-serif">{c.serif}</em></figcaption>
+              </figure>
+            ))}
           </div>
         </section>
       </main>
 
-      <footer className="lp-wrap">
-        <div className="lp-footer" data-reveal>
-          <div className="lp-foot-top">
-            <div><Brand to="/welcome" height={30} /><span className="brand-tagline">Build <i>/</i> Automate <i>/</i> Grow</span><p>Free project management for unlimited users. Made in the UK for teams everywhere.</p></div>
-            {[
-              ['Product', [['Features', '#features'], ['How it works', '#how'], ['AI guide', '#guide']]],
-              ['Get started', [['Create account', '/signup'], ['Log in', '/login']]],
-              ['Principles', [['No seat limits', '#features'], ['Your data stays yours', '#guide'], ['Accessible by design', '#features']]],
-            ].map(([title, links]) => (
-              <div key={title as string} className="lp-foot-col">
-                <b>{title}</b>
-                {(links as string[][]).map(([l, href]) => href.startsWith('/') ? <Link key={l} to={href}>{l}</Link> : <a key={l} href={href}>{l}</a>)}
-              </div>
-            ))}
+      {/* ---------- Inset footer on the lime halo ---------- */}
+      <footer className="pd-footer" data-ground="light">
+        <div className="pd-footer-panel" data-ground="dark">
+          <h2 className="pd-title light center"><Mixed text="Always shipping" /><br /><Mixed text="the *work.*" /></h2>
+          <div className="pd-footer-grid">
+            <div>
+              <p className="pd-eyebrow light">Product</p>
+              <button onClick={() => go('features')}>Features</button><button onClick={() => go('methods')}>Methods</button><button onClick={() => go('pricing')}>Pricing</button>
+            </div>
+            <div className="pd-footer-mid">
+              <Mark size={64} />
+              <Link to="/signup" className="pd-btn">Create free account</Link>
+            </div>
+            <div>
+              <p className="pd-eyebrow light">Account</p>
+              <Link to="/signup">Sign up</Link><Link to="/login">Log in</Link><Link to="/forgot-password">Reset password</Link>
+            </div>
           </div>
-          <div className="lp-badges">
-            {[['shield', 'GDPR-minded', 'Data minimised by design'], ['eye', 'WCAG 2.2 AA', 'Keyboard & screen-reader friendly'], ['lock', 'Private AI', 'No third-party AI services'], ['heart', 'Free forever', 'Unlimited users']].map(([icon, t, s]) => (
-              <div key={t}><span><Icon name={icon} size={17} /></span><p><b>{t}</b><small>{s}</small></p></div>
-            ))}
+          <div className="pd-footer-base">
+            <Brand to="/welcome" onDark height={30} />
+            <span>Free for unlimited users · No ads · Your data stays yours</span>
+            <span>© {new Date().getFullYear()} WorkMars</span>
           </div>
-          <p className="lp-copy">© {new Date().getFullYear()} WorkMars. All rights reserved.</p>
         </div>
       </footer>
     </div>
   );
 }
 
-/** A faithful, static rendering of the WorkMars overview for the hero. */
-function ProductShot() {
-  const bars = [38, 52, 46, 61, 58, 74, 69, 86];
+/** The hooked return arrow used on lime buttons and tiles. */
+function Hook({ size = 16 }: { size?: number }) {
   return (
-    <div className="shot" aria-hidden="true">
-      <div className="shot-top">
-        <span className="shot-brand"><Logo height={16} /></span>
-        <span className="shot-search"><Icon name="search" size={11} /> Search or jump to…</span>
-        <span className="shot-pill"><Icon name="sparkles" size={10} /> Mars guide</span>
-        <span className="shot-av">AM</span>
-      </div>
-      <div className="shot-body">
-        <div className="shot-rail">{['grid', 'board', 'inbox', 'timeline', 'calendar', 'chart', 'sun', 'people'].map((i, n) => <span key={i} className={n === 0 ? 'on' : ''}><Icon name={i} size={13} /></span>)}</div>
-        <div className="shot-main">
-          <div className="shot-tabs"><b>Overview</b><span>Board</span><span>Backlog</span><span>Timeline</span><span>Reports</span><em>Last 14 days ▾</em><strong>Create task</strong></div>
-          <div className="shot-metrics">
-            {[['Total work items', '128', '+12 this week'], ['Completed', '86', '67% done'], ['In progress', '24', 'Active now'], ['Sprint', '9 days', 'WEB Sprint 4'], ['Overdue', '2', 'Need attention']].map(([l, v, s]) => (
-              <div key={l}><small>{l}</small><b>{v}</b><i>{s}</i></div>
-            ))}
-          </div>
-          <div className="shot-grid">
-            <div className="shot-panel">
-              <small>Delivered — last 8 weeks</small>
-              <svg viewBox="0 0 240 90" preserveAspectRatio="none">
-                <defs><linearGradient id="shotfill" x1="0" x2="0" y1="0" y2="1"><stop offset="0" stopColor="#a66b48" stopOpacity=".28" /><stop offset="1" stopColor="#a66b48" stopOpacity="0" /></linearGradient></defs>
-                <path d={`M0,90 ${bars.map((b, i) => `L${(i * 240) / 7},${90 - b}`).join(' ')} L240,90 Z`} fill="url(#shotfill)" />
-                <path d={bars.map((b, i) => `${i ? 'L' : 'M'}${(i * 240) / 7},${90 - b}`).join(' ')} fill="none" stroke="#6f3e25" strokeWidth="1.6" />
-                {bars.map((b, i) => <circle key={i} cx={(i * 240) / 7} cy={90 - b} r="2.2" fill="#6f3e25" />)}
-              </svg>
-            </div>
-            <div className="shot-panel">
-              <small>Up next</small>
-              {[['Design landing page', 'High', 'v'], ['Fix sign-in errors', 'Urgent', 'r'], ['Audit user journeys', 'High', 'a'], ['Write release notes', 'Low', 'g']].map(([t, p, c]) => (
-                <div key={t} className="shot-row"><i className={c} />{t}<em className={c}>{p}</em></div>
-              ))}
-            </div>
-            <div className="shot-panel shot-donut">
-              <small>Status mix</small>
-              <svg viewBox="0 0 42 42"><circle cx="21" cy="21" r="15.9" fill="none" stroke="#f7eee2" strokeWidth="6" />
-                {[[67, '#6f3e25', 0], [19, '#88accc', 67], [9, '#e4b768', 86], [5, '#d59388', 95]].map(([v, c, o]) => <circle key={c as string} cx="21" cy="21" r="15.9" fill="none" stroke={c as string} strokeWidth="6" strokeDasharray={`${v} ${100 - (v as number)}`} strokeDashoffset={25 - (o as number)} />)}
-              </svg>
-              <ul><li><i style={{ background: '#6f3e25' }} />Done 67%</li><li><i style={{ background: '#88accc' }} />Doing 19%</li><li><i style={{ background: '#e4b768' }} />Review 9%</li></ul>
-            </div>
-          </div>
-          <div className="shot-ask"><Icon name="sparkles" size={10} /> Ask Mars guide</div>
-        </div>
-      </div>
-    </div>
+    <svg width={size} height={size} viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2.4" strokeLinecap="round" strokeLinejoin="round" aria-hidden="true" className="pd-hook">
+      <path d="M5 4v7a4 4 0 0 0 4 4h11" /><path d="m15 10 5 5-5 5" />
+    </svg>
   );
 }
 
-/** Cards that glide across columns on a loop — the board in miniature. */
-function MiniBoard() {
+/** "Next race" ticket, WorkMars edition. */
+function Ticket() {
   return (
-    <div className="mini" aria-hidden="true">
-      {['To do', 'In progress', 'Done'].map((c, i) => (
-        <div key={c} className="mini-col"><b><i className={`c${i}`} />{c}</b>
-          {[0, 1].map((n) => <span key={n} className="mini-card"><em className={`t${(i + n) % 3}`} /><span /><span className="short" /></span>)}
-        </div>
-      ))}
-      <span className="mini-card mini-fly"><em className="t0" /><span /><span className="short" /></span>
-    </div>
+    <aside className="pd-ticket" aria-label="Now live">
+      <span className="pd-ticket-tab">Now live</span>
+      <svg viewBox="0 0 120 54" className="pd-ticket-map" aria-hidden="true">
+        <path d="M6 44 L6 14 Q6 6 14 6 L40 6 Q48 6 48 14 L48 24 Q48 30 54 30 L84 30 Q92 30 92 22 L92 14 Q92 6 100 6 L106 6 Q114 6 114 14 L114 40 Q114 48 106 48 L14 48 Q6 48 6 44 Z" fill="none" stroke="currentColor" strokeWidth="2.2" strokeLinejoin="round" />
+        <circle cx="48" cy="24" r="3.5" fill="#d2ff00" stroke="currentColor" strokeWidth="1.4" />
+      </svg>
+      <b>WorkMars 1.0</b>
+      <hr />
+      <div className="pd-ticket-foot"><span className="pd-laurel"><Icon name="star" size={13} /></span><small>Free for unlimited users<br />since 2026</small></div>
+    </aside>
   );
+}
+
+/** The hand-drawn signature: a lime scribble. */
+function Scribble() {
+  return (
+    <svg viewBox="0 0 320 110" fill="none" aria-hidden="true">
+      <path className="pd-ink" d="M14 72 C 30 20, 46 18, 40 70 C 36 98, 64 30, 74 36 C 84 42, 70 86, 90 66 C 104 50, 112 30, 120 44 C 128 58, 116 84, 136 72 C 154 60, 150 40, 168 46 C 184 52, 168 78, 190 70 C 214 60, 216 30, 236 40 C 252 48, 240 74, 262 66 C 280 58, 296 46, 306 50 M 60 92 C 120 84, 220 82, 300 88"
+        stroke="#d2ff00" strokeWidth="5" strokeLinecap="round" strokeLinejoin="round" />
+    </svg>
+  );
+}
+
+/* ---------- Method glyphs: line drawings on Visor Black, lime accents ---------- */
+const G = ({ children }: { children: ReactNode }) => <svg viewBox="0 0 200 160" fill="none" stroke="#dde1d2" strokeWidth="2.4" strokeLinecap="round" strokeLinejoin="round" aria-hidden="true">{children}</svg>;
+function GlyphScrum() {
+  return <G><circle cx="100" cy="80" r="46" strokeDasharray="6 7" /><path d="M146 80a46 46 0 0 1-30 43" stroke="#d2ff00" strokeWidth="4" /><path d="M110 118l8 6-2-10" stroke="#d2ff00" strokeWidth="4" /><rect x="84" y="64" width="32" height="32" rx="2" /><path d="M92 80h16M100 72v16" /></G>;
+}
+function GlyphKanban() {
+  return <G>{[34, 84, 134].map((x, i) => <g key={x}><path d={`M${x} 26h32`} /><rect x={x} y="36" width="32" height="20" rx="2" stroke={i === 1 ? '#d2ff00' : '#dde1d2'} strokeWidth={i === 1 ? 3.5 : 2.4} />{i !== 1 && <rect x={x} y="62" width="32" height="20" rx="2" />}{i === 0 && <rect x={x} y="88" width="32" height="20" rx="2" />}</g>)}</G>;
+}
+function GlyphWaterfall() {
+  return <G>{[0, 1, 2, 3].map((i) => <rect key={i} x={30 + i * 34} y={28 + i * 24} width="54" height="16" rx="2" stroke={i === 3 ? '#d2ff00' : '#dde1d2'} strokeWidth={i === 3 ? 3.5 : 2.4} />)}{[0, 1, 2].map((i) => <path key={i} d={`M${78 + i * 34} 44v8h6`} />)}</G>;
+}
+function GlyphLean() {
+  return <G><path d="M24 80h34M78 80h34M132 80h40" /><path d="M58 70l12 10-12 10M112 70l12 10-12 10M166 70l12 10-12 10" stroke="#d2ff00" strokeWidth="3.5" /><circle cx="40" cy="52" r="8" /><circle cx="95" cy="52" r="8" /><circle cx="150" cy="52" r="8" /></G>;
+}
+function GlyphSigma() {
+  return <G><path d="M20 126h160" /><path d="M24 124C60 124 70 34 100 34s40 90 76 90" stroke="#d2ff00" strokeWidth="3.5" /><path d="M64 126V96M136 126V96" strokeDasharray="4 6" /><path d="M100 34v92" strokeDasharray="4 6" /></G>;
+}
+function GlyphPrince() {
+  return <G>{[0, 1, 2, 3].map((i) => <g key={i}><rect x={22 + i * 42} y="60" width="30" height="40" rx="2" stroke={i === 2 ? '#d2ff00' : '#dde1d2'} strokeWidth={i === 2 ? 3.5 : 2.4} />{i < 3 && <path d={`M${56 + i * 42} 80h4`} />}</g>)}<path d="M22 44h156" strokeDasharray="3 6" /><path d="M100 30v14" /></G>;
+}
+function GlyphScrumban() {
+  return <G><circle cx="62" cy="80" r="34" strokeDasharray="6 7" /><path d="M96 80a34 34 0 0 1-20 31" stroke="#d2ff00" strokeWidth="4" />{[118, 152].map((x) => <g key={x}><path d={`M${x} 40h26`} /><rect x={x} y="50" width="26" height="16" rx="2" /><rect x={x} y="72" width="26" height="16" rx="2" /></g>)}</G>;
+}
+function GlyphSimple() {
+  return <G>{[0, 1, 2].map((i) => <g key={i}><rect x="46" y={38 + i * 30} width="18" height="18" rx="2" stroke={i < 2 ? '#d2ff00' : '#dde1d2'} />{i < 2 && <path d={`M50 ${47 + i * 30}l4 4 7-8`} stroke="#d2ff00" strokeWidth="3" />}<path d={`M76 ${47 + i * 30}h${78 - i * 18}`} /></g>)}</G>;
 }

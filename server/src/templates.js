@@ -1,8 +1,8 @@
 /** Colours, plus starter work for each methodology so nobody faces an empty project. */
 
 // Atelier palette: copper, sage, dusk blue, ochre, plum, sea, terracotta, mocha.
-export const PROJECT_COLORS = ['#a65a2e', '#6f8a68', '#9c6b4e', '#c58f2c', '#7d7a4a', '#c48a64', '#b9563a', '#8c6d4f'];
-export const USER_COLORS = ['#8a4a24', '#9c6b4e', '#6f8a68', '#b9563a', '#7d7a4a', '#c58f2c', '#c48a64', '#a0705a'];
+export const PROJECT_COLORS = ['#282c20', '#5b7a1e', '#535450', '#8a9468', '#3f4a2a', '#6b7a56', '#7c8c2a', '#9a9e86'];
+export const USER_COLORS = ['#282c20', '#535450', '#5b7a1e', '#3f4a2a', '#6b7a56', '#7c8c2a', '#4a5a26', '#62645c'];
 
 /**
  * Example work earlier versions seeded into new projects, per methodology. No

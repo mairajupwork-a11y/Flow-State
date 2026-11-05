@@ -12,9 +12,9 @@ import { METHODOLOGIES, methodologyOf } from '../../lib/methodology';
 import { SectionBar, useProjectCtx } from './ProjectLayout';
 import { AutomationsCard, CustomFieldsCard } from './ProjectExtensions';
 
-const COLORS = ['#a65a2e', '#6f8a68', '#9c6b4e', '#c58f2c', '#7d7a4a', '#c48a64', '#b9563a', '#8c6d4f'];
+const COLORS = ['#282c20', '#5b7a1e', '#535450', '#8a9468', '#3f4a2a', '#6b7a56', '#7c8c2a', '#9a9e86'];
 const CATEGORY_LABEL: Record<StatusCategory, string> = { todo: 'To do', progress: 'In progress', done: 'Done' };
-const STATUS_COLORS = ['#a3907d', '#b86a3e', '#c58f2c', '#6f8a68', '#a65a2e', '#c4808a', '#8c6d4f'];
+const STATUS_COLORS = ['#b4b8a5', '#8a9468', '#b2c73a', '#5b7a1e', '#535450', '#6b7a56', '#282c20'];
 
 export default function ProjectSettings() {
   const { project, issues } = useProjectCtx();

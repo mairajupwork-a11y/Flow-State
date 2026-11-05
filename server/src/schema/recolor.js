@@ -33,3 +33,12 @@ export function recolorSql(maps = MAPS) {
 }
 
 export const recolorSqlV6 = () => recolorSql(MAPS_V6);
+
+/** v9: the Paddock palette (olive, moss, tarmac) replaces the earth tones. */
+const MAPS_V9 = {
+  projects: {'#a65a2e': '#282c20', '#6f8a68': '#5b7a1e', '#9c6b4e': '#535450', '#c58f2c': '#8a9468', '#7d7a4a': '#3f4a2a', '#c48a64': '#6b7a56', '#b9563a': '#7c8c2a', '#8c6d4f': '#9a9e86', '#5f7c99': '#535450', '#3f7f78': '#6b7a56', '#7b4a68': '#3f4a2a'},
+  users: {'#8a4a24': '#282c20', '#9c6b4e': '#535450', '#6f8a68': '#5b7a1e', '#b9563a': '#3f4a2a', '#7d7a4a': '#6b7a56', '#c58f2c': '#7c8c2a', '#c48a64': '#4a5a26', '#a0705a': '#62645c', '#5f7c99': '#535450', '#3f7f78': '#6b7a56', '#7b4a68': '#3f4a2a'},
+  statuses: {'#a3907d': '#b4b8a5', '#b86a3e': '#8a9468', '#c58f2c': '#b2c73a', '#6f8a68': '#5b7a1e', '#a65a2e': '#535450', '#c4808a': '#b6402a', '#8c6d4f': '#6b7a56', '#5f7c99': '#8a9468', '#3f7f78': '#6b7a56'},
+};
+
+export const recolorSqlV9 = () => recolorSql(MAPS_V9);

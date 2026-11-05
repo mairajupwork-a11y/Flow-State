@@ -124,10 +124,10 @@ export function Metrics({ issues }: { issues: Issue[] }) {
   const overdue = work.filter((x) => x.dueDate && x.dueDate < today && x.statusCategory !== 'done').length;
   const weekDone = work.filter((x) => x.resolvedAt && daysBetween(x.resolvedAt.slice(0, 10), today) <= 7).length;
   const m: [string, number, string, string, string, string][] = [
-    ['Total work items', work.length, 'All tracked tasks', 'grid', '#f2dcd0', '#d2895f'],
-    ['Completed', done, weekDone ? `${weekDone} finished this week` : 'Moving forward', 'checkcircle', '#eaf3f2', '#448b82'],
-    ['In progress', progress, 'Active workstream', 'loader', '#f0f5f9', '#829fb9'],
-    ['Need attention', overdue, overdue ? 'Overdue items' : 'Nothing overdue', 'flag', '#fdf1ef', '#ce876f'],
+    ['Total work items', work.length, 'All tracked tasks', 'grid', '#e9ead8', '#b6bc75'],
+    ['Completed', done, weekDone ? `${weekDone} finished this week` : 'Moving forward', 'checkcircle', '#ecf1ec', '#537e51'],
+    ['In progress', progress, 'Active workstream', 'loader', '#f2f7f3', '#8caf92'],
+    ['Need attention', overdue, overdue ? 'Overdue items' : 'Nothing overdue', 'flag', '#f9f9f3', '#b9bc81'],
   ];
   return (
     <div className="metric-grid">

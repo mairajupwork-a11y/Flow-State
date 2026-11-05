@@ -19,20 +19,20 @@ export function inviteEmail({ to, inviter, workspace, role, designation = '', ur
     `If you weren't expecting this, you can ignore this email.`,
   ].join('\n');
   const html = `<!doctype html>
-<html><body style="margin:0;background:#f3e9da;font-family:'Plus Jakarta Sans',Segoe UI,Helvetica,Arial,sans-serif;color:#2b160d">
+<html><body style="margin:0;background:#f4f4ed;font-family:'Plus Jakarta Sans',Segoe UI,Helvetica,Arial,sans-serif;color:#282c20">
   <table role="presentation" width="100%" cellpadding="0" cellspacing="0" style="padding:32px 12px">
     <tr><td align="center">
-      <table role="presentation" width="100%" cellpadding="0" cellspacing="0" style="max-width:520px;background:#ffffff;border-radius:16px;padding:32px">
-        <tr><td style="font-size:22px;font-weight:800;letter-spacing:-.5px;color:#2b160d;padding-bottom:20px">Work<span style="color:#a65a2e">Mars</span></td></tr>
+      <table role="presentation" width="100%" cellpadding="0" cellspacing="0" style="max-width:520px;background:#fbfbf6;border-radius:0;padding:32px">
+        <tr><td style="font-size:22px;font-weight:800;letter-spacing:-.5px;color:#282c20;padding-bottom:20px"><span style="font-family:Georgia,serif">WORK</span><span style="color:#282c20">MARS</span></td></tr>
         <tr><td style="font-size:22px;font-weight:700;line-height:1.3;padding-bottom:12px">You're invited to ${esc(workspace)}</td></tr>
-        <tr><td style="font-size:15px;line-height:1.6;color:#785e4c;padding-bottom:24px">
-          <b style="color:#2b160d">${esc(inviter)}</b> has invited you to join <b style="color:#2b160d">${esc(workspace)}</b> on WorkMars ${designation ? `as <b style="color:#2b160d">${esc(designation)}</b>` : `as ${as}`}.
+        <tr><td style="font-size:15px;line-height:1.6;color:#535450;padding-bottom:24px">
+          <b style="color:#282c20">${esc(inviter)}</b> has invited you to join <b style="color:#282c20">${esc(workspace)}</b> on WorkMars ${designation ? `as <b style="color:#282c20">${esc(designation)}</b>` : `as ${as}`}.
         </td></tr>
         <tr><td style="padding-bottom:24px">
-          <a href="${esc(url)}" style="display:inline-block;background:#2b160d;color:#ffffff;text-decoration:none;font-weight:600;font-size:15px;padding:12px 24px;border-radius:999px">Join ${esc(workspace)}</a>
+          <a href="${esc(url)}" style="display:inline-block;background:#d2ff00;color:#282c20;text-decoration:none;font-weight:800;text-transform:uppercase;letter-spacing:.02em;font-size:15px;padding:12px 24px;border-radius:8px">Join ${esc(workspace)}</a>
         </td></tr>
-        <tr><td style="font-size:13px;line-height:1.6;color:#8f7461;padding-bottom:8px">Or paste this link into your browser:<br><a href="${esc(url)}" style="color:#a65a2e;word-break:break-all">${esc(url)}</a></td></tr>
-        <tr><td style="font-size:12px;line-height:1.6;color:#8f7461;border-top:1px solid #eadbc6;padding-top:16px;margin-top:16px">
+        <tr><td style="font-size:13px;line-height:1.6;color:#6c6e64;padding-bottom:8px">Or paste this link into your browser:<br><a href="${esc(url)}" style="color:#5b7a1e;word-break:break-all">${esc(url)}</a></td></tr>
+        <tr><td style="font-size:12px;line-height:1.6;color:#6c6e64;border-top:1px solid #dde1d2;padding-top:16px;margin-top:16px">
           WorkMars is free for everyone. This invitation was sent to ${esc(to)}. If you weren't expecting it, you can ignore this email.
         </td></tr>
       </table>
@@ -45,16 +45,16 @@ export function inviteEmail({ to, inviter, workspace, role, designation = '', ur
 /** Shared frame for simple one-button emails, in the WorkMars palette. */
 function frame({ heading, body, button, url, footer }) {
   return `<!doctype html>
-<html><body style="margin:0;background:#f3e9da;font-family:'Plus Jakarta Sans',Segoe UI,Helvetica,Arial,sans-serif;color:#2b160d">
+<html><body style="margin:0;background:#f4f4ed;font-family:'Plus Jakarta Sans',Segoe UI,Helvetica,Arial,sans-serif;color:#282c20">
   <table role="presentation" width="100%" cellpadding="0" cellspacing="0" style="padding:32px 12px">
     <tr><td align="center">
-      <table role="presentation" width="100%" cellpadding="0" cellspacing="0" style="max-width:520px;background:#fffaf3;border-radius:16px;padding:32px">
-        <tr><td style="font-size:22px;font-weight:800;letter-spacing:-.5px;color:#2b160d;padding-bottom:20px">Work<span style="color:#a65a2e">Mars</span></td></tr>
+      <table role="presentation" width="100%" cellpadding="0" cellspacing="0" style="max-width:520px;background:#fbfbf6;border-radius:0;padding:32px">
+        <tr><td style="font-size:22px;font-weight:800;letter-spacing:-.5px;color:#282c20;padding-bottom:20px"><span style="font-family:Georgia,serif">WORK</span><span style="color:#282c20">MARS</span></td></tr>
         <tr><td style="font-size:21px;font-weight:700;line-height:1.3;padding-bottom:12px">${heading}</td></tr>
-        <tr><td style="font-size:15px;line-height:1.6;color:#785e4c;padding-bottom:24px">${body}</td></tr>
-        ${url ? `<tr><td style="padding-bottom:24px"><a href="${esc(url)}" style="display:inline-block;background:#2b160d;color:#fbf1e3;text-decoration:none;font-weight:600;font-size:15px;padding:12px 24px;border-radius:999px">${button}</a></td></tr>
-        <tr><td style="font-size:13px;line-height:1.6;color:#8f7461;padding-bottom:8px">Or paste this link into your browser:<br><a href="${esc(url)}" style="color:#a65a2e;word-break:break-all">${esc(url)}</a></td></tr>` : ''}
-        <tr><td style="font-size:12px;line-height:1.6;color:#8f7461;border-top:1px solid #eadbc6;padding-top:16px">${footer}</td></tr>
+        <tr><td style="font-size:15px;line-height:1.6;color:#535450;padding-bottom:24px">${body}</td></tr>
+        ${url ? `<tr><td style="padding-bottom:24px"><a href="${esc(url)}" style="display:inline-block;background:#d2ff00;color:#282c20;text-decoration:none;font-weight:800;text-transform:uppercase;letter-spacing:.02em;font-size:15px;padding:12px 24px;border-radius:8px">${button}</a></td></tr>
+        <tr><td style="font-size:13px;line-height:1.6;color:#6c6e64;padding-bottom:8px">Or paste this link into your browser:<br><a href="${esc(url)}" style="color:#5b7a1e;word-break:break-all">${esc(url)}</a></td></tr>` : ''}
+        <tr><td style="font-size:12px;line-height:1.6;color:#6c6e64;border-top:1px solid #dde1d2;padding-top:16px">${footer}</td></tr>
       </table>
     </td></tr>
   </table>

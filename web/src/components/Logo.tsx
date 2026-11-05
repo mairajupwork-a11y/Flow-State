@@ -1,23 +1,22 @@
-import logoLight from '../assets/workmars-logo.webp';
-import logoDark from '../assets/workmars-logo-dark.webp';
-import mark from '../assets/workmars-mark.webp';
-
 /**
- * The WorkMars wordmark. Both versions are rendered and CSS shows the right
- * one: charcoal letters on light surfaces, cream letters in dark mode or on
- * dark panels (`onDark`). The planet and orange are the same in both.
+ * The WorkMars wordmark: WORK in the display serif stacked over MARS in heavy
+ * condensed sans, drawn in the current text colour so it works on Chalk Cream
+ * and Paddock Olive alike (`onDark` just switches the colour).
  */
 export function Logo({ onDark = false, height = 26 }: { onDark?: boolean; height?: number }) {
   return (
-    <span className={`wm-logo ${onDark ? 'on-dark' : ''}`} style={{ height }}>
-      {/* The hidden version is display:none, so screen readers announce the name once. */}
-      <img className="wm-logo-light" src={logoLight} alt="WorkMars" height={height} />
-      <img className="wm-logo-dark" src={logoDark} alt="WorkMars" height={height} />
+    <span className={`wm-word ${onDark ? 'on-dark' : ''}`} style={{ fontSize: height / 1.72 }} role="img" aria-label="WorkMars">
+      <span className="wm-word-top" aria-hidden="true">Work</span>
+      <span className="wm-word-bot" aria-hidden="true">Mars</span>
     </span>
   );
 }
 
-/** The planet on its own: app icon, small spaces and decorative accents. */
+/** The WM monogram: app icon, the guide button and small spaces. */
 export function Mark({ size = 28 }: { size?: number }) {
-  return <img className="wm-mark" src={mark} alt="" aria-hidden="true" width={Math.round(size * 1.27)} height={size} />;
+  return (
+    <span className="wm-mono" style={{ width: size, height: size, fontSize: size * 0.42 }} aria-hidden="true">
+      <b>W</b><i>M</i>
+    </span>
+  );
 }
