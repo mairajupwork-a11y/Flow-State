@@ -27,26 +27,68 @@ export function Brand({ to = '/', onDark = false, height = 28 }: { to?: string; 
 }
 
 /**
- * Sets --p (0 → 1) on a tall section as its sticky stage scrolls through the
- * viewport, so CSS can scale, slide and fade things with the scroll.
+ * One scroll engine for the whole page. Every element marked `data-track`
+ * gets a progress value that eases towards the real scroll position each
+ * frame (so wheel steps glide instead of jumping):
+ *   data-track="stage" → --p: 0 → 1 while a tall section's sticky stage is pinned
+ *   data-track="view"  → --v: 0 → 1 from entering the bottom to leaving the top
+ * `onFrame` runs after each update, with the eased values, for anything that
+ * reads them (the floating chrome).
  */
-function useStage(ref: RefObject<HTMLElement | null>) {
+function useScrollEngine(root: RefObject<HTMLElement | null>, onFrame: (get: (el: Element | null) => number) => void) {
+  const frameRef = useRef(onFrame);
+  frameRef.current = onFrame;
   useEffect(() => {
-    const el = ref.current;
-    if (!el) return;
-    let frame = 0;
-    const update = () => {
-      frame = 0;
-      const r = el.getBoundingClientRect();
-      const span = Math.max(1, r.height - innerHeight);
-      el.style.setProperty('--p', Math.min(1, Math.max(0, -r.top / span)).toFixed(4));
+    const host = root.current;
+    if (!host) return;
+    const items = [...host.querySelectorAll<HTMLElement>('[data-track]')].map((el) => ({ el, stage: el.dataset.track === 'stage', cur: -1 }));
+    const value = new Map<Element, number>();
+    const reduced = prefersReducedMotion();
+    let raf = 0;
+    let last = performance.now();
+    const target = (it: (typeof items)[number]) => {
+      const r = it.el.getBoundingClientRect();
+      const vh = innerHeight;
+      const t = it.stage ? -r.top / Math.max(1, r.height - vh) : (vh - r.top) / (vh + r.height);
+      return Math.min(1, Math.max(0, t));
     };
-    const onScroll = () => { if (!frame) frame = requestAnimationFrame(update); };
-    update();
-    addEventListener('scroll', onScroll, { passive: true });
-    addEventListener('resize', onScroll);
-    return () => { removeEventListener('scroll', onScroll); removeEventListener('resize', onScroll); cancelAnimationFrame(frame); };
-  }, [ref]);
+    const measure = () => {
+      // The story strip travels exactly as far as its content is wider than its window.
+      host.querySelectorAll<HTMLElement>('[data-travel]').forEach((track) => {
+        const view = track.parentElement;
+        if (view) track.style.setProperty('--travel', `${Math.max(0, track.scrollWidth - view.clientWidth)}px`);
+      });
+    };
+    const tick = (now: number) => {
+      raf = 0;
+      // Frame-rate independent easing: about 16% of the remaining distance per 60fps frame.
+      const k = reduced ? 1 : 1 - Math.pow(1 - 0.16, Math.min(4, (now - last) / 16.7));
+      last = now;
+      let moving = false;
+      for (const it of items) {
+        const t = target(it);
+        const next = it.cur < 0 ? t : it.cur + (t - it.cur) * k;
+        const done = Math.abs(t - next) < 0.0004;
+        const v = done ? t : next;
+        if (Math.abs(v - it.cur) > 0.00005) it.el.style.setProperty(it.stage ? '--p' : '--v', v.toFixed(4));
+        it.cur = v;
+        value.set(it.el, v);
+        if (!done) moving = true;
+      }
+      frameRef.current((el) => (el ? value.get(el) ?? 0 : 0));
+      if (moving) raf = requestAnimationFrame(tick);
+    };
+    const wake = () => { if (!raf) { last = performance.now(); raf = requestAnimationFrame(tick); } };
+    const onResize = () => { measure(); wake(); };
+    measure();
+    tick(performance.now());
+    addEventListener('scroll', wake, { passive: true });
+    addEventListener('resize', onResize);
+    // Images and fonts can change widths after the first measure.
+    const late = setTimeout(onResize, 800);
+    document.fonts?.ready.then(onResize).catch(() => {});
+    return () => { removeEventListener('scroll', wake); removeEventListener('resize', onResize); cancelAnimationFrame(raf); clearTimeout(late); };
+  }, [root]);
 }
 
 /** Uppercase sans with serif words swapped in: pass serif words wrapped in *asterisks*. */
@@ -60,12 +102,12 @@ function Mixed({ text, className = '' }: { text: string; className?: string }) {
 
 const MANIFESTO = ['*Redefining* how', 'teams plan *and* ship.', 'Boards, sprints and', 'reports — *free* for', 'every person, *forever*.', 'Built to *win*.'];
 
-const STORY: { img: string; cap: string; w: number; x: number; y: number; tone?: 'full' }[] = [
-  { img: desert, cap: 'Backlog, week 01', w: 300, x: 0, y: 8 },
-  { img: shotBoard, cap: 'Board, week 02', w: 640, x: 360, y: 26, tone: 'full' },
-  { img: hills, cap: 'Review, week 03', w: 280, x: 1060, y: 4 },
-  { img: shotReports, cap: 'Reports, week 04', w: 420, x: 1390, y: 40 },
-  { img: explorer, cap: 'Shipped, week 05', w: 300, x: 1870, y: 10 },
+const STORY: { img: string; cap: string; w: number; x: number; y: number; sp: number; tone?: 'full' }[] = [
+  { img: desert, cap: 'Backlog, week 01', w: 300, x: 0, y: 8, sp: -90 },
+  { img: shotBoard, cap: 'Board, week 02', w: 640, x: 360, y: 26, sp: 40, tone: 'full' },
+  { img: hills, cap: 'Review, week 03', w: 280, x: 1060, y: 4, sp: -130 },
+  { img: shotReports, cap: 'Reports, week 04', w: 420, x: 1390, y: 40, sp: 70 },
+  { img: explorer, cap: 'Shipped, week 05', w: 300, x: 1870, y: 10, sp: -60 },
 ];
 
 const METHODS: { name: string; year: string; glyph: ReactNode }[] = [
@@ -95,32 +137,18 @@ export function Welcome() {
   const { data } = useSession();
   const root = useRef<HTMLDivElement>(null);
   const hero = useRef<HTMLElement>(null);
-  const manifesto = useRef<HTMLElement>(null);
-  const story = useRef<HTMLElement>(null);
-  const [menu, setMenu] = useState(false);
+      const [menu, setMenu] = useState(false);
   const [ground, setGround] = useState<'light' | 'dark'>('light');
   const [, setTheme, dark] = useTheme();
   useReveal(root);
-  useStage(hero);
-  useStage(manifesto);
-  useStage(story);
-
   // The floating chrome reads the ground beneath it and flips its colours to match.
-  useEffect(() => {
-    let frame = 0;
-    const check = () => {
-      frame = 0;
-      const el = document.elementsFromPoint(innerWidth / 2, 46).map((n) => n.closest<HTMLElement>('[data-ground]')).find(Boolean);
-      // The hero turns from cream to olive as it shrinks, so it reports its own ground.
-      const heroP = Number(hero.current?.style.getPropertyValue('--p') || 0);
-      const inHero = !!el && !!hero.current?.contains(el);
-      setGround(inHero ? (heroP > 0.3 ? 'dark' : 'light') : ((el?.dataset.ground as 'light' | 'dark') ?? 'light'));
-    };
-    const onScroll = () => { if (!frame) frame = requestAnimationFrame(check); };
-    check();
-    addEventListener('scroll', onScroll, { passive: true });
-    return () => { removeEventListener('scroll', onScroll); cancelAnimationFrame(frame); };
-  }, []);
+  // The hero turns from cream to olive as it shrinks, so it reports its own ground.
+  useScrollEngine(root, (get) => {
+    const el = document.elementsFromPoint(innerWidth / 2, 46).map((n) => n.closest<HTMLElement>('[data-ground]')).find(Boolean);
+    const inHero = !!el && !!hero.current?.contains(el);
+    const next = inHero ? (get(hero.current) > 0.3 ? 'dark' : 'light') : ((el?.dataset.ground as 'light' | 'dark') ?? 'light');
+    setGround((g) => (g === next ? g : next));
+  });
 
   useEffect(() => {
     if (!menu) return;
@@ -166,7 +194,7 @@ export function Welcome() {
 
       <main id="top">
         {/* ---------- Hero: the explorer assembles, then shrinks into an inset card ---------- */}
-        <section className="pd-hero" ref={hero} data-ground="light">
+        <section className="pd-hero" ref={hero} data-ground="light" data-track="stage">
           <div className="pd-hero-stage" data-ground="light">
             <div className="pd-marquee" aria-hidden="true">
               <div className="pd-marquee-track">
@@ -181,13 +209,15 @@ export function Welcome() {
               <span className="pd-scribble" aria-hidden="true"><Scribble /></span>
             </div>
             <h1 className="sr-only">WorkMars: workflow management for unlimited people, at zero cost</h1>
-            <Ticket />
-            <div className="pd-scroll-hint" aria-hidden="true"><span>Scroll</span><i /></div>
+            <div className="pd-hero-overlay">
+              <Ticket />
+              <div className="pd-scroll-hint" aria-hidden="true"><span>Scroll</span><i /></div>
+            </div>
           </div>
         </section>
 
         {/* ---------- Manifesto ---------- */}
-        <section className="pd-manifesto" ref={manifesto} data-ground="dark" id="features">
+        <section className="pd-manifesto" data-ground="dark" id="features" data-track="stage">
           <div className="pd-manifesto-stage">
             <p className="pd-statement" aria-label={MANIFESTO.join(' ').replace(/\*/g, '')}>
               {(() => {
@@ -213,16 +243,16 @@ export function Welcome() {
         </section>
 
         {/* ---------- Scattered story, pinned and scrolled sideways ---------- */}
-        <section className="pd-story" ref={story} data-ground="light">
+        <section className="pd-story" data-ground="light" data-track="stage">
           <div className="pd-story-stage">
-            <div className="pd-story-head">
+            <div className="pd-story-head" data-reveal>
               <p className="pd-eyebrow">The season</p>
               <h2 className="pd-title"><Mixed text="From *idea*" /><br /><Mixed text="to *done*." /></h2>
               <p className="pd-body">Capture it in the backlog, pull it across the board, review it, ship it. Every step lives in one calm place your whole team can see.</p>
             </div>
-            <div className="pd-story-viewport"><div className="pd-story-track">
+            <div className="pd-story-viewport"><div className="pd-story-track" data-travel style={{ width: Math.max(...STORY.map((f) => f.x + f.w)) + 140 }}>
               {STORY.map((f) => (
-                <figure key={f.cap} className={`pd-frag ${f.tone === 'full' ? 'full' : ''}`} style={{ width: f.w, left: f.x, top: `${f.y}%` } as CSSProperties}>
+                <figure key={f.cap} className={`pd-frag ${f.tone === 'full' ? 'full' : ''}`} style={{ width: f.w, left: f.x, top: `${f.y}%`, '--sp': f.sp } as CSSProperties}>
                   <figcaption>{f.cap}</figcaption>
                   <img src={f.img} alt="" loading="lazy" />
                 </figure>
@@ -232,7 +262,7 @@ export function Welcome() {
         </section>
 
         {/* ---------- Team board / My day ---------- */}
-        <section className="pd-teaser" data-ground="light">
+        <section className="pd-teaser" data-ground="light" data-track="view">
           <img className="pd-cut left" src={boulder} alt="" aria-hidden="true" />
           <img className="pd-cut right" src={slab} alt="" aria-hidden="true" />
           <div className="pd-teaser-cols">
@@ -250,7 +280,7 @@ export function Welcome() {
         </section>
 
         {/* ---------- Full-bleed portrait with a quote ---------- */}
-        <section className="pd-bleed" data-ground="dark">
+        <section className="pd-bleed" data-ground="dark" data-track="view">
           <img src={explorer} alt="An explorer kneeling on a rocky Mars-like plain" loading="lazy" />
           <div className="pd-bleed-copy" data-reveal>
             <p className="pd-eyebrow light">Mars guide · free AI</p>
@@ -260,14 +290,14 @@ export function Welcome() {
         </section>
 
         {/* ---------- Method hall of fame ---------- */}
-        <section className="pd-hall" id="methods" data-ground="dark">
+        <section className="pd-hall" id="methods" data-ground="dark" data-track="view">
           <div className="pd-hall-head" data-reveal>
             <p className="pd-eyebrow light">Every way of working</p>
             <h2 className="pd-title light"><Mixed text="Method" /> <Mixed text="*hall of fame*" /></h2>
           </div>
           <div className="pd-hall-grid">
             {METHODS.map((m, i) => (
-              <article key={m.name} className="pd-hcard" data-reveal style={{ '--d': `${(i % 4) * 90}ms` } as CSSProperties}>
+              <article key={m.name} className="pd-hcard" data-reveal style={{ '--d': `${(i % 4) * 80 + Math.floor(i / 4) * 60}ms` } as CSSProperties}>
                 <div className="pd-hcard-art">{m.glyph}</div>
                 <div className="pd-hcard-tab"><b>{m.name}</b><span>{m.year}</span></div>
               </article>
@@ -280,7 +310,7 @@ export function Welcome() {
         </section>
 
         {/* ---------- Pricing (the "store") ---------- */}
-        <section className="pd-store" id="pricing" data-ground="light">
+        <section className="pd-store" id="pricing" data-ground="light" data-track="view">
           <div className="pd-store-copy" data-reveal>
             <p className="pd-eyebrow"><Icon name="diamond" size={14} /> WorkMars plan</p>
             <h2 className="pd-title big"><Mixed text="Every feature" /><br /><Mixed text="*free.*" /></h2>
@@ -296,9 +326,9 @@ export function Welcome() {
         </section>
 
         {/* ---------- Works with ---------- */}
-        <section className="pd-tools" id="tools" data-ground="light">
-          <div className="pd-tools-head">
-            <span className="pd-brush" aria-hidden="true">Connected</span>
+        <section className="pd-tools" id="tools" data-ground="light" data-track="view">
+          <div className="pd-tools-head" data-reveal>
+            <span className="pd-brush" aria-hidden="true"><span>Connected</span></span>
             <h2 className="pd-title"><Mixed text="Works with *your* tools" /></h2>
           </div>
           <div className="pd-logos" aria-label="Works with">
@@ -309,8 +339,8 @@ export function Welcome() {
         </section>
 
         {/* ---------- Fanned deck ---------- */}
-        <section className="pd-deck" id="deck" data-ground="light">
-          <h2 className="pd-title center"><Mixed text="What's up" /> <Mixed text="*inside*" /></h2>
+        <section className="pd-deck" id="deck" data-ground="light" data-track="view">
+          <h2 className="pd-title center" data-reveal><Mixed text="What's up" /> <Mixed text="*inside*" /></h2>
           <div className="pd-fan">
             {DECK.map((c, i) => (
               <figure key={c.serif} className={`pd-fan-card ${i === (DECK.length - 1) / 2 ? 'center' : ''}`} style={{ '--k': i - (DECK.length - 1) / 2, '--ak': Math.abs(i - (DECK.length - 1) / 2) } as CSSProperties}>
@@ -323,9 +353,9 @@ export function Welcome() {
       </main>
 
       {/* ---------- Inset footer on the lime halo ---------- */}
-      <footer className="pd-footer" data-ground="light">
+      <footer className="pd-footer" data-ground="light" data-track="view">
         <div className="pd-footer-panel" data-ground="dark">
-          <h2 className="pd-title light center"><Mixed text="Always shipping" /><br /><Mixed text="the *work.*" /></h2>
+          <h2 className="pd-title light center" data-reveal><Mixed text="Always shipping" /><br /><Mixed text="the *work.*" /></h2>
           <div className="pd-footer-grid">
             <div>
               <p className="pd-eyebrow light">Product</p>
