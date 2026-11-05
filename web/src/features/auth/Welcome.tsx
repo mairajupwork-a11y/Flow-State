@@ -8,8 +8,6 @@ import { prefersReducedMotion, useReveal } from '../../lib/motion';
 import explorer from '../../assets/mars-explorer.webp';
 import hills from '../../assets/mars-explorer-hills.webp';
 import desert from '../../assets/mars-desert.webp';
-import boulder from '../../assets/rocks/boulder.webp';
-import slab from '../../assets/rocks/slab.webp';
 import shotBoard from '../../assets/shots/board.webp';
 import shotOverview from '../../assets/shots/overview.webp';
 import shotIssue from '../../assets/shots/issue.webp';
@@ -102,13 +100,16 @@ function Mixed({ text, className = '' }: { text: string; className?: string }) {
 
 const MANIFESTO = ['*Redefining* how', 'teams plan *and* ship.', 'Boards, sprints and', 'reports — *free* for', 'every person, *forever*.', 'Built to *win*.'];
 
+/* Fragment sizes and positions are in units (--u) of the screen height, so the
+   strip keeps its composition and always fits its window, on any screen. */
 const STORY: { img: string; cap: string; w: number; x: number; y: number; sp: number; tone?: 'full' }[] = [
-  { img: desert, cap: 'Backlog, week 01', w: 300, x: 0, y: 8, sp: -90 },
-  { img: shotBoard, cap: 'Board, week 02', w: 640, x: 360, y: 26, sp: 40, tone: 'full' },
-  { img: hills, cap: 'Review, week 03', w: 280, x: 1060, y: 4, sp: -130 },
-  { img: shotReports, cap: 'Reports, week 04', w: 420, x: 1390, y: 40, sp: 70 },
-  { img: explorer, cap: 'Shipped, week 05', w: 300, x: 1870, y: 10, sp: -60 },
+  { img: desert, cap: 'Backlog, week 01', w: 34, x: 0, y: 6, sp: -3 },
+  { img: shotBoard, cap: 'Board, week 02', w: 70, x: 40, y: 22, sp: 2, tone: 'full' },
+  { img: hills, cap: 'Review, week 03', w: 30, x: 116, y: 2, sp: -4 },
+  { img: shotReports, cap: 'Reports, week 04', w: 46, x: 152, y: 34, sp: 3 },
+  { img: explorer, cap: 'Shipped, week 05', w: 34, x: 204, y: 8, sp: -2 },
 ];
+const STORY_SPAN = Math.max(...STORY.map((f) => f.x + f.w));
 
 const METHODS: { name: string; year: string; glyph: ReactNode }[] = [
   { name: 'Scrum', year: '1995', glyph: <GlyphScrum /> },
@@ -250,9 +251,9 @@ export function Welcome() {
               <h2 className="pd-title"><Mixed text="From *idea*" /><br /><Mixed text="to *done*." /></h2>
               <p className="pd-body">Capture it in the backlog, pull it across the board, review it, ship it. Every step lives in one calm place your whole team can see.</p>
             </div>
-            <div className="pd-story-viewport"><div className="pd-story-track" data-travel style={{ width: Math.max(...STORY.map((f) => f.x + f.w)) + 140 }}>
+            <div className="pd-story-viewport"><div className="pd-story-track" data-travel style={{ '--span': STORY_SPAN } as CSSProperties}>
               {STORY.map((f) => (
-                <figure key={f.cap} className={`pd-frag ${f.tone === 'full' ? 'full' : ''}`} style={{ width: f.w, left: f.x, top: `${f.y}%`, '--sp': f.sp } as CSSProperties}>
+                <figure key={f.cap} className={`pd-frag ${f.tone === 'full' ? 'full' : ''}`} style={{ '--fw': f.w, '--fx': f.x, top: `${f.y}%`, '--sp': f.sp } as CSSProperties}>
                   <figcaption>{f.cap}</figcaption>
                   <img src={f.img} alt="" loading="lazy" />
                 </figure>
@@ -263,8 +264,6 @@ export function Welcome() {
 
         {/* ---------- Team board / My day ---------- */}
         <section className="pd-teaser" data-ground="light" data-track="view">
-          <img className="pd-cut left" src={boulder} alt="" aria-hidden="true" />
-          <img className="pd-cut right" src={slab} alt="" aria-hidden="true" />
           <div className="pd-teaser-cols">
             <div className="pd-teaser-col" data-reveal>
               <h2 className="pd-split"><em className="pd-serif">Team</em><span>Board</span></h2>
@@ -279,13 +278,57 @@ export function Welcome() {
           </div>
         </section>
 
-        {/* ---------- Full-bleed portrait with a quote ---------- */}
-        <section className="pd-bleed" data-ground="dark" data-track="view">
-          <img src={explorer} alt="An explorer kneeling on a rocky Mars-like plain" loading="lazy" />
-          <div className="pd-bleed-copy" data-reveal>
-            <p className="pd-eyebrow light">Mars guide · free AI</p>
-            <h2 className="pd-title light"><Mixed text="Your *co-pilot*" /><br /><Mixed text="for the *day*." /></h2>
-            <p className="pd-body light">Ask it to plan your day and it reads your real board. Describe a task in plain English and it becomes a work item. No paid AI, no limits.</p>
+        {/* ---------- Mars guide: a live console instead of a photo ---------- */}
+        <section className="pd-guide" data-ground="dark" data-track="view" id="guide">
+          <div className="pd-guide-marquee" aria-hidden="true">
+            <div className="pd-guide-marquee-track">
+              {[0, 1].map((k) => <span key={k}><Mixed text="Plan my day · *write my stand-up* · what needs attention? · *size the sprint* · " /></span>)}
+            </div>
+          </div>
+          <div className="pd-guide-grid">
+            <div className="pd-guide-copy" data-reveal>
+              <p className="pd-eyebrow light"><span className="pd-live" /> Mars guide · free AI</p>
+              <h2 className="pd-title light"><Mixed text="Your *co-pilot*" /><br /><Mixed text="for the *day*." /></h2>
+              <p className="pd-body light">Ask it to plan your day and it reads your real board. Describe a task in plain English and it becomes a work item. No paid AI, no limits.</p>
+              <dl className="pd-stats">
+                <div><dt>$0</dt><dd>for the AI, forever</dd></div>
+                <div><dt>∞</dt><dd>questions a day</dd></div>
+                <div><dt>1</dt><dd>sentence to a work item</dd></div>
+              </dl>
+              <Link to="/signup" className="pd-btn">Try the guide <Hook size={16} /></Link>
+            </div>
+            <div className="pd-console-wrap" data-reveal style={{ '--d': '120ms' } as CSSProperties}>
+              <svg className="pd-orbit" viewBox="0 0 600 600" aria-hidden="true">
+                <ellipse cx="300" cy="300" rx="286" ry="286" />
+                <ellipse cx="300" cy="300" rx="226" ry="226" className="dash" />
+                <ellipse cx="300" cy="300" rx="166" ry="166" />
+                <g className="pd-orbit-sat"><circle cx="300" cy="14" r="7" /></g>
+                <g className="pd-orbit-sat slow"><circle cx="300" cy="134" r="5" /></g>
+              </svg>
+              <div className="pd-console" aria-label="Example conversation with the Mars guide">
+                <div className="pd-console-head"><Mark size={26} /><b>Mars guide</b><span>Reads your workspace · free</span></div>
+                <div className="pd-console-body">
+                  <p className="pd-msg me" style={{ '--t': 0 } as CSSProperties}>Plan my day</p>
+                  <p className="pd-msg typing" style={{ '--t': 1 } as CSSProperties}><i /><i /><i /></p>
+                  <div className="pd-msg ai" style={{ '--t': 2 } as CSSProperties}>
+                    <b>A calm plan for today</b>
+                    <ol>
+                      <li><code>WEB-102</code> Fix sign-in errors <em>urgent · due today</em></li>
+                      <li><code>WEB-106</code> Map navigation <em>high</em></li>
+                      <li><code>WEB-101</code> Landing page layout <em>high</em></li>
+                    </ol>
+                  </div>
+                  <p className="pd-msg me" style={{ '--t': 3 } as CSSProperties}>create an urgent bug: checkout fails on Safari, due Friday</p>
+                  <div className="pd-msg ai draft" style={{ '--t': 4 } as CSSProperties}>
+                    <span className="pd-draft-tag">Draft work item</span>
+                    <b>Checkout fails on Safari</b>
+                    <span className="pd-draft-meta"><i>Bug</i><i>Urgent</i><i>Due Fri</i><i>#payments</i></span>
+                    <span className="pd-draft-btn">Create work item <Hook size={14} /></span>
+                  </div>
+                </div>
+                <div className="pd-console-input"><span className="pd-caret">Ask about your work…</span><span className="pd-send"><Hook size={14} /></span></div>
+              </div>
+            </div>
           </div>
         </section>
 
