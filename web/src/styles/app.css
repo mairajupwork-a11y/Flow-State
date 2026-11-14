@@ -188,7 +188,7 @@ button.notification:hover { background: var(--row-hover); }
 .col-more { margin-left: auto; color: #adb09b; text-decoration: none; }
 .col-count { padding: 0 6px; width: auto; }
 .col-empty { border: 1.5px dashed #eaecdc; border-radius: 12px; padding: 18px 10px; text-align: center; color: #b7b9a8; font-size: 11px; margin-bottom: 8px; }
-.task-card.overlay { cursor: grabbing; transform: rotate(2deg) scale(1.02); box-shadow: 0 22px 50px rgba(87, 89, 62,.22); }
+.task-card.drag-preview { cursor: grabbing; transform: rotate(2deg) scale(1.02); box-shadow: 0 22px 50px rgba(87, 89, 62,.22); }
 .task-card.is-done .task-title { color: #a1a48d; }
 .dragging { opacity: .35; }
 .card-meta .overdue { color: var(--overdue); }
@@ -213,7 +213,7 @@ button.notification:hover { background: var(--row-hover); }
 .backlog-empty { border: 1.5px dashed #eaecdc; border-radius: 11px; padding: 16px; text-align: center; color: #b7b9a8; font-size: 11px; }
 .backlog-row { display: flex; align-items: center; gap: 10px; padding: 9px 10px; border-radius: 10px; background: rgba(251, 252, 249,.9); border: 1px solid #f3f4eb; cursor: grab; font-size: 12px; min-width: 0; }
 .backlog-row:hover { border-color: #e0e2c9; background: var(--row-hover); }
-.backlog-row.overlay { box-shadow: 0 18px 40px rgba(87, 89, 62,.2); cursor: grabbing; }
+.backlog-row.drag-preview { box-shadow: 0 18px 40px rgba(87, 89, 62,.2); cursor: grabbing; }
 .grip { color: #d0d1c6; display: inline-flex; }
 .backlog-title { flex: 1; min-width: 0; overflow: hidden; text-overflow: ellipsis; white-space: nowrap; font-weight: 600; color: var(--text); }
 .backlog-tags { display: flex; gap: 4px; }

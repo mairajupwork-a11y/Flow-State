@@ -1,3 +1,4 @@
+import { uiZoom } from '../lib/zoom';
 import { useCallback, useEffect, useState, type KeyboardEvent, type PointerEvent } from 'react';
 
 const KEY = 'fs_sidebar_width';
@@ -64,7 +65,7 @@ export function SidebarResizer() {
   };
   const onPointerMove = (e: PointerEvent<HTMLDivElement>) => {
     if (!dragging) return;
-    const w = clamp(e.clientX);
+    const w = clamp(e.clientX / uiZoom());
     apply(w);
     setWidth(w);
   };
@@ -73,7 +74,7 @@ export function SidebarResizer() {
     e.currentTarget.releasePointerCapture(e.pointerId);
     setDragging(false);
     document.documentElement.classList.remove('sidebar-resizing');
-    persist(clamp(e.clientX));
+    persist(clamp(e.clientX / uiZoom()));
   };
   const onKeyDown = (e: KeyboardEvent<HTMLDivElement>) => {
     const step = e.shiftKey ? 40 : 16;

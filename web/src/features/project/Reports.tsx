@@ -10,6 +10,7 @@ import { askConfirm, toast } from '../../lib/store';
 import { methodologyOf, term, typeLabel, type MetricId, lower } from '../../lib/methodology';
 import type { Reports as ReportsData } from '../../lib/types';
 import { SectionBar, useProjectCtx } from './ProjectLayout';
+import { uiZoom } from '../../lib/zoom';
 
 /*
  * Charts follow one system: series colours come from validated tokens
@@ -124,7 +125,7 @@ function Burndown({ data }: { data: ReportsData }) {
           {actual.map((p) => { const i = b.points.indexOf(p); return <circle key={p.day} cx={x(i)} cy={y(p.remaining!)} r={hover === i ? 5 : 3.5} className="dot s1" />; })}
           {b.points.map((p, i) => (
             <rect key={p.day} x={x(i) - (W / n) / 2} y={PAD.t} width={W / n} height={H - PAD.t - PAD.b} fill="transparent"
-              onMouseMove={(e) => { setHover(i); setTip({ x: e.nativeEvent.offsetX, y: e.nativeEvent.offsetY, lines: [fmtDate(p.day, locale), `Remaining: ${p.remaining ?? '—'}`, `Ideal: ${p.ideal}`] }); }} />
+              onMouseMove={(e) => { setHover(i); setTip({ x: e.nativeEvent.offsetX / uiZoom(), y: e.nativeEvent.offsetY / uiZoom(), lines: [fmtDate(p.day, locale), `Remaining: ${p.remaining ?? '—'}`, `Ideal: ${p.ideal}`] }); }} />
           ))}
         </svg>
         <Tooltip tip={tip} />
@@ -154,7 +155,7 @@ function Velocity({ data }: { data: ReportsData }) {
               <g key={s.name}>
                 {([['committed', s.committed, 's1', -bw - 1], ['completed', s.completed, 's2', 1]] as const).map(([k, val, cls, dx]) => (
                   <path key={k} className={`bar ${cls}`} d={barPath(cx + dx, y(val), bw, H - PAD.b)}
-                    onMouseMove={(e) => setTip({ x: e.nativeEvent.offsetX, y: e.nativeEvent.offsetY, lines: [s.name, `Committed: ${s.committed}`, `Completed: ${s.completed}`] })} />
+                    onMouseMove={(e) => setTip({ x: e.nativeEvent.offsetX / uiZoom(), y: e.nativeEvent.offsetY / uiZoom(), lines: [s.name, `Committed: ${s.committed}`, `Completed: ${s.completed}`] })} />
                 ))}
                 <text className="axis-x" x={cx} y={H - 8} textAnchor="middle">{s.name.replace(/^.*(Sprint|Iteration)\s*/i, '#')}</text>
               </g>
@@ -191,7 +192,7 @@ function Flow({ data }: { data: ReportsData }) {
           <Axis max={max} />
           {data.flow.map((d, i) => {
             const cx = PAD.l + slot * i + slot / 2;
-            const show = () => (e: React.MouseEvent) => setTip({ x: e.nativeEvent.offsetX, y: e.nativeEvent.offsetY, lines: [fmtDate(d.day, locale), `Created: ${d.created}`, `Resolved: ${d.resolved}`] });
+            const show = () => (e: React.MouseEvent) => setTip({ x: e.nativeEvent.offsetX / uiZoom(), y: e.nativeEvent.offsetY / uiZoom(), lines: [fmtDate(d.day, locale), `Created: ${d.created}`, `Resolved: ${d.resolved}`] });
             return (
               <g key={d.day} onMouseMove={show()}>
                 <rect x={cx - slot / 2} y={PAD.t} width={slot} height={H - PAD.t - PAD.b} fill="transparent" />
@@ -322,7 +323,7 @@ function Cfd({ data }: { data: ReportsData }) {
           {days.map((d, i) => i % step === 0 && <text key={d.day} className="axis-x" x={x(i)} y={H - 8} textAnchor="middle">{fmtDate(d.day, locale)}</text>)}
           {days.map((d, i) => (
             <rect key={d.day} x={x(i) - (W / n) / 2} y={PAD.t} width={W / n} height={H - PAD.t - PAD.b} fill="transparent"
-              onMouseMove={(e) => setTip({ x: e.nativeEvent.offsetX, y: e.nativeEvent.offsetY, lines: [fmtDate(d.day, locale), ...statuses.map((s) => `${s.name}: ${d.counts[s.name] ?? 0}`)] })} />
+              onMouseMove={(e) => setTip({ x: e.nativeEvent.offsetX / uiZoom(), y: e.nativeEvent.offsetY / uiZoom(), lines: [fmtDate(d.day, locale), ...statuses.map((s) => `${s.name}: ${d.counts[s.name] ?? 0}`)] })} />
           ))}
         </svg>
         <Tooltip tip={tip} />
@@ -352,7 +353,7 @@ function CycleScatter({ data }: { data: ReportsData }) {
           {c.p50 != null && <line className="line-ideal" x1={PAD.l} x2={W - PAD.r} y1={y(c.p50)} y2={y(c.p50)} />}
           {c.samples.map((s) => (
             <circle key={s.key} cx={x(s.resolved)} cy={y(s.cycle)} r={4.5} className="dot s1"
-              onMouseMove={(e) => setTip({ x: e.nativeEvent.offsetX, y: e.nativeEvent.offsetY, lines: [s.key, s.title, `Cycle ${s.cycle}d · lead ${s.lead}d`] })} />
+              onMouseMove={(e) => setTip({ x: e.nativeEvent.offsetX / uiZoom(), y: e.nativeEvent.offsetY / uiZoom(), lines: [s.key, s.title, `Cycle ${s.cycle}d · lead ${s.lead}d`] })} />
           ))}
           <text className="axis-x" x={PAD.l} y={H - 8}>{fmtDate(c.samples[0].resolved, locale)}</text>
           <text className="axis-x" x={W - PAD.r} y={H - 8} textAnchor="end">{fmtDate(c.samples[c.samples.length - 1].resolved, locale)}</text>
@@ -381,7 +382,7 @@ function Throughput({ data }: { data: ReportsData }) {
           {t.map((w, i) => {
             const cx = PAD.l + slot * i + slot / 2;
             return (
-              <g key={w.week} onMouseMove={(e) => setTip({ x: e.nativeEvent.offsetX, y: e.nativeEvent.offsetY, lines: [`Week of ${fmtDate(w.week, locale)}`, `${w.count} finished`] })}>
+              <g key={w.week} onMouseMove={(e) => setTip({ x: e.nativeEvent.offsetX / uiZoom(), y: e.nativeEvent.offsetY / uiZoom(), lines: [`Week of ${fmtDate(w.week, locale)}`, `${w.count} finished`] })}>
                 <rect x={cx - slot / 2} y={PAD.t} width={slot} height={H - PAD.t - PAD.b} fill="transparent" />
                 {w.count > 0 && <path className="bar s2" d={barPath(cx - bw / 2, y(w.count), bw, H - PAD.b)} />}
                 <text className="axis-x" x={cx} y={H - 8} textAnchor="middle">{fmtDate(w.week, locale)}</text>
@@ -493,7 +494,7 @@ function ControlChart({ data }: { data: ReportsData }) {
             <path className="line s1" d={c.points.map((p, i) => `${i ? 'L' : 'M'}${x(i)},${y(p.value)}`).join('')} />
             {c.points.map((p, i) => (
               <circle key={p.id} cx={x(i)} cy={y(p.value)} r={signal.has(i) ? 5.5 : 3.5} className="dot s1" style={signal.has(i) ? { fill: '#cf7e71', stroke: '#cf7e71' } : undefined}
-                onMouseMove={(e) => setTip({ x: e.nativeEvent.offsetX, y: e.nativeEvent.offsetY, lines: [fmtDate(p.day, locale), `${p.value}${unit}`, ...(p.note ? [p.note] : []), ...c.signals.filter((s) => s.index === i).map((s) => `⚠ ${s.rule}`)] })} />
+                onMouseMove={(e) => setTip({ x: e.nativeEvent.offsetX / uiZoom(), y: e.nativeEvent.offsetY / uiZoom(), lines: [fmtDate(p.day, locale), `${p.value}${unit}`, ...(p.note ? [p.note] : []), ...c.signals.filter((s) => s.index === i).map((s) => `⚠ ${s.rule}`)] })} />
             ))}
           </svg>
           <Tooltip tip={tip} />

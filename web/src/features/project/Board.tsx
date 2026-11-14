@@ -2,7 +2,7 @@ import { fmtMinutes } from '../../lib/time';
 import { memo, useEffect, useMemo, useState, type FormEvent } from 'react';
 import { Link, useSearchParams } from 'react-router-dom';
 import {
-  DndContext, DragOverlay, KeyboardSensor, PointerSensor, TouchSensor, closestCorners, useDroppable, useSensor, useSensors,
+  DndContext, KeyboardSensor, PointerSensor, TouchSensor, closestCorners, useDroppable, useSensor, useSensors,
   type DragEndEvent, type DragOverEvent, type DragStartEvent,
 } from '@dnd-kit/core';
 import { SortableContext, sortableKeyboardCoordinates, useSortable, verticalListSortingStrategy } from '@dnd-kit/sortable';
@@ -11,6 +11,7 @@ import { useQueryClient } from '@tanstack/react-query';
 import { Icon } from '../../components/Icon';
 import { AssigneeAvatars, Empty, PriorityPill } from '../../components/ui';
 import { announcements } from '../../lib/dnd';
+import { ZoomSafeDragOverlay, unzoom, zoomSafeMeasuring } from '../../lib/zoom';
 import { useMoveIssue, useUpdateIssue, invalidateWork } from '../../lib/queries';
 import { useWs } from '../../lib/workspace';
 import { toast, toastError } from '../../lib/store';
@@ -213,7 +214,7 @@ export function Board() {
           </select>
         </label>
       </div>
-      <DndContext sensors={sensors} collisionDetection={closestCorners} onDragStart={onDragStart} onDragOver={onDragOver} onDragEnd={onDragEnd} onDragCancel={() => setDragging(null)}
+      <DndContext measuring={zoomSafeMeasuring} sensors={sensors} collisionDetection={closestCorners} onDragStart={onDragStart} onDragOver={onDragOver} onDragEnd={onDragEnd} onDragCancel={() => setDragging(null)}
         accessibility={{ announcements: dndAnnouncements, screenReaderInstructions: { draggable: 'To pick up a card, press Space. Use the arrow keys to move it between columns, then press Space again to drop it, or Escape to cancel.' } }}>
         <div className={laneMode === 'none' ? '' : 'swimlanes'}>
           {lanes.map((lane, li) => (
@@ -239,9 +240,9 @@ export function Board() {
           ))}
           {!lanes.length && <BoardEmpty />}
         </div>
-        <DragOverlay dropAnimation={{ duration: 180, easing: 'cubic-bezier(.2,.8,.2,1)' }}>
+        <ZoomSafeDragOverlay dropAnimation={{ duration: 180, easing: 'cubic-bezier(.2,.8,.2,1)' }}>
           {draggingIssue ? <CardBody issue={draggingIssue} overlay /> : null}
-        </DragOverlay>
+        </ZoomSafeDragOverlay>
       </DndContext>
       <p className="hint-line"><Icon name="lightbulb" size={14} /> {m.features.wip ? 'Pull work only when the next column is under its WIP limit. ' : ''}Drag cards between columns{laneMode !== 'none' ? ' and lanes' : ''} — or focus a card, press Space and use the arrow keys. On mobile, long-press to drag.</p>
     </>
@@ -331,7 +332,7 @@ function SortableCard({ issue, disabled }: { issue: Issue; disabled: boolean }) 
   const [, setParams] = useSearchParams();
   const open = () => setParams((p) => { const n = new URLSearchParams(p); n.set('issue', issue.key); return n; });
   return (
-    <div ref={setNodeRef} style={{ transform: CSS.Transform.toString(transform), transition }} className={isDragging ? 'dragging' : ''}
+    <div ref={setNodeRef} style={{ transform: CSS.Transform.toString(unzoom(transform)), transition }} className={isDragging ? 'dragging' : ''}
       {...attributes} {...listeners} role="button" aria-roledescription="Draggable work item" aria-label={`${issue.key} ${issue.title}, ${issue.statusName}`}
       onClick={open} onKeyDown={(e) => { if (e.key === 'Enter') open(); else listeners?.onKeyDown?.(e); }}>
       <CardBody issue={issue} />
@@ -344,7 +345,7 @@ export const CardBody = memo(function CardBody({ issue, overlay = false }: { iss
   const m = methodologyOf(projects.find((p) => p.id === issue.projectId));
   const overdue = issue.dueDate && issue.dueDate < todayISO() && issue.statusCategory !== 'done';
   return (
-    <article className={`task-card ${overlay ? 'overlay' : ''} ${issue.statusCategory === 'done' ? 'is-done' : ''}`}>
+    <article className={`task-card ${overlay ? 'drag-preview' : ''} ${issue.statusCategory === 'done' ? 'is-done' : ''}`}>
       <div className="card-top">
         <span className="issue-id">{issue.key} · {typeLabel(m, issue.type)}</span>
         <PriorityPill priority={issue.priority} />

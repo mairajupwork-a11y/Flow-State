@@ -502,3 +502,11 @@
 .pd-login { white-space: nowrap; }
 @media (max-width: 560px) { .pd-login { height: 46px; padding: 0 12px; font-size: 12px; } .pd-chrome-right { gap: 6px; } }
 @media (max-width: 380px) { .pd-login { display: none; } }
+
+/* ---------- Compact desktop scale ----------
+   Desktops and laptops render everything at 75%, the size that reads best on a large screen
+   (the same as setting the browser to 75% zoom). Phones and tablets stay at full size.
+   Viewport units are compensated at build time (see vite.config.ts). */
+:root { --ui-zoom: 1; }
+@media (min-width: 1200px) and (hover: hover) and (pointer: fine) { :root { --ui-zoom: .75; } }
+html { zoom: var(--ui-zoom); }

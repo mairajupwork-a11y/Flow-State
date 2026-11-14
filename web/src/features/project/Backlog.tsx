@@ -1,12 +1,13 @@
 import { useEffect, useMemo, useState, type FormEvent } from 'react';
 import { useSearchParams } from 'react-router-dom';
-import { DndContext, DragOverlay, KeyboardSensor, PointerSensor, TouchSensor, closestCenter, useDroppable, useSensor, useSensors, type DragEndEvent, type DragOverEvent } from '@dnd-kit/core';
+import { DndContext, KeyboardSensor, PointerSensor, TouchSensor, closestCenter, useDroppable, useSensor, useSensors, type DragEndEvent, type DragOverEvent } from '@dnd-kit/core';
 import { SortableContext, sortableKeyboardCoordinates, useSortable, verticalListSortingStrategy } from '@dnd-kit/sortable';
 import { CSS } from '@dnd-kit/utilities';
 import { useMutation, useQueryClient } from '@tanstack/react-query';
 import { Icon } from '../../components/Icon';
 import { AssigneeAvatars, Modal, StatusPill, TypeIcon, PriorityPill } from '../../components/ui';
 import { announcements } from '../../lib/dnd';
+import { ZoomSafeDragOverlay, unzoom, zoomSafeMeasuring } from '../../lib/zoom';
 import { api } from '../../lib/api';
 import { invalidateWork, useMoveIssue } from '../../lib/queries';
 import { useWs } from '../../lib/workspace';
@@ -105,14 +106,14 @@ export function Backlog() {
     <>
       <SectionBar title={`Backlog & ${W.toLowerCase()}s`} sub={methodologyOf(project).features.sprints === 'optional' ? `${W}s are optional in ${methodologyOf(project).name} — pull straight to Ready, or plan an ${W.toLowerCase()} for rhythm` : 'Drag work to plan, reorder to prioritise'} />
       <FilterBar count={items.length} />
-      <DndContext sensors={sensors} collisionDetection={closestCenter} accessibility={{ announcements: dndAnnouncements }} onDragStart={(e) => setDragging(Number(e.active.id))} onDragOver={onDragOver} onDragEnd={onDragEnd} onDragCancel={() => setDragging(null)}>
+      <DndContext measuring={zoomSafeMeasuring} sensors={sensors} collisionDetection={closestCenter} accessibility={{ announcements: dndAnnouncements }} onDragStart={(e) => setDragging(Number(e.active.id))} onDragOver={onDragOver} onDragEnd={onDragEnd} onDragCancel={() => setDragging(null)}>
         {openSprints.map((s) => (
           <SprintBox key={s.id} sprint={s} ids={containers[cid(s.id)] ?? []} byId={byId} canEdit={canEdit} locale={locale}
             onStart={() => setStarting(s)} onComplete={() => setCompleting(s)} hasActive={openSprints.some((x) => x.state === 'active')} />
         ))}
         <Container id={BACKLOG} title="Backlog" ids={containers[BACKLOG]} byId={byId} canEdit={canEdit} sprintId={null}
           actions={canEdit && <button className="btn btn-light btn-sm" onClick={() => createSprint.mutate()} disabled={createSprint.isPending}><Icon name="plus" size={14} /> Create {W.toLowerCase()}</button>} />
-        <DragOverlay>{dragging != null && byId.get(dragging) ? <Row issue={byId.get(dragging)!} overlay /> : null}</DragOverlay>
+        <ZoomSafeDragOverlay>{dragging != null && byId.get(dragging) ? <Row issue={byId.get(dragging)!} overlay /> : null}</ZoomSafeDragOverlay>
       </DndContext>
       <ClosedSprints sprints={project.sprints.filter((s) => s.state === 'closed')} />
       {starting && <StartSprintModal sprint={starting} points={sumPoints(containers[cid(starting.id)], byId)} onClose={() => setStarting(null)} />}
@@ -189,7 +190,7 @@ function SortableRow({ issue, disabled }: { issue: Issue; disabled: boolean }) {
   const [, setParams] = useSearchParams();
   const open = () => setParams((p) => { const n = new URLSearchParams(p); n.set('issue', issue.key); return n; });
   return (
-    <div ref={setNodeRef} style={{ transform: CSS.Transform.toString(transform), transition }} className={isDragging ? 'dragging' : ''} {...attributes} {...listeners}
+    <div ref={setNodeRef} style={{ transform: CSS.Transform.toString(unzoom(transform)), transition }} className={isDragging ? 'dragging' : ''} {...attributes} {...listeners}
       onClick={open} onKeyDown={(e) => { if (e.key === 'Enter') open(); else listeners?.onKeyDown?.(e); }} aria-label={`${issue.key} ${issue.title}`}>
       <Row issue={issue} />
     </div>
@@ -200,7 +201,7 @@ function Row({ issue, overlay }: { issue: Issue; overlay?: boolean }) {
   const { projects } = useWs();
   const m = methodologyOf(projects.find((p) => p.id === issue.projectId));
   return (
-    <div className={`backlog-row ${overlay ? 'overlay' : ''}`}>
+    <div className={`backlog-row ${overlay ? 'drag-preview' : ''}`}>
       <span className="grip" aria-hidden="true"><Icon name="grip" size={14} /></span>
       <TypeIcon type={issue.type} size={13} />
       <span className="issue-id">{issue.key}</span>

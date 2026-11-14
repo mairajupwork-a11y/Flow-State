@@ -32,6 +32,20 @@ function browserBackend(): Plugin {
   };
 }
 
+/**
+ * Desktops render the whole UI at a compact scale (`html { zoom: var(--ui-zoom) }`).
+ * CSS zoom also shrinks viewport units, so every vh/vw/dvh/svh value is divided by the
+ * zoom here; full-height sidebars and overlays still fill the real screen.
+ */
+const VIEWPORT_UNIT = /(-?\d*\.?\d+)(d|s|l)?(vh|vw|vmin|vmax)\b/g;
+const viewportUnitsFollowZoom = {
+  postcssPlugin: 'workmars-viewport-units-follow-zoom',
+  Declaration(decl: { prop: string; value: string }) {
+    if (decl.prop.startsWith('--ui-zoom') || !decl.value.match(VIEWPORT_UNIT) || decl.value.includes('var(--ui-zoom')) return;
+    decl.value = decl.value.replace(VIEWPORT_UNIT, (m) => `calc(${m} / var(--ui-zoom, 1))`);
+  },
+};
+
 /** Normal builds talk to the real API, so the demo backend is replaced by a stub. */
 function stubDemoBackend(): Plugin {
   return {
@@ -44,6 +58,7 @@ function stubDemoBackend(): Plugin {
 export default defineConfig(({ mode }) => ({
   plugins: [react(), mode === 'demo' ? browserBackend() : stubDemoBackend()],
   base: mode === 'demo' ? './' : '/',
+  css: { postcss: { plugins: [viewportUnitsFollowZoom] } },
   server: {
     // Listen on 127.0.0.1 explicitly: on Windows, Node may otherwise bind only
     // to IPv6 (::1), which some browsers and extensions don't reach.
