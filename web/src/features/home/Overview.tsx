@@ -108,6 +108,7 @@ function describe(a: Activity, name: string) {
     case 'member_joined': return <><b>{d.name}</b> joined the workspace 👋</>;
     case 'project_created': return <><b>{name}</b> created project {d.name}</>;
     case 'dev_linked': return <>{d.provider} linked {d.kind === 'pr' ? 'a pull request' : `a ${d.kind}`} to <i>{a.issueKey}</i></>;
+    case 'imported': return <><b>{name}</b> imported {String(d.count)} work items into {d.name}</>;
     case 'resources_updated': return <><b>{name}</b> updated the team on {d.name}</>;
     case 'workspace_created': return <><b>{name}</b> created this workspace</>;
     case 'deleted': return <><b>{name}</b> deleted {d.key}</>;

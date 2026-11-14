@@ -175,3 +175,32 @@ test('chat channels: only real webhook hosts, a test message, and messages on ne
   assert.match(posted[0].body.text, /commented .*Looks great/);
   assert.equal((await admin('DELETE', `/integrations/${teams.id}`)).status, 200);
 });
+
+test('import: Jira-style rows become work items with matched columns, people, priorities and dates', async () => {
+  const { admin, dev, devUser, web } = await org();
+  const rows = [
+    { key: 'OLD-1', title: 'Checkout fails on Safari', type: 'Bug', status: 'In Progress', priority: 'Highest', assignee: devUser.email, dueDate: '12/Mar/26 10:00 AM', labels: 'payments, safari', storyPoints: '3' },
+    { key: 'OLD-2', title: 'Pricing page copy', type: 'Story', status: 'Done', priority: 'Low', assignee: 'Dev Dan', dueDate: '2026-04-01' },
+    { title: 'Plan Q3', status: 'Backlog', assignee: 'Nobody Here', dueDate: '03/15/2026' },
+    { title: '', status: 'To Do' },
+  ];
+  assert.equal((await dev('POST', `/projects/${web.id}/import`, { rows })).status, 403, 'only managers import');
+  const res = (await admin('POST', `/projects/${web.id}/import`, { rows })).data;
+  assert.equal(res.created, 3);
+  assert.deepEqual(res.skipped, [{ row: 4, reason: 'No title' }]);
+  assert.deepEqual(res.unmatchedPeople, ['Nobody Here']);
+  const items = (await admin('GET', `/projects/${web.id}/issues`)).data;
+  const bug = items.find((i) => i.title === 'Checkout fails on Safari');
+  assert.equal(bug.priority, 'urgent');
+  assert.equal(bug.type, 'bug');
+  assert.equal(bug.statusCategory, 'progress');
+  assert.equal(bug.dueDate, '2026-03-12');
+  assert.deepEqual(bug.assigneeIds, [devUser.id]);
+  assert.deepEqual(bug.labels, ['payments', 'safari']);
+  assert.equal(bug.storyPoints, 3);
+  assert.match(bug.description, /Imported from OLD-1/);
+  const copy = items.find((i) => i.title === 'Pricing page copy');
+  assert.equal(copy.statusCategory, 'done');
+  assert.deepEqual(copy.assigneeIds, [devUser.id], 'matched by name');
+  assert.equal(items.find((i) => i.title === 'Plan Q3').dueDate, '2026-03-15');
+});

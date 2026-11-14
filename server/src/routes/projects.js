@@ -1,4 +1,5 @@
 import { Router } from 'express';
+import { importRows } from '../services/importer.js';
 import { z } from 'zod';
 import { requireUser } from '../auth.js';
 import { HttpError, parse, notFound } from '../http.js';
@@ -25,6 +26,19 @@ export function projectRoutes({ db, events }) {
   r.get('/:id', async (req, res) => {
     const p = await loadProject(db, req.user, req.params.id);
     res.json(await projectPayload(db, p));
+  });
+
+  // ---- Import work from Jira, Trello, Asana, ClickUp or a spreadsheet ----
+  r.post('/:id/import', async (req, res) => {
+    const p = await loadProject(db, req.user, req.params.id, 'manager');
+    const cell = z.union([z.string().max(20_000), z.number(), z.null()]).optional();
+    const { rows } = parse(z.object({ rows: z.array(z.object({
+      title: cell, description: cell, type: cell, status: cell, priority: cell, assignee: cell, dueDate: cell, startDate: cell,
+      labels: z.union([z.string().max(2000), z.array(z.string().max(60)).max(30), z.null()]).optional(), storyPoints: cell, key: cell,
+    })).min(1, 'the file has no rows').max(2000, 'import up to 2,000 rows at a time') }), req.body);
+    const result = await db.tx(() => importRows(db, { project: p, actor: req.user, rows, events }));
+    await db.run('INSERT INTO audit_log (workspace_id, user_id, action, target, detail, ip) VALUES (?, ?, ?, ?, ?, ?)', p.workspace_id, req.user.id, 'project.import', p.name, `${result.created} items`, req.ip ?? '');
+    res.json(result);
   });
 
   // ---- Resources: the people who work on this project ----

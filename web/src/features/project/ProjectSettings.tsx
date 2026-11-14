@@ -12,6 +12,7 @@ import { METHODOLOGIES, methodologyOf } from '../../lib/methodology';
 import { SectionBar, useProjectCtx } from './ProjectLayout';
 import { AutomationsCard, CustomFieldsCard } from './ProjectExtensions';
 import { ResourcesCard } from './ProjectResources';
+import { ImportModal } from './ImportModal';
 
 const COLORS = ['#282c20', '#5b7a1e', '#535450', '#8a9468', '#3f4a2a', '#6b7a56', '#7c8c2a', '#9a9e86'];
 const CATEGORY_LABEL: Record<StatusCategory, string> = { todo: 'To do', progress: 'In progress', done: 'Done' };
@@ -34,6 +35,7 @@ export default function ProjectSettings() {
   const archive = useMutation({ mutationFn: () => api.patch(`/projects/${project.id}`, { archived: true }), onSuccess: () => { refresh(); navigate(base, { replace: true }); toast(`${project.name} archived.`); } });
 
   const [newCol, setNewCol] = useState({ name: '', category: 'progress' as StatusCategory });
+  const [importing, setImporting] = useState(false);
   const submitDetails = (e: FormEvent) => { e.preventDefault(); save.mutate(details); };
   const submitCol = (e: FormEvent) => {
     e.preventDefault();
@@ -90,6 +92,15 @@ export default function ProjectSettings() {
           )}
         </div>
       </div>
+
+      {canEdit && (
+        <div className="content-card import-card" style={{ marginTop: 16 }}>
+          <span className="dash-ico sky"><Icon name="upload" size={16} /></span>
+          <div><h3>Import work items</h3><p className="muted">Bring tasks from Jira, Trello, Asana, ClickUp, Excel or Google Sheets. Columns, people, priorities and dates are matched for you.</p></div>
+          <button className="btn btn-primary" onClick={() => setImporting(true)}><Icon name="upload" size={14} /> Import</button>
+        </div>
+      )}
+      {importing && <ImportModal project={project} onClose={() => setImporting(false)} />}
 
       <div className="two-col" style={{ marginTop: 16 }}>
         <CustomFieldsCard project={project} />
