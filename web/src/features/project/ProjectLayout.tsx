@@ -2,7 +2,7 @@ import { useEffect, useMemo, useRef, useState, type CSSProperties } from 'react'
 import { Navigate, NavLink, Outlet, useLocation, useOutletContext, useParams } from 'react-router-dom';
 import { useIssues, useProject } from '../../lib/queries';
 import { useWs } from '../../lib/workspace';
-import { openCreate, openGuide } from '../../lib/store';
+import { openCreate } from '../../lib/store';
 import { Icon } from '../../components/Icon';
 import { AvatarGroup, ErrorState, PageHeader, PageLoader } from '../../components/ui';
 import { PRIORITIES, PRIORITY_LABEL, todayISO, daysBetween, fmtDate } from '../../lib/format';
@@ -76,7 +76,6 @@ export function ProjectLayout() {
     <>
       <PageHeader eyebrow={eyebrow} title={title} subtitle={subtitle} actions={
         <>
-          <button className="btn btn-light" onClick={() => openGuide()}><Icon name="sparkles" size={16} /><span className="btn-label-mobile">Ask Mars guide</span></button>
           {canEdit && <button className="btn btn-primary" onClick={() => openCreate()}><Icon name="plus" size={16} /> Create task</button>}
         </>
       } />

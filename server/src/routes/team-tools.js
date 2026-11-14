@@ -74,7 +74,7 @@ export function teamToolRoutes({ db, appUrl }) {
   r.get('/share/:token', async (req, res) => {
     const link = /^[\w-]{20,64}$/.test(req.params.token) ? await db.get('SELECT * FROM share_links WHERE token = ? AND revoked_at IS NULL', req.params.token) : null;
     if (!link) throw notFound('Shared project');
-    const p = await db.get('SELECT p.*, w.name AS ws_name FROM projects p JOIN workspaces w ON w.id = p.workspace_id WHERE p.id = ?', link.project_id);
+    const p = await db.get('SELECT p.*, w.name AS ws_name, w.logo AS ws_logo FROM projects p JOIN workspaces w ON w.id = p.workspace_id WHERE p.id = ?', link.project_id);
     if (!p || p.archived) throw notFound('Shared project');
     const statuses = await db.all('SELECT id, name, category, color FROM statuses WHERE project_id = ? ORDER BY position', p.id);
     const issues = await db.all("SELECT i.number, i.title, i.type, i.priority, i.status_id, i.due_date, i.resolved_at FROM issues i WHERE i.project_id = ? AND i.type NOT IN ('epic', 'subtask') ORDER BY i.rank", p.id);
@@ -83,7 +83,7 @@ export function teamToolRoutes({ db, appUrl }) {
     res.setHeader('Cache-Control', 'no-store');
     res.setHeader('X-Robots-Tag', 'noindex');
     res.json({
-      project: { name: p.name, key: p.key, color: p.color, description: p.description, client: p.client ?? '', workspace: p.ws_name },
+      project: { name: p.name, key: p.key, color: p.color, description: p.description, client: p.client ?? '', workspace: p.ws_name, logo: p.ws_logo ?? '' },
       sprint: sprint ? { name: sprint.name, goal: sprint.goal, endDate: sprint.end_date } : null,
       progress: { total: issues.length, done, pct: issues.length ? Math.round((done / issues.length) * 100) : 0 },
       columns: statuses.map((s) => ({ name: s.name, category: s.category, color: s.color, items: issues.filter((i) => i.status_id === s.id).slice(0, 200).map((i) => ({ key: `${p.key}-${i.number}`, title: i.title, type: i.type, priority: i.priority, dueDate: i.due_date, doneAt: i.resolved_at?.slice(0, 10) ?? null })) })),

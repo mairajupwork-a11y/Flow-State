@@ -6,6 +6,7 @@ import { removeSamplesSql } from './schema/remove-samples.js';
 import { v8Sqlite } from './schema/v8.js';
 import { v10Sqlite } from './schema/v10.js';
 import { v11Sqlite } from './schema/v11.js';
+import { v12Sqlite } from './schema/v12.js';
 
 /**
  * Schema is applied idempotently on boot. Each entry in MIGRATIONS runs once,
@@ -334,6 +335,8 @@ export const MIGRATIONS = [
   v10Sqlite(),
   // v11: time tracking, GitHub/GitLab + chat integrations, audit log, two-factor sign-in, client share links.
   v11Sqlite(),
+  // v12: organisation logo on workspaces.
+  v12Sqlite(),
 ];
 
 export function openDatabase(file = process.env.DATABASE_FILE || 'data/workmars.db') {

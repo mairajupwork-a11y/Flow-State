@@ -16,7 +16,7 @@ export function me(u) {
 export function workspace(w, role) {
   return {
     id: w.id, name: w.name, slug: w.slug, region: w.region, locale: w.locale, weekStart: w.week_start,
-    teamSize: w.team_size, useCase: w.use_case, role, createdAt: w.created_at,
+    teamSize: w.team_size, useCase: w.use_case, role, logo: w.logo ?? '', createdAt: w.created_at,
   };
 }
 

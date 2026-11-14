@@ -1,9 +1,8 @@
-import { Mark } from '../components/Logo';
 import { useEffect, useMemo } from 'react';
 import { Outlet, useMatch, useNavigate, useParams, useSearchParams } from 'react-router-dom';
 import { useSession, useWorkspace } from '../lib/queries';
 import { WorkspaceProvider, useRealtime } from '../lib/workspace';
-import { ui, useUi, openCreate, openGuide } from '../lib/store';
+import { ui, useUi, openCreate } from '../lib/store';
 import { ErrorState, PageLoader } from '../components/ui';
 import { Sidebar } from './Sidebar';
 import { SidebarResizer } from './SidebarResizer';
@@ -13,7 +12,6 @@ import { CommandPalette } from './CommandPalette';
 import { ShortcutsHelp } from './ShortcutsHelp';
 import { IssueModal } from '../features/issue/IssueModal';
 import { CreateIssueModal } from '../features/issue/CreateIssueModal';
-import { GuideDrawer } from '../features/ai/GuideDrawer';
 import { CreateProjectModal } from '../features/project/CreateProjectModal';
 import { InviteModal } from '../features/team/InviteModal';
 
@@ -96,9 +94,6 @@ function Shell() {
         </main>
       </div>
       <MobileNav activeKey={routeKey} />
-      <button className="floating-ai" onClick={() => openGuide()} title="Ask the Mars guide (free)" aria-label="Open the Mars guide">
-        <Mark size={30} />
-      </button>
 
       {issueRef && <IssueModal issueRef={issueRef} onClose={closeIssue} />}
       <GlobalModals routeKey={routeKey} />
@@ -108,7 +103,6 @@ function Shell() {
 
 function GlobalModals({ routeKey }: { routeKey?: string }) {
   const create = useUi((s) => s.create);
-  const guideOpen = useUi((s) => s.guideOpen);
   const paletteOpen = useUi((s) => s.paletteOpen);
   const shortcutsOpen = useUi((s) => s.shortcutsOpen);
   const createProjectOpen = useUi((s) => s.createProjectOpen);
@@ -116,7 +110,6 @@ function GlobalModals({ routeKey }: { routeKey?: string }) {
   return (
     <>
       {create && <CreateIssueModal draft={create} routeKey={routeKey} onClose={() => ui.set({ create: null })} />}
-      {guideOpen && <GuideDrawer routeKey={routeKey} onClose={() => ui.set({ guideOpen: false, guidePrompt: null })} />}
       {paletteOpen && <CommandPalette routeKey={routeKey} onClose={() => ui.set({ paletteOpen: false })} />}
       {shortcutsOpen && <ShortcutsHelp onClose={() => ui.set({ shortcutsOpen: false })} />}
       {createProjectOpen && <CreateProjectModal onClose={() => ui.set({ createProjectOpen: false })} />}
@@ -137,7 +130,7 @@ function useShortcuts(slug: string, routeKey: string | undefined, navigate: (to:
         ui.set({ paletteOpen: !ui.get().paletteOpen });
         return;
       }
-      if (typing || e.metaKey || e.ctrlKey || e.altKey || document.body.classList.contains('modal-open') || ui.get().guideOpen || ui.get().paletteOpen) return;
+      if (typing || e.metaKey || e.ctrlKey || e.altKey || document.body.classList.contains('modal-open') || ui.get().paletteOpen) return;
       let projectKey = routeKey;
       try {
         projectKey ??= localStorage.getItem(lastProjectKey(slug)) ?? undefined;

@@ -2,6 +2,7 @@ import { useQuery } from '@tanstack/react-query';
 import { useParams } from 'react-router-dom';
 import { Icon } from '../../components/Icon';
 import { PriorityGlyph } from '../../components/ui';
+import { WorkspaceAvatar } from '../../components/WorkspaceAvatar';
 import { ProgressRing } from '../project/ProjectLayout';
 import { api } from '../../lib/api';
 import { fmtDate } from '../../lib/format';
@@ -9,7 +10,7 @@ import type { Priority } from '../../lib/types';
 import { Brand } from './Welcome';
 
 interface Shared {
-  project: { name: string; key: string; color: string; description: string; client: string; workspace: string };
+  project: { name: string; key: string; color: string; description: string; client: string; workspace: string; logo?: string };
   sprint: { name: string; goal: string; endDate: string | null } | null;
   progress: { total: number; done: number; pct: number };
   columns: { name: string; category: string; color: string; items: { key: string; title: string; type: string; priority: Priority; dueDate: string | null; doneAt: string | null }[] }[];
@@ -31,7 +32,7 @@ export function SharedProject() {
       <section className="content-card share-hero">
         <span className="hero-glyph" style={{ background: project.color }}>{project.key.slice(0, 2)}</span>
         <div className="share-hero-copy">
-          <small>{project.workspace}{project.client ? ` · for ${project.client}` : ''}</small>
+          <small className="share-org">{project.logo && <WorkspaceAvatar name={project.workspace} logo={project.logo} size="sm" />}{project.workspace}{project.client ? ` · for ${project.client}` : ''}</small>
           <h1>{project.name}</h1>
           {sprint && <p><Icon name="bolt" size={13} /> {sprint.name}{sprint.endDate ? ` · ends ${fmtDate(sprint.endDate, 'en-GB', true)}` : ''}{sprint.goal ? ` — ${sprint.goal}` : ''}</p>}
           {!sprint && project.description && <p>{project.description}</p>}

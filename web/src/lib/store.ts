@@ -21,8 +21,6 @@ function createStore<T extends object>(initial: T) {
 export interface CreateDraft { statusId?: number; sprintId?: number | null; phaseId?: number | null; dueDate?: string; type?: IssueType; parentId?: number; epicId?: number; title?: string; projectId?: number }
 
 interface UiState {
-  guideOpen: boolean;
-  guidePrompt: string | null;
   create: CreateDraft | null;
   paletteOpen: boolean;
   shortcutsOpen: boolean;
@@ -32,7 +30,7 @@ interface UiState {
 }
 
 export const ui = createStore<UiState>({
-  guideOpen: false, guidePrompt: null, create: null, paletteOpen: false, shortcutsOpen: false,
+  create: null, paletteOpen: false, shortcutsOpen: false,
   sidebarOpen: false, createProjectOpen: false, inviteOpen: false,
 });
 
@@ -40,7 +38,6 @@ export function useUi<K>(select: (s: UiState) => K): K {
   return useSyncExternalStore(ui.subscribe, () => select(ui.get()));
 }
 
-export const openGuide = (prompt: string | null = null) => ui.set({ guideOpen: true, guidePrompt: prompt });
 export const openCreate = (draft: CreateDraft = {}) => ui.set({ create: draft });
 
 // ---- Toasts ----

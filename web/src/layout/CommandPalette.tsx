@@ -6,7 +6,7 @@ import { Icon } from '../components/Icon';
 import { Avatar, TypeIcon } from '../components/ui';
 import { api } from '../lib/api';
 import { useWs, useCurrentProject } from '../lib/workspace';
-import { openCreate, openGuide, ui } from '../lib/store';
+import { openCreate, ui } from '../lib/store';
 import { setTheme } from '../lib/theme';
 import type { Issue, Project, User } from '../lib/types';
 import { methodologyOf, viewMeta } from '../lib/methodology';
@@ -45,7 +45,6 @@ export function CommandPalette({ routeKey, onClose }: { routeKey?: string; onClo
     const p = project ? `${base}/p/${project.key}` : null;
     const commands: Item[] = [
       ...(canEdit ? [{ id: 'create', icon: <Icon name="plus" size={16} />, label: q.trim() ? `Create work item “${q.trim()}”` : 'Create work item', hint: 'C', group: 'Actions', run: () => { onClose(); openCreate({ title: q.trim() || undefined }); } }] : []),
-      { id: 'guide', icon: <Icon name="sparkles" size={16} />, label: q.trim() ? `Ask the Mars guide: “${q.trim()}”` : 'Ask the Mars guide', group: 'Actions', run: () => { onClose(); openGuide(q.trim() || null); } },
       ...(p ? [
         ...methodologyOf(project).views.map((v) => {
           const meta = viewMeta(methodologyOf(project), v);
@@ -73,8 +72,8 @@ export function CommandPalette({ routeKey, onClose }: { routeKey?: string; onClo
       run: () => { onClose(); navigate(`?issue=${i.key}`); },
     }));
     const people: Item[] = (debounced ? search.data?.people ?? [] : []).map((u) => ({ id: `u${u.id}`, icon: <Avatar user={u} size="sm" />, label: u.name, hint: u.email, group: 'People', run: go(`${base}/team`) }));
-    const alwaysFirst = commands.filter((c) => c.id === 'create' || c.id === 'guide');
-    const rest = [...projectItems, ...commands.filter((c) => c.id !== 'create' && c.id !== 'guide')].filter((c) => matches(c.label));
+    const alwaysFirst = commands.filter((c) => c.id === 'create');
+    const rest = [...projectItems, ...commands.filter((c) => c.id !== 'create')].filter((c) => matches(c.label));
     return ql ? [...issues, ...rest, ...people, ...alwaysFirst] : [...alwaysFirst, ...rest];
     // eslint-disable-next-line react-hooks/exhaustive-deps
   }, [q, debounced, search.data, projects, project, base, canEdit]);

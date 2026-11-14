@@ -5,10 +5,11 @@ import { api } from '../../lib/api';
 import { keys, useSession } from '../../lib/queries';
 import { Icon } from '../../components/Icon';
 import { PageLoader } from '../../components/ui';
+import { WorkspaceAvatar } from '../../components/WorkspaceAvatar';
 import type { Session } from '../../lib/types';
 import { Brand } from './Welcome';
 
-interface InvitePreview { workspaceName: string; workspaceSlug: string; inviter: string; email: string; role: string; designation?: string; members: number }
+interface InvitePreview { workspaceName: string; workspaceLogo?: string; workspaceSlug: string; inviter: string; email: string; role: string; designation?: string; members: number }
 
 export function AcceptInvite() {
   const { token = '' } = useParams();
@@ -21,6 +22,17 @@ export function AcceptInvite() {
 
   if (session.isLoading || invite.isLoading) return <div className="boot"><PageLoader /></div>;
   const next = `/invite/${token}`;
+
+  // Signed in as someone else than the person this email invitation was sent to (e.g. two test accounts in one browser).
+  const signedInEmail = session.data?.user?.email?.toLowerCase() ?? '';
+  const wrongAccount = !!session.data?.user && !!invite.data?.email && invite.data.email.toLowerCase() !== signedInEmail;
+  async function switchAccount() {
+    setBusy(true);
+    await api.post('/auth/logout', {}).catch(() => {});
+    qc.setQueryData(keys.session, { user: null, workspaces: [] });
+    qc.removeQueries({ predicate: (q) => q.queryKey[0] !== 'invite' });
+    navigate(`/signup?next=${encodeURIComponent(next)}&email=${encodeURIComponent(invite.data!.email)}`, { replace: true });
+  }
 
   async function accept() {
     setBusy(true);
@@ -46,16 +58,25 @@ export function AcceptInvite() {
           </>
         ) : (
           <>
-            <div className="invite-ws"><span className="ws-avatar lg">{invite.data.workspaceName[0]?.toUpperCase()}</span></div>
+            <div className="invite-ws"><WorkspaceAvatar name={invite.data.workspaceName} logo={invite.data.workspaceLogo} size="lg" /></div>
             <h1>Join {invite.data.workspaceName}</h1>
             <p className="page-subtitle"><b>{invite.data.inviter}</b> invited you to collaborate as {invite.data.designation ? <b>{invite.data.designation}</b> : <>a <b>{invite.data.role}</b></>}. {invite.data.members} {invite.data.members === 1 ? 'person is' : 'people are'} already here.</p>
             {error && <div className="form-error" role="alert">{error}</div>}
-            {session.data?.user ? (
+            {wrongAccount ? (
+              <div className="stack-8">
+                <div className="form-note invite-mismatch" role="alert">
+                  <Icon name="lock" size={15} />
+                  <span>This invitation was sent to <b>{invite.data.email}</b>, but you’re signed in as <b>{session.data!.user!.name}</b> ({session.data!.user!.email}).</span>
+                </div>
+                <button className="btn btn-primary btn-block btn-xl" onClick={switchAccount} disabled={busy}>Sign out and continue as {invite.data.email} <Icon name="right" size={16} /></button>
+                <Link className="btn btn-light btn-block" to="/">Stay signed in as {session.data!.user!.name.split(' ')[0]}</Link>
+              </div>
+            ) : session.data?.user ? (
               <button className="btn btn-primary btn-block btn-xl" onClick={accept} disabled={busy}>{busy ? 'Joining…' : `Join as ${session.data.user.name}`} <Icon name="right" size={16} /></button>
             ) : (
               <div className="stack-8">
                 <Link className="btn btn-primary btn-block btn-xl" to={`/signup?next=${encodeURIComponent(next)}${invite.data.email ? `&email=${encodeURIComponent(invite.data.email)}` : ''}`}>Create a free account to join</Link>
-                <Link className="btn btn-light btn-block" to={`/login?next=${encodeURIComponent(next)}`}>I already have an account</Link>
+                <Link className="btn btn-light btn-block" to={`/login?next=${encodeURIComponent(next)}${invite.data.email ? `&email=${encodeURIComponent(invite.data.email)}` : ''}`}>I already have an account</Link>
               </div>
             )}
             <p className="auth-legal">WorkMars is free for unlimited users — joining costs nothing.</p>

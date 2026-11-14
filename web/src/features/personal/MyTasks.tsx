@@ -4,7 +4,7 @@ import { Icon } from '../../components/Icon';
 import { Empty, ErrorState, PageHeader, PageLoader, PriorityPill, StatusPill, TypeIcon } from '../../components/ui';
 import { useMyIssues } from '../../lib/queries';
 import { useWs } from '../../lib/workspace';
-import { openCreate, openGuide } from '../../lib/store';
+import { openCreate } from '../../lib/store';
 import { daysBetween, fmtDate, todayISO, PRIORITY_RANK } from '../../lib/format';
 import type { Issue } from '../../lib/types';
 
@@ -54,7 +54,6 @@ export function MyTasks() {
     <>
       <PageHeader eyebrow="Personal / Assigned to me" title="Your work, clearly in view." subtitle="Everything assigned to you across every project — grouped by when it’s due."
         actions={<>
-          <button className="btn btn-light" onClick={() => openGuide('Prioritise my day')}><Icon name="sparkles" size={16} /><span className="btn-label-mobile">Prioritise for me</span></button>
           {canEdit && <button className="btn btn-primary" onClick={() => openCreate()}><Icon name="plus" size={16} /> Create task</button>}
         </>} />
       <div className="section-bar">

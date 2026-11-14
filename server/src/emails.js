@@ -15,7 +15,7 @@ export function inviteEmail({ to, inviter, workspace, role, designation = '', ur
     ``,
     `Accept the invitation: ${url}`,
     ``,
-    `WorkMars is free for everyone — boards, sprints, timelines and a free AI guide.`,
+    `WorkMars is free for everyone — boards, sprints, timelines, time tracking and reports.`,
     `If you weren't expecting this, you can ignore this email.`,
   ].join('\n');
   const html = `<!doctype html>

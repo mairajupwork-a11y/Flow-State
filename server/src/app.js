@@ -6,13 +6,11 @@ import { createSigner, sessionMiddleware } from './auth.js';
 import { errorHandler, HttpError } from './http.js';
 import { createHub } from './realtime.js';
 import { createEvents } from './events.js';
-import { createGuide, createOllama } from './ai/guide.js';
 import { authRoutes } from './routes/auth.js';
 import { workspaceRoutes, inviteRoutes } from './routes/workspaces.js';
 import { projectRoutes } from './routes/projects.js';
 import { issueRoutes } from './routes/issues.js';
 import { todoRoutes, notificationRoutes } from './routes/personal.js';
-import { aiRoutes } from './routes/ai.js';
 import { recoveryRoutes } from './routes/recovery.js';
 import { fileRoutes } from './routes/files.js';
 import { extensionRoutes } from './routes/extensions.js';
@@ -30,13 +28,12 @@ const CLIENT_HEADERS = ['workmars', 'flowstate'];
  * Builds the HTTP app. Kept free of side effects (no listen, no env reads
  * beyond defaults) so tests can spin up isolated instances.
  */
-export function createApp({ db, secret, production = false, staticDir = null, ollama = null, google = null, mailer = null, push = null, appUrl = null, trustProxy = production ? 1 : false, log = console, fetcher = globalThis.fetch }) {
+export function createApp({ db, secret, production = false, staticDir = null, google = null, mailer = null, push = null, appUrl = null, trustProxy = production ? 1 : false, log = console, fetcher = globalThis.fetch }) {
   const app = express();
   const hub = createHub();
   const events = createEvents(db, hub, createDelivery({ db, mailer, push, appUrl, log }), createChatRelay({ db, fetcher, appUrl, log }));
-  const guide = createGuide({ db, llm: ollama?.url ? createOllama(ollama) : null });
   const signer = createSigner(secret);
-  const ctx = { db, events, hub, guide, signer, production, google, mailer, push, appUrl, log, fetcher };
+  const ctx = { db, events, hub, signer, production, google, mailer, push, appUrl, log, fetcher };
 
   app.disable('x-powered-by');
   // Hops of reverse proxy in front of us (Render, nginx…). Off when Node faces the
@@ -68,7 +65,7 @@ export function createApp({ db, secret, production = false, staticDir = null, ol
 
   app.get('/api/health', async (_req, res) => {
     await db.get('SELECT 1 AS ok');
-    res.json({ ok: true, database: db.dialect ?? 'sqlite', ai: ollama?.url ? 'builtin+local-model' : 'builtin' });
+    res.json({ ok: true, database: db.dialect ?? 'sqlite' });
   });
   app.use('/api/auth', recoveryRoutes(ctx));
   app.use('/api/auth', authRoutes(ctx));
@@ -78,7 +75,6 @@ export function createApp({ db, secret, production = false, staticDir = null, ol
   app.use('/api/issues', issueRoutes(ctx));
   app.use('/api/todos', todoRoutes(ctx));
   app.use('/api/notifications', notificationRoutes(ctx));
-  app.use('/api/ai', aiRoutes(ctx));
   app.use('/api', fileRoutes(ctx));
   app.use('/api', extensionRoutes(ctx));
   app.use('/api', notifySettingsRoutes(ctx));

@@ -3,7 +3,7 @@
 
 # WorkMars
 
-**Free project management for unlimited users.** Jira-level features (boards, sprints, backlog, epics, timelines, reports) with a Trello-calm interface, a private daily to-do list ("My day"), and a free built-in AI guide.
+**Free project management for unlimited users.** Jira-level features (boards, sprints, backlog, epics, timelines, reports) with a Trello-calm interface, a private daily to-do list ("My day"), time tracking and organisation branding.
 
 Built UK-first (en-GB dates, Monday weeks, British English), with US and Asia-Pacific date formats one click away.
 
@@ -19,7 +19,6 @@ Built UK-first (en-GB dates, Monday weeks, British English), with US and Asia-Pa
 | **Views** | Board, Backlog, List (sortable), Timeline (epics + dated work), Calendar (create by day) |
 | **Reports** | Sprint burndown, velocity, created vs resolved, cycle time, workload, status and priority mix — each with a table view |
 | **Personal** | My tasks (grouped by due date, across projects) and **My day**: private to-dos by time of day, stars, roll-over, "do it tomorrow", 7-day momentum, pin project work |
-| **Mars guide (free AI)** | Plans your day, spots blockers/overdue/WIP breaches, sizes the next sprint from velocity, writes your stand-up, summarises projects, shows workload, answers how-to questions with "Take me there", and turns sentences into work items or to-dos |
 | **Team** | Unlimited members, admin/member/viewer roles, designations (CEO, Project Manager, MERN Stack Developer… or your own), invitation emails (any provider, via SMTP) plus shareable invite links and reusable team links |
 | **Automations** | Per-project rules: *when* an item is created, moves column, is assigned, changes priority, gets a comment, is due soon or overdue (optionally only for a type, priority or label) *then* notify people, assign, set priority, add a label, move, comment or set a due date. Rules never chain into loops |
 | **Notifications** | In-app bell, **email** (mentions, assignments, automations, or everything) and **push** to phones and computers. Each person picks what they get |
@@ -42,18 +41,6 @@ All methodology behaviour is defined in one shared config, [`shared/methodologie
 | **Scrumban** | Kanban flow with a WIP-limited "Ready" buffer, optional iterations, and an on-demand planning trigger | Impediments | Cumulative flow, cycle time, throughput, burndown |
 
 Phase gates run strictly in order: start → submit for review → approve (with a recorded decision) → the next phase opens. Approving while items are still open requires a written decision, and every decision goes into the gate log.
-
-## The AI is free — how
-
-The Mars guide runs **inside the WorkMars server** using your workspace data: intent detection, a natural-language parser (dates, priorities, people, labels), and a product knowledge base. No paid API, no usage limits, and no data leaves your server.
-
-For richer free-form conversation you can optionally point it at a **self-hosted open-source model** via [Ollama](https://ollama.com) — still free:
-
-```bash
-OLLAMA_URL=http://localhost:11434 OLLAMA_MODEL=llama3.2 npm start
-```
-
-Structured actions (creating work, planning) always use the built-in engine; the model only rephrases open-ended answers, with an automatic fallback if it's slow or offline.
 
 ## Run it
 
@@ -109,7 +96,6 @@ docker run -p 4000:4000 -e SESSION_SECRET=change-me -v workmars-data:/data workm
 | `APP_URL` | *(request address)* | Public address used for links in emails. Set it when hosting online |
 | `TRUST_PROXY` | `1` in production, off in development | Proxy hops in front of WorkMars, used for the visitor's IP (rate limits) and HTTPS detection |
 | `DATABASE_FILE` | `server/data/workmars.db` | SQLite file location (when `DATABASE_URL` is not set) |
-| `OLLAMA_URL`, `OLLAMA_MODEL` | — | Optional self-hosted model for the Mars guide |
 
 ## Quality
 
@@ -129,7 +115,6 @@ server/  Node + Express 5 + node:sqlite or PostgreSQL / Supabase
   src/db-postgres.js    Postgres adapter (same API) + schema/postgres.sql
   src/routes/           auth, workspaces/invites, projects/sprints/reports, issues, personal (to-dos, notifications), ai
   src/services/         issue & project domain logic (validation, ranking, activity, notifications)
-  src/ai/               Mars guide: intents, NL parser, knowledge base, optional Ollama
   src/realtime.js       SSE hub — "something changed" hints, never data
 web/     React 19 + TypeScript + Vite
   src/lib/              API client, React Query hooks (optimistic updates), stores, formatting, theme

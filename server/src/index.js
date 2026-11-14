@@ -103,7 +103,6 @@ const app = createApp({
   google: process.env.GOOGLE_CLIENT_ID && process.env.GOOGLE_CLIENT_SECRET
     ? { clientId: process.env.GOOGLE_CLIENT_ID, clientSecret: process.env.GOOGLE_CLIENT_SECRET, redirectUrl: process.env.GOOGLE_REDIRECT_URL || null }
     : null,
-  ollama: process.env.OLLAMA_URL ? { url: process.env.OLLAMA_URL, model: process.env.OLLAMA_MODEL || 'llama3.2' } : null,
 });
 
 const server = app.listen(port, () => console.log(`WorkMars API listening on http://localhost:${port}`));

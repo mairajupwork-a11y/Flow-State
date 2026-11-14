@@ -937,3 +937,23 @@ body::before { opacity: .55; }
   .sheet-table thead th:not(.sheet-item):not(:last-child), .sheet-table td.num:not(.total) { display: none; }
   .sheet-item { min-width: 0; }
 }
+.invite-mismatch { display: flex; gap: 8px; align-items: flex-start; font-size: 13px; line-height: 1.5; text-align: left; }
+
+/* ---------- Organisation logo ---------- */
+.ws-avatar { overflow: hidden; flex-shrink: 0; }
+.ws-avatar.has-logo { background: #fff !important; padding: 0; border: 1px solid var(--line, rgba(0,0,0,.08)); }
+.ws-avatar.has-logo img { width: 100%; height: 100%; object-fit: contain; display: block; }
+.ws-avatar.xl { width: 72px; height: 72px; border-radius: 18px !important; font-size: 30px; }
+.logo-uploader { display: flex; align-items: center; gap: 16px; text-align: left; }
+.logo-uploader-copy { display: grid; gap: 4px; min-width: 0; }
+.logo-uploader-copy b { font-size: 13px; }
+.logo-uploader-copy > span { font-size: 11.5px; color: var(--muted); line-height: 1.5; }
+.logo-uploader-actions { display: flex; gap: 8px; flex-wrap: wrap; margin-top: 6px; }
+.logo-uploader .form-error { margin-top: 6px; }
+.ready-logo { max-width: 520px; margin: 22px auto 6px; padding: 18px; border-radius: 20px; background: var(--surface, rgba(255,255,255,.7)); border: 1px solid var(--line, rgba(0,0,0,.08)); display: grid; gap: 10px; }
+.ready-logo > small { color: var(--muted); font-size: 11px; text-align: left; }
+.share-org { display: inline-flex; align-items: center; gap: 8px; }
+@media (max-width: 520px) { .logo-uploader { flex-direction: column; align-items: flex-start; } }
+.invite-card .btn-block { white-space: normal; height: auto; min-height: 44px; padding-block: 10px; overflow-wrap: anywhere; text-align: center; }
+.invite-mismatch, .invite-mismatch span { min-width: 0; overflow-wrap: anywhere; }
+.ready-logo { margin-bottom: 18px; }

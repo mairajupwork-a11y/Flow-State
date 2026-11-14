@@ -279,38 +279,6 @@ test('search finds by key and text', async () => {
   assert.ok(byText.issues.some((i) => /landing/i.test(i.title)));
 });
 
-test('Mars guide answers from live data and drafts actions', async () => {
-  const api = client();
-  const { slug, ws } = await onboard(api);
-  const projectId = ws.projects[0].id;
-  await addWork(api, projectId);
-  const ask = (question) => api('POST', `/ai/${slug}/ask`, { question, projectId }).then((r) => r.data);
-
-  const focus = await ask('Prioritise my day');
-  assert.match(focus.text, /WEB-\d+/);
-  assert.ok(focus.actions.some((a) => a.type === 'plan_day'));
-
-  const draft = await ask('create an urgent bug: checkout button broken, assign to me, due tomorrow #payments');
-  const action = draft.actions[0];
-  assert.equal(action.type, 'create_issue');
-  assert.equal(action.payload.type, 'bug');
-  assert.equal(action.payload.priority, 'urgent');
-  assert.equal(action.payload.title, 'Checkout button broken');
-  assert.deepEqual(action.payload.labels, ['payments']);
-  assert.ok(action.payload.assigneeId);
-
-  const howTo = await ask('how do WIP limits work?');
-  assert.match(howTo.text, /WIP/);
-  assert.equal(howTo.source, 'builtin');
-
-  const todo = await ask('remind me to call the supplier');
-  assert.equal(todo.actions[0].payload.text, 'Call the supplier');
-
-  assert.match((await ask('what needs attention?')).text, /attention|healthy/);
-  assert.match((await ask('write my stand-up')).text, /Yesterday/);
-  assert.match((await ask('plan the next sprint')).text, /points/);
-});
-
 test('every methodology creates a project with the right structure and no example work', async () => {
   const api = client();
   const { slug } = await onboard(api);
@@ -381,18 +349,6 @@ test('switching methodology keeps work and can adopt new columns', async () => {
   assert.equal(after.filter((i) => i.statusCategory === 'done').length, before.filter((i) => i.statusCategory === 'done').length);
   const prince = (await api('PATCH', `/projects/${p.id}`, { methodology: 'prince2' })).data;
   assert.equal(prince.phases.length, 5, 'stages are added when needed');
-});
-
-test('Mars guide recommends a methodology', async () => {
-  const api = client();
-  const { slug } = await onboard(api);
-  const ask = (question) => api('POST', `/ai/${slug}/ask`, { question }).then((r) => r.data);
-  assert.match((await ask('Which methodology should I use for a mobile app with changing requirements?')).text, /Scrumban/);
-  const compare = (await ask('Scrum vs Kanban')).text;
-  assert.match(compare, /\*\*Scrum\*\*/);
-  assert.match(compare, /\*\*Kanban\*\*/);
-  assert.doesNotMatch(compare, /Scrumban/);
-  assert.match((await ask('what is PRINCE2?')).text, /Project Board/);
 });
 
 test('QA regressions: numeric names, bad ids, prototype keys and input caps', async () => {

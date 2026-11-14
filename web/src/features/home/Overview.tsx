@@ -4,7 +4,7 @@ import { Icon } from '../../components/Icon';
 import { Avatar, Empty, PageHeader, PriorityGlyph } from '../../components/ui';
 import { useActivity, useIssues, useMyIssues, useProject, useTodos } from '../../lib/queries';
 import { useWs, useCurrentProject } from '../../lib/workspace';
-import { openCreate, openGuide, ui } from '../../lib/store';
+import { openCreate, ui } from '../../lib/store';
 import { PRIORITY_LABEL, greeting, relativeDay, timeAgo, todayISO } from '../../lib/format';
 import { Metrics, ProjectHero } from '../project/ProjectLayout';
 import type { Activity } from '../../lib/types';
@@ -25,7 +25,6 @@ export function Overview() {
       <PageHeader eyebrow="Workspace / Overview" title={`${greeting()}, ${me.name.split(' ')[0]}.`}
         subtitle={overdue ? `${overdue} of your items could use a nudge today.` : 'Here’s where things stand today.'}
         actions={<>
-          <button className="btn btn-light" onClick={() => openGuide()}><Icon name="sparkles" size={16} /><span className="btn-label-mobile">Ask Mars guide</span></button>
           {canEdit && <button className="btn btn-primary" onClick={() => openCreate()}><Icon name="plus" size={16} /> Create task</button>}
         </>} />
 
@@ -58,15 +57,6 @@ export function Overview() {
             </div>
             <div className="dash-side">
               <ProjectsCard />
-              <div className="content-card dash-card guide-card">
-                <h3><span className="dash-ico violet"><Icon name="sparkles" size={15} /></span> Mars guide</h3>
-                <p className="muted">Free AI that reads your board.</p>
-                <div className="guide-chips">
-                  <button onClick={() => openGuide('Prioritise my day')}><Icon name="sun" size={13} /> Plan my day</button>
-                  <button onClick={() => openGuide('What needs attention?')}><Icon name="flag" size={13} /> What needs attention?</button>
-                  <button onClick={() => openGuide('Write my stand-up')}><Icon name="message" size={13} /> Write my stand-up</button>
-                </div>
-              </div>
               <RecentActivity />
             </div>
           </div>
@@ -152,21 +142,18 @@ function GettingStarted() {
   if (!visible) return null;
   const mineMoved = (activity.data ?? []).some((a) => a.actorId === me.id && a.verb === 'updated');
   const created = (activity.data ?? []).some((a) => a.actorId === me.id && a.verb === 'created');
-  let askedGuide = false;
-  try { askedGuide = localStorage.getItem('fs_asked_guide') === '1'; } catch { /* storage blocked */ }
   const steps: [boolean, string, string, () => void][] = [
     [created, 'Create your first work item', 'Press C anywhere', () => openCreate()],
     [mineMoved, 'Move a card on the board', 'Drag it to the next column', () => current && navigate(`${base}/p/${current.key}/board`)],
     [members.length > 1, 'Invite a teammate', 'Free for unlimited people', () => ui.set({ inviteOpen: true })],
     [!!todos.data?.items.length, 'Plan your day', 'Add a to-do in My day', () => navigate(`${base}/my-day`)],
-    [askedGuide, 'Ask the Mars guide', 'Try “prioritise my day”', () => openGuide('Prioritise my day')],
   ];
   const done = steps.filter((s) => s[0]).length;
   const dismiss = () => { try { localStorage.removeItem(key); } catch { /* */ } setVisible(false); };
   return (
     <div className="content-card getting-started">
       <div className="row-between">
-        <div><h3>Getting started · {done}/{steps.length}</h3><p className="muted">Five small steps to feel at home in WorkMars.</p></div>
+        <div><h3>Getting started · {done}/{steps.length}</h3><p className="muted">Four small steps to feel at home in WorkMars.</p></div>
         <button className="icon-btn" onClick={dismiss} aria-label="Dismiss getting started"><Icon name="close" size={16} /></button>
       </div>
       <div className="sprint-progress" style={{ margin: '12px 0 4px' }}><i className="done" style={{ width: `${(done / steps.length) * 100}%` }} /></div>

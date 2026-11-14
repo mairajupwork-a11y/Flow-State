@@ -12,6 +12,7 @@ import type { Locale, Session, Theme } from '../../lib/types';
 import { CalendarCard, NotificationsCard } from './NotifySettings';
 import { InstallCard } from '../../components/InstallApp';
 import { AuditCard, TwoFactorRow } from './Security';
+import { LogoUploader } from '../../components/WorkspaceAvatar';
 
 const LOCALES: [Locale, string, string][] = [
   ['en-GB', 'United Kingdom', '14 Oct 2026'], ['en-US', 'United States', 'Oct 14, 2026'], ['en-IN', 'India', '14 Oct 2026'],
@@ -99,6 +100,7 @@ export default function Settings() {
               <h3>Workspace</h3>
               <p className="muted">Settings for everyone in {workspace.name}</p>
               <div className="stack-14" style={{ marginTop: 14 }}>
+                <LogoUploader slug={workspace.slug} name={workspace.name} logo={workspace.logo} onChange={() => toast('Logo updated.')} />
                 <label className="form-field"><span>Workspace name</span><input className="text-input" value={wsForm.name} maxLength={60} onChange={(e) => setWsForm({ ...wsForm, name: e.target.value })} /></label>
                 <div className="form-grid">
                   <label className="form-field"><span>Default date format</span>
@@ -141,7 +143,6 @@ export default function Settings() {
               <p className="muted">Promises built into the product</p>
             </div>
             <div className="setting-row"><div><strong>No user seat caps</strong><small>Free for unlimited people, every feature included.</small></div><Icon name="checkcircle" size={19} /></div>
-            <div className="setting-row"><div><strong>Free AI guidance</strong><small>The Mars guide runs on your workspace data — no paid AI, no limits.</small></div><Icon name="checkcircle" size={19} /></div>
             <div className="setting-row"><div><strong>Simple, familiar workflows</strong><small>Designed for technical and non-technical teams alike.</small></div><Icon name="checkcircle" size={19} /></div>
           </div>
         </div>

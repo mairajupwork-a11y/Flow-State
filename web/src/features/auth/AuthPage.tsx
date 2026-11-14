@@ -128,7 +128,7 @@ export function AuthPage({ mode }: { mode: 'login' | 'signup' }) {
         </div>
         <div className="auth-aside-body">
           <h2>{isSignup ? <>Your whole team. <span className="serif-accent">Free. Forever.</span></> : <>Welcome <span className="serif-accent">back.</span></>}</h2>
-          <p>{isSignup ? 'Boards, sprints, timelines, reports, a personal to-do list and a free AI guide — for unlimited users.' : 'Pick up exactly where you left off. Your board is waiting.'}</p>
+          <p>{isSignup ? 'Boards, sprints, timelines, reports, time tracking and a personal to-do list — for unlimited users.' : 'Pick up exactly where you left off. Your board is waiting.'}</p>
           <ul>
             <li><Icon name="checkcircle" size={17} /> Set up in under a minute</li>
             <li><Icon name="checkcircle" size={17} /> Invite as many people as you like</li>

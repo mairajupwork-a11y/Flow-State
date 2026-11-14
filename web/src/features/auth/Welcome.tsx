@@ -16,7 +16,6 @@ import shotReports from '../../assets/shots/reports.webp';
 import { InstallButton } from '../../components/InstallApp';
 import tabDay from '../../assets/shots/tab-myday.webp';
 import tabReports from '../../assets/shots/tab-reports.webp';
-import tabGuide from '../../assets/shots/tab-guide.webp';
 import tabBoard from '../../assets/shots/tab-board.webp';
 import tabAutomations from '../../assets/shots/tab-automations.webp';
 import tabIssue from '../../assets/shots/tab-issue.webp';
@@ -131,14 +130,13 @@ const METHODS: { name: string; year: string; glyph: ReactNode }[] = [
 const DECK: { img: string; label: string; serif: string }[] = [
   { img: tabDay, label: 'My', serif: 'day' },
   { img: tabReports, label: 'Live', serif: 'reports' },
-  { img: tabGuide, label: 'Mars', serif: 'guide' },
   { img: tabBoard, label: 'Team', serif: 'board' },
   { img: tabAutomations, label: 'Auto', serif: 'mations' },
   { img: tabIssue, label: 'Every', serif: 'detail' },
   { img: tabOverview, label: 'Big', serif: 'picture' },
 ];
 
-const TOOLS = ['Google Calendar', 'Gmail', 'Outlook', 'Apple Calendar', 'Supabase', 'PostgreSQL', 'Google sign-in', 'Ollama', 'Any SMTP', 'Web push'];
+const TOOLS = ['Google Calendar', 'Gmail', 'Outlook', 'Apple Calendar', 'Supabase', 'PostgreSQL', 'Google sign-in', 'Slack', 'Any SMTP', 'Web push'];
 
 export function Welcome() {
   const { data } = useSession();
@@ -279,62 +277,8 @@ export function Welcome() {
             </div>
             <div className="pd-teaser-col" data-reveal style={{ '--d': '120ms' } as CSSProperties}>
               <h2 className="pd-split"><em className="pd-serif">My</em><span>Day</span></h2>
-              <p className="pd-body">A private to-do list next to team work. Morning, afternoon, evening, with gentle roll-over and a free AI guide that plans it for you.</p>
+              <p className="pd-body">A private to-do list next to team work. Morning, afternoon, evening, with gentle roll-over and reminders.</p>
               <Link to="/signup" className="pd-tile" aria-label="Plan my day"><Hook size={22} /></Link>
-            </div>
-          </div>
-        </section>
-
-        {/* ---------- Mars guide: a live console instead of a photo ---------- */}
-        <section className="pd-guide" data-ground="dark" data-track="view" id="guide">
-          <div className="pd-guide-marquee" aria-hidden="true">
-            <div className="pd-guide-marquee-track">
-              {[0, 1].map((k) => <span key={k}><Mixed text="Plan my day · *write my stand-up* · what needs attention? · *size the sprint* · " /></span>)}
-            </div>
-          </div>
-          <div className="pd-guide-grid">
-            <div className="pd-guide-copy" data-reveal>
-              <p className="pd-eyebrow light"><span className="pd-live" /> Mars guide · free AI</p>
-              <h2 className="pd-title light"><Mixed text="Your *co-pilot*" /><br /><Mixed text="for the *day*." /></h2>
-              <p className="pd-body light">Ask it to plan your day and it reads your real board. Describe a task in plain English and it becomes a work item. No paid AI, no limits.</p>
-              <dl className="pd-stats">
-                <div><dt>$0</dt><dd>for the AI, forever</dd></div>
-                <div><dt>∞</dt><dd>questions a day</dd></div>
-                <div><dt>1</dt><dd>sentence to a work item</dd></div>
-              </dl>
-              <Link to="/signup" className="pd-btn">Try the guide <Hook size={16} /></Link>
-            </div>
-            <div className="pd-console-wrap" data-reveal style={{ '--d': '120ms' } as CSSProperties}>
-              <svg className="pd-orbit" viewBox="0 0 600 600" aria-hidden="true">
-                <ellipse cx="300" cy="300" rx="286" ry="286" />
-                <ellipse cx="300" cy="300" rx="226" ry="226" className="dash" />
-                <ellipse cx="300" cy="300" rx="166" ry="166" />
-                <g className="pd-orbit-sat"><circle cx="300" cy="14" r="7" /></g>
-                <g className="pd-orbit-sat slow"><circle cx="300" cy="134" r="5" /></g>
-              </svg>
-              <div className="pd-console" aria-label="Example conversation with the Mars guide">
-                <div className="pd-console-head"><Mark size={26} /><b>Mars guide</b><span>Reads your workspace · free</span></div>
-                <div className="pd-console-body">
-                  <p className="pd-msg me" style={{ '--t': 0 } as CSSProperties}>Plan my day</p>
-                  <p className="pd-msg typing" style={{ '--t': 1 } as CSSProperties}><i /><i /><i /></p>
-                  <div className="pd-msg ai" style={{ '--t': 2 } as CSSProperties}>
-                    <b>A calm plan for today</b>
-                    <ol>
-                      <li><code>WEB-102</code> Fix sign-in errors <em>urgent · due today</em></li>
-                      <li><code>WEB-106</code> Map navigation <em>high</em></li>
-                      <li><code>WEB-101</code> Landing page layout <em>high</em></li>
-                    </ol>
-                  </div>
-                  <p className="pd-msg me" style={{ '--t': 3 } as CSSProperties}>create an urgent bug: checkout fails on Safari, due Friday</p>
-                  <div className="pd-msg ai draft" style={{ '--t': 4 } as CSSProperties}>
-                    <span className="pd-draft-tag">Draft work item</span>
-                    <b>Checkout fails on Safari</b>
-                    <span className="pd-draft-meta"><i>Bug</i><i>Urgent</i><i>Due Fri</i><i>#payments</i></span>
-                    <span className="pd-draft-btn">Create work item <Hook size={14} /></span>
-                  </div>
-                </div>
-                <div className="pd-console-input"><span className="pd-caret">Ask about your work…</span><span className="pd-send"><Hook size={14} /></span></div>
-              </div>
             </div>
           </div>
         </section>
@@ -364,7 +308,7 @@ export function Welcome() {
           <div className="pd-store-copy" data-reveal>
             <p className="pd-eyebrow"><Icon name="diamond" size={14} /> WorkMars plan</p>
             <h2 className="pd-title big"><Mixed text="Every feature" /><br /><Mixed text="*free.*" /></h2>
-            <p className="pd-body">Unlimited people, projects, boards, automations, attachments, custom fields and the AI guide. No seat prices, no hidden tiers, no trial that runs out.</p>
+            <p className="pd-body">Unlimited people, projects, boards, automations, attachments, custom fields and time tracking. No seat prices, no hidden tiers, no trial that runs out.</p>
             <div className="pd-price"><b>$0</b><span>per person<br />per month, forever</span></div>
             <Link to="/signup" className="pd-btn">Start free <Hook size={16} /></Link>
           </div>

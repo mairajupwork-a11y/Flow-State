@@ -16,7 +16,7 @@ export interface Member extends User { role: Role; joinedAt: string }
 
 export interface Workspace {
   id: number; name: string; slug: string; region: 'uk' | 'us' | 'asia' | 'other'; locale: Locale; weekStart: 0 | 1;
-  teamSize: string; useCase: string; role: Role; createdAt: string;
+  teamSize: string; useCase: string; role: Role; createdAt: string; logo?: string;
 }
 
 export interface Session { user: Me | null; workspaces: Workspace[] }
@@ -105,11 +105,3 @@ export interface Reports {
   registers: { kind: string; label: string; total: number; open: number; high: number }[];
 }
 
-export type GuideAction =
-  | { type: 'create_issue'; label: string; payload: { projectId: number; title: string; type: IssueType; priority: Priority; assigneeId: number | null; dueDate: string | null; labels: string[] } }
-  | { type: 'add_todo'; label: string; payload: { text: string } }
-  | { type: 'plan_day'; label: string; payload: { items: { text: string; issueRef: string }[] } }
-  | { type: 'open_issue'; label: string; payload: { key: string } }
-  | { type: 'navigate'; label: string; payload: { to: string } };
-
-export interface GuideAnswer { text: string; suggestions: string[]; actions: GuideAction[]; source: 'builtin' | 'local-model'; copyable?: boolean }

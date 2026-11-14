@@ -1,5 +1,4 @@
-import { SCENES, sceneStyle } from '../../lib/scenes';
-import { useMemo, useState, type CSSProperties, type FormEvent, type KeyboardEvent } from 'react';
+import { useMemo, useState, type FormEvent, type KeyboardEvent } from 'react';
 import { useNavigate } from 'react-router-dom';
 import { useQueryClient } from '@tanstack/react-query';
 import { api } from '../../lib/api';
@@ -10,6 +9,7 @@ import type { MethodologyId, Session, Workspace } from '../../lib/types';
 import { MethodologyPicker } from '../../components/MethodologyPicker';
 import { METHODOLOGIES } from '../../lib/methodology';
 import { accentTitle } from '../../components/ui';
+import { LogoUploader } from '../../components/WorkspaceAvatar';
 import { DesignationSelect } from '../team/DesignationSelect';
 import { accessForDesignation } from '../../../../shared/designations.js';
 
@@ -150,7 +150,7 @@ export function Onboarding() {
           <section className="onboard-step" key="s0">
             <div className="eyebrow"><span className="line" />Welcome, {first}</div>
             <h1 className="page-title">{accentTitle('What kind of work do you do?')}</h1>
-            <p className="page-subtitle">We’ll tailor your first project and the Mars guide’s suggestions. You can change everything later.</p>
+            <p className="page-subtitle">We’ll tailor your first project to how you work. You can change everything later.</p>
             <div className="niche-groups" role="radiogroup" aria-label="Your field">
               {NICHE_GROUPS.map(([group, list]) => (
                 <div key={group} className="niche-group">
@@ -231,14 +231,16 @@ export function Onboarding() {
 
         {step === 4 && created && (
           <section className="onboard-step ready" key="s4">
-            <div className="ready-scene scene" style={sceneStyle(SCENES[0]) as CSSProperties} aria-hidden="true" />
-            <div className="ready-burst" aria-hidden="true"><Icon name="sparkles" size={34} /></div>
             <h1 className="page-title">{accentTitle(`You’re all set, ${first}.`)}</h1>
             <p className="page-subtitle"><b>{created.name}</b> is ready with your <b>{project.name}</b> {METHODOLOGIES[methodology].name} project{emails.length ? ` and ${emails.length} invitation${emails.length === 1 ? '' : 's'}` : ''}.{emailed ? ` We’ve emailed ${emailed === 1 ? 'your invitation' : `all ${emailed} invitations`}.` : ''}</p>
+            <div className="ready-logo">
+              <LogoUploader slug={created.slug} name={created.name} logo={created.logo} onChange={(logo) => setCreated({ ...created, logo })} />
+              <small>Optional — you can add or change it later in Settings.</small>
+            </div>
             <div className="ready-grid">
               <div><Icon name={METHODOLOGIES[methodology].icon} size={18} /><b>{METHODOLOGIES[methodology].name}, set up properly</b><span>{METHODOLOGIES[methodology].tagline}</span></div>
               <div><Icon name="sun" size={18} /><b>My day</b><span>A private to-do list, just for you</span></div>
-              <div><Icon name="sparkles" size={18} /><b>Mars guide</b><span>Free AI help in the corner, any time</span></div>
+              <div><Icon name="people" size={18} /><b>Your team</b><span>Invite people and give each a role</span></div>
             </div>
             <button type="button" className="btn btn-primary btn-xl" autoFocus onClick={() => navigate(`/w/${created.slug}/p/${key}`, { replace: true })}>
               Open my project <Icon name="right" size={16} />

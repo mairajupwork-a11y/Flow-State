@@ -130,12 +130,16 @@ export function workspaceRoutes({ db, events, hub, mailer, appUrl, production })
       region: z.enum(['uk', 'us', 'asia', 'other']).optional(),
       locale: z.enum(['en-GB', 'en-US', 'en-IN', 'en-SG', 'en-AU']).optional(),
       weekStart: z.union([z.literal(0), z.literal(1)]).optional(),
+      // Organisation logo: a small PNG/JPEG/WebP data URL (the browser resizes it), or '' to remove.
+      logo: z.union([z.literal(''), z.string().max(400_000, 'that logo is too large — use an image under 300 KB').regex(/^data:image\/(png|jpeg|webp);base64,[A-Za-z0-9+/=]+$/, 'upload a PNG, JPG or WebP image')]).optional(),
     }), req.body);
+    if (body.logo !== undefined) await db.run('UPDATE workspaces SET logo = ? WHERE id = ?', body.logo, ws.id);
     if (body.name) await db.run('UPDATE workspaces SET name = ? WHERE id = ?', body.name, ws.id);
     if (body.region) await db.run('UPDATE workspaces SET region = ? WHERE id = ?', body.region, ws.id);
     if (body.locale) await db.run('UPDATE workspaces SET locale = ? WHERE id = ?', body.locale, ws.id);
     if (body.weekStart !== undefined) await db.run('UPDATE workspaces SET week_start = ? WHERE id = ?', body.weekStart, ws.id);
     await audit(db, { workspaceId: ws.id, userId: req.user.id, action: 'workspace.settings', detail: Object.keys(body).join(', '), ip: req.ip });
+    if (body.logo !== undefined) events.changed(ws.id, ['workspace'], req.user.id);
     events.changed(ws.id, ['workspace'], req.user.id);
     res.json(serializeWorkspace(await db.get('SELECT * FROM workspaces WHERE id = ?', ws.id), membership.role));
   });
@@ -315,17 +319,21 @@ async function ensureAnotherAdmin(db, workspaceId, leavingUserId) {
 export function inviteRoutes({ db, events }) {
   const r = Router();
   const find = async (token) => {
-    const invite = await db.get('SELECT i.*, w.name AS ws_name, w.slug, u.name AS inviter FROM invites i JOIN workspaces w ON w.id = i.workspace_id JOIN users u ON u.id = i.invited_by WHERE i.token = ?', token);
+    const invite = await db.get('SELECT i.*, w.name AS ws_name, w.slug, w.logo AS ws_logo, u.name AS inviter FROM invites i JOIN workspaces w ON w.id = i.workspace_id JOIN users u ON u.id = i.invited_by WHERE i.token = ?', token);
     if (!invite || (invite.email && invite.accepted_at)) throw notFound('Invitation');
     return invite;
   };
   r.get('/:token', async (req, res) => {
     const i = await find(req.params.token);
     const members = (await db.get('SELECT COUNT(*) AS n FROM memberships WHERE workspace_id = ?', i.workspace_id)).n;
-    res.json({ workspaceName: i.ws_name, workspaceSlug: i.slug, inviter: i.inviter, email: i.email, role: i.role, designation: i.designation ?? '', members });
+    res.json({ workspaceName: i.ws_name, workspaceSlug: i.slug, workspaceLogo: i.ws_logo ?? '', inviter: i.inviter, email: i.email, role: i.role, designation: i.designation ?? '', members });
   });
   r.post('/:token/accept', requireUser, async (req, res) => {
     const i = await find(req.params.token);
+    // An emailed invitation belongs to that address: someone else signed in on the same browser can't use it.
+    if (i.email && i.email.trim().toLowerCase() !== String(req.user.email).trim().toLowerCase()) {
+      throw new HttpError(403, `This invitation was sent to ${i.email}, but you’re signed in as ${req.user.email}. Sign out, then sign in or sign up as ${i.email} to join.`);
+    }
     await db.tx(async () => {
       await db.run('INSERT OR IGNORE INTO memberships (workspace_id, user_id, role) VALUES (?, ?, ?)', i.workspace_id, req.user.id, i.role);
       for (const pid of JSON.parse(i.project_ids || '[]')) {

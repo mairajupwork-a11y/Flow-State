@@ -4,7 +4,6 @@ import { Icon } from '../../components/Icon';
 import { Empty, ErrorState, PageHeader, PageLoader } from '../../components/ui';
 import { useMyIssues, useTodos, useTodoMutations } from '../../lib/queries';
 import { useWs } from '../../lib/workspace';
-import { openGuide } from '../../lib/store';
 import { addDays, daysBetween, fmtDate, todayISO } from '../../lib/format';
 import type { TimeBlock, Todo } from '../../lib/types';
 
@@ -136,7 +135,6 @@ export function MyDay() {
           )}
 
           <div className="tip-box"><Icon name="lightbulb" size={19} /><span><b>Focus tip:</b> {TIPS[new Date(day).getDate() % TIPS.length]}</span></div>
-          <button className="btn btn-light btn-block" onClick={() => openGuide('Prioritise my day')}><Icon name="sparkles" size={16} /> Help me plan my day</button>
         </div>
       </div>
     </>

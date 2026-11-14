@@ -281,3 +281,38 @@ test('workload and client share links', async () => {
   assert.equal((await admin('DELETE', `/share-links/${link.id}`)).status, 200);
   assert.equal((await anon('GET', `/share/${token}`)).status, 404, 'revoked links stop working');
 });
+
+test('invites: an emailed invitation can only be accepted by that email address', async () => {
+  const { admin, ws, tag } = await org();
+  const [inv] = (await admin('POST', `/workspaces/${ws.slug}/invites`, { emails: [`thor${tag}@mailinator.com`], role: 'member' })).data;
+  // Loki is signed in on the same browser and opens Thor's link
+  const browser = client();
+  await browser('POST', '/auth/signup', { name: 'Loki Odinson', email: `loki${tag}@mailinator.com`, password: 'correct-horse' });
+  const wrong = await browser('POST', `/invites/${inv.token}/accept`);
+  assert.equal(wrong.status, 403);
+  assert.match(wrong.data.error, /sent to thor/);
+  assert.equal((await browser('GET', `/workspaces/${ws.slug}`)).status, 404, 'Loki did not join');
+  // after signing out and signing up as Thor, it works
+  await browser('POST', '/auth/logout');
+  await browser('POST', '/auth/signup', { name: 'Thor Odinson', email: `THOR${tag}@mailinator.com`, password: 'correct-horse' });
+  assert.equal((await browser('POST', `/invites/${inv.token}/accept`)).status, 200);
+  const members = (await admin('GET', `/workspaces/${ws.slug}`)).data.members.map((m) => m.name);
+  assert.ok(members.includes('Thor Odinson') && !members.includes('Loki Odinson'));
+  // team links (no email) are for anyone with the link
+  const [teamLink] = (await admin('POST', `/workspaces/${ws.slug}/invites`, { link: true, role: 'member' })).data;
+  const anyone = client();
+  await anyone('POST', '/auth/signup', { name: 'Sif', email: `sif${tag}@mailinator.com`, password: 'correct-horse' });
+  assert.equal((await anyone('POST', `/invites/${teamLink.token}/accept`)).status, 200);
+});
+
+test('organisation logo: admins upload a small image; it shows on the workspace and invites', async () => {
+  const { admin, dev, ws } = await org();
+  const png = 'data:image/png;base64,iVBORw0KGgoAAAANSUhEUgAAAAEAAAABCAQAAAC1HAwCAAAAC0lEQVR42mNkYAAAAAYAAjCB0C8AAAAASUVORK5CYII=';
+  assert.equal((await admin('PATCH', `/workspaces/${ws.slug}`, { logo: 'data:text/html;base64,PHNjcmlwdD4=' })).status, 400);
+  assert.equal((await dev('PATCH', `/workspaces/${ws.slug}`, { logo: png })).status, 403);
+  assert.equal((await admin('PATCH', `/workspaces/${ws.slug}`, { logo: png })).data.logo, png);
+  assert.equal((await dev('GET', `/workspaces/${ws.slug}`)).data.workspace.logo, png);
+  const [inv] = (await admin('POST', `/workspaces/${ws.slug}/invites`, { link: true })).data;
+  assert.equal((await client()('GET', `/invites/${inv.token}`)).data.workspaceLogo, png);
+  assert.equal((await admin('PATCH', `/workspaces/${ws.slug}`, { logo: '' })).data.logo, '');
+});

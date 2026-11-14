@@ -4,6 +4,7 @@ import { NavLink, useNavigate } from 'react-router-dom';
 import { useQueryClient } from '@tanstack/react-query';
 import { Icon } from '../components/Icon';
 import { Avatar } from '../components/ui';
+import { WorkspaceAvatar } from '../components/WorkspaceAvatar';
 import { useWs, useCurrentProject } from '../lib/workspace';
 import { useSession, useTodos } from '../lib/queries';
 import { toast, ui, useUi } from '../lib/store';
@@ -105,7 +106,7 @@ function WorkspaceSwitcher() {
   return (
     <div className="ws-switch-wrap" ref={ref}>
       <button className="workspace-switch" aria-haspopup="menu" aria-expanded={open} onClick={() => setOpen(!open)}>
-        <span className="ws-avatar">{workspace.name[0]?.toUpperCase()}</span>
+        <WorkspaceAvatar name={workspace.name} logo={workspace.logo} />
         <span className="ellipsis"><b className="ellipsis">{workspace.name}</b><small>Free workspace · {workspace.role}</small></span>
         <span className="chevron"><Icon name="chevron" size={15} /></span>
       </button>
@@ -114,7 +115,7 @@ function WorkspaceSwitcher() {
           <div className="menu-label">Your workspaces</div>
           {data?.workspaces.map((w) => (
             <button key={w.id} role="menuitem" className={`menu-item ${w.slug === workspace.slug ? 'current' : ''}`} onClick={() => { setOpen(false); navigate(`/w/${w.slug}`); }}>
-              <span className="ws-avatar sm">{w.name[0]?.toUpperCase()}</span>
+              <WorkspaceAvatar name={w.name} logo={w.logo} size="sm" />
               <span className="ellipsis" style={{ flex: 1 }}>{w.name}</span>
               {w.slug === workspace.slug && <Icon name="check" size={14} />}
             </button>

@@ -6,6 +6,7 @@ import { removeSamplesSql } from './schema/remove-samples.js';
 import { v8Postgres } from './schema/v8.js';
 import { v10Postgres } from './schema/v10.js';
 import { v11Postgres } from './schema/v11.js';
+import { v12Postgres } from './schema/v12.js';
 
 /**
  * PostgreSQL adapter (Supabase or any Postgres) with the same surface as
@@ -159,6 +160,7 @@ export async function migratePostgres(pool) {
     recolorSqlV9(),
     v10Postgres(),
     v11Postgres(),
+    v12Postgres(),
   ];
   const VERSION = UPGRADES.length;
   const client = await pool.connect();
