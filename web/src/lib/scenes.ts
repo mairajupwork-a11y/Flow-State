@@ -1,17 +1,17 @@
-import day from '../assets/harbor-scene.svg';
-import dusk from '../assets/harbor-dusk.svg';
+import desert from '../assets/mars-desert.webp';
+import hills from '../assets/mars-explorer-hills.webp';
 
 /**
- * Illustrated Martian-harbour banners used behind banner-style panels
- * (project heroes, the team banner, the sidebar card). `focus` keeps the
- * busy right-hand side of the drawing in view; text sits over the left.
+ * Martian landscape photos used as backdrops for banner-style panels
+ * (project heroes, the team banner, the sidebar card, landing bands).
+ * `focus` is the background-position that keeps each photo's subject in view.
  */
 export const SCENES = [
-  { src: day, focus: '72% 100%' }, // daytime harbour: domes, brick houses, a crane and strollers on the quay
-  { src: dusk, focus: '72% 100%' }, // evening harbour: two moons, stars and a moored rocket-boat
+  { src: desert, focus: '50% 36%' }, // rocky desert dunes and distant ridges under a soft sky
+  { src: hills, focus: '50% 44%' }, // explorer standing between two rust-coloured hills
 ] as const;
 
-/** A stable scene per id, so each project keeps the same drawing. */
+/** A stable scene per id, so each project keeps the same photo. */
 export const sceneFor = (id: number) => SCENES[Math.abs(id - 1) % SCENES.length];
 
 /** CSS custom properties for a `.scene` panel. */
