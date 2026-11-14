@@ -26,6 +26,7 @@ const projectInput = z.object({
   template: z.enum(['scrum', 'kanban', 'business']).optional(),
   color: z.string().regex(/^#[0-9a-fA-F]{6}$/).optional(),
   memberIds: z.array(z.number().int().positive()).max(500).optional(),
+  autoKey: z.boolean().optional(),
 });
 
 async function slugify(db, name) {
@@ -116,7 +117,9 @@ export function workspaceRoutes({ db, events, hub, mailer, appUrl, production })
        FROM projects p WHERE p.workspace_id = ? AND p.archived = 0 AND ${VISIBLE_PROJECT('p')} ORDER BY p.created_at, p.id`,
       ws.id, req.user.id, req.user.id,
     )).map((p) => serializeProject(p, { issueCount: p.total, doneCount: p.done }));
-    res.json({ workspace: serializeWorkspace(ws, membership.role), members, projects });
+    // Every key in use, archived and hidden projects included, so new projects can pick a free one.
+    const takenKeys = (await db.all('SELECT key FROM projects WHERE workspace_id = ?', ws.id)).map((r) => r.key);
+    res.json({ workspace: serializeWorkspace(ws, membership.role), members, projects, takenKeys });
   });
 
   r.patch('/:ws', async (req, res) => {

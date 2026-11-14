@@ -164,3 +164,17 @@ test('reminders: a personal to-do reminds once at its time and re-arms when move
   await runReminders(db, { events });
   assert.equal((await pm.c('GET', `/notifications/${ws.slug}`)).data.items.filter((n) => n.kind === 'reminder').length, 1, 'done to-dos stay quiet');
 });
+
+test('project keys: a suggested key that is taken moves to the next free one', async () => {
+  const { admin, ws } = await org();
+  const make = (body) => admin('POST', `/workspaces/${ws.slug}/projects`, body);
+  assert.equal((await make({ name: 'OPTPAI123', key: 'OPTP' })).data.key, 'OPTP');
+  const second = await make({ name: 'OPTPAI456', key: 'OPTP', autoKey: true });
+  assert.equal(second.status, 201);
+  assert.equal(second.data.key, 'OPTP2');
+  const typed = await make({ name: 'Other', key: 'OPTP' });
+  assert.equal(typed.status, 409);
+  assert.match(typed.data.error, /Try OPTP3 instead/);
+  const detail = (await admin('GET', `/workspaces/${ws.slug}`)).data;
+  assert.ok(detail.takenKeys.includes('OPTP2'));
+});

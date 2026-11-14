@@ -5,6 +5,7 @@ import { Modal } from '../../components/ui';
 import { Icon } from '../../components/Icon';
 import { api } from '../../lib/api';
 import { useWs } from '../../lib/workspace';
+import { useWorkspace } from '../../lib/queries';
 import { toast } from '../../lib/store';
 import type { MethodologyId, Project } from '../../lib/types';
 import { MethodologyPicker } from '../../components/MethodologyPicker';
@@ -15,6 +16,17 @@ function suggestKey(name: string) {
   return key ? (/^[A-Z]/.test(key) ? key : 'P' + key).slice(0, 6) : '';
 }
 
+/** The first free key: OPTP, then OPTP2…, matching what the server would pick. */
+function freeKey(base: string, taken: Set<string>) {
+  if (!base || !taken.has(base)) return base;
+  for (let n = 2; n < 1000; n++) {
+    const tail = String(n);
+    const candidate = base.slice(0, 6 - tail.length) + tail;
+    if (!taken.has(candidate)) return candidate;
+  }
+  return base;
+}
+
 export function CreateProjectModal({ onClose }: { onClose: () => void }) {
   const { workspace, base } = useWs();
   const qc = useQueryClient();
@@ -22,8 +34,11 @@ export function CreateProjectModal({ onClose }: { onClose: () => void }) {
   const [form, setForm] = useState({ name: '', key: '', keyTouched: false, description: '', methodology: 'scrum' as MethodologyId });
   const [error, setError] = useState('');
   const [busy, setBusy] = useState(false);
-  const key = form.keyTouched ? form.key : suggestKey(form.name);
-  const keyValid = /^[A-Z][A-Z0-9]{1,5}$/.test(key);
+  const detail = useWorkspace(workspace.slug).data;
+  const taken = new Set((detail?.takenKeys ?? detail?.projects.map((p) => p.key) ?? []).map((k) => k.toUpperCase()));
+  const key = form.keyTouched ? form.key : freeKey(suggestKey(form.name), taken);
+  const keyTaken = form.keyTouched && taken.has(key);
+  const keyValid = /^[A-Z][A-Z0-9]{1,5}$/.test(key) && !keyTaken;
 
   async function submit(e: FormEvent) {
     e.preventDefault();
@@ -31,7 +46,7 @@ export function CreateProjectModal({ onClose }: { onClose: () => void }) {
     setBusy(true);
     setError('');
     try {
-      const p = await api.post<Project>(`/workspaces/${workspace.slug}/projects`, { name: form.name.trim(), key, description: form.description.trim(), methodology: form.methodology });
+      const p = await api.post<Project>(`/workspaces/${workspace.slug}/projects`, { name: form.name.trim(), key, autoKey: !form.keyTouched, description: form.description.trim(), methodology: form.methodology });
       await qc.invalidateQueries({ queryKey: ['ws'] });
       toast(`${p.name} is ready.`);
       onClose();
@@ -49,7 +64,10 @@ export function CreateProjectModal({ onClose }: { onClose: () => void }) {
           {error && <div className="form-error" role="alert">{error}</div>}
           <label className="form-field"><span>Project name *</span><input className="text-input" data-autofocus required maxLength={80} value={form.name} onChange={(e) => setForm({ ...form, name: e.target.value })} placeholder="e.g. Mobile Banking App" /></label>
           <div className="form-grid">
-            <label className="form-field"><span>Key</span><input className="text-input mono" maxLength={6} value={key} aria-invalid={!!key && !keyValid} onChange={(e) => setForm({ ...form, key: e.target.value.toUpperCase().replace(/[^A-Z0-9]/g, ''), keyTouched: true })} placeholder="MBA" /></label>
+            <label className="form-field"><span>Key</span><input className="text-input mono" maxLength={6} value={key} aria-invalid={!!key && !keyValid} onChange={(e) => setForm({ ...form, key: e.target.value.toUpperCase().replace(/[^A-Z0-9]/g, ''), keyTouched: true })} placeholder="MBA" />
+              {keyTaken && <small className="field-hint bad" role="alert">{key} is already used by another project. <button type="button" className="link-btn" onClick={() => setForm({ ...form, key: freeKey(key, taken) })}>Use {freeKey(key, taken)}</button></small>}
+              {!form.keyTouched && key && key !== suggestKey(form.name) && <small className="field-hint">{suggestKey(form.name)} is taken, so this project gets {key}.</small>}
+            </label>
             <div className="form-field"><span>Preview</span><div className="key-preview">{key || 'KEY'}-101</div></div>
           </div>
           <div className="form-field"><span>Methodology</span>

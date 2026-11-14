@@ -54,7 +54,7 @@ export interface AutomationAction { action: ActionKind; to?: (number | 'assignee
 export interface Automation { id: number; projectId: number; name: string; when: AutomationWhen; then: AutomationAction[]; enabled: boolean; runCount: number; lastRunAt: string | null; createdBy: number | null; createdAt: string }
 export interface NotifySettings { email: NotifyPref; push: NotifyPref; devices: number; emailAvailable: boolean; pushAvailable: boolean; pushKey: string | null; calendarUrl: string | null; calendarReachable: boolean }
 
-export interface WorkspaceDetail { workspace: Workspace; members: Member[]; projects: Project[] }
+export interface WorkspaceDetail { workspace: Workspace; members: Member[]; projects: Project[]; takenKeys?: string[] }
 
 export interface Issue {
   id: number; key: string; number: number; projectId: number; type: IssueType; title: string; description: string;

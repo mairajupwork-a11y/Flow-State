@@ -520,3 +520,5 @@ html.reduce-motion .page > * { animation: none; }
 .content-card p, .list-name strong, .backlog-row, .issue-head { overflow-wrap: anywhere; word-break: break-word; min-width: 0; }
 .detail-layout > * { min-width: 0; }
 .modal-body { overflow-x: hidden; }
+.field-hint { display: block; margin-top: 6px; font-size: 12px; color: var(--muted); text-transform: none; letter-spacing: 0; font-weight: 500; }
+.field-hint.bad { color: var(--danger-ink); }

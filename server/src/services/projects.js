@@ -9,6 +9,19 @@ export function suggestKey(name) {
   return (/^[A-Z]/.test(key) ? key : 'P' + key).slice(0, 6);
 }
 
+/** The first free key: OPTP, then OPTP2…OPTP9, then OPT10…, so a suggested key never collides. */
+export async function uniqueKey(db, workspaceId, base) {
+  const taken = new Set((await db.all('SELECT key FROM projects WHERE workspace_id = ?', workspaceId)).map((r) => r.key.toUpperCase()));
+  const root = (base || 'PRJ').toUpperCase().slice(0, 6);
+  if (!taken.has(root)) return root;
+  for (let n = 2; n < 1000; n++) {
+    const tail = String(n);
+    const candidate = root.slice(0, 6 - tail.length) + tail;
+    if (!taken.has(candidate)) return candidate;
+  }
+  return root;
+}
+
 const PHASE_DAYS = 14;
 
 /** Creates the methodology's phases; the first one starts active. */
@@ -36,13 +49,14 @@ export async function createPhases(db, projectId, m, { startOffset = 0 } = {}) {
  * and a first sprint or iteration where the practice requires one. Projects
  * start empty; no example work is added.
  */
-export async function createProject(db, { workspaceId, actor, name, key, description = '', methodology: methodId, template, color, memberIds = [] }) {
+export async function createProject(db, { workspaceId, actor, name, key, autoKey = false, description = '', methodology: methodId, template, color, memberIds = [] }) {
   const id = methodId || template || 'scrum';
   const m = methodology(id);
   return await db.tx(async () => {
-    const finalKey = (key || suggestKey(name)).toUpperCase();
+    // A key the person didn't type themselves is adjusted to the next free one instead of failing.
+    const finalKey = !key || autoKey ? await uniqueKey(db, workspaceId, key || suggestKey(name)) : key.toUpperCase();
     if (await db.get('SELECT 1 FROM projects WHERE workspace_id = ? AND key = ?', workspaceId, finalKey)) {
-      throw new HttpError(409, `The key ${finalKey} is already used by another project. Try a different one.`);
+      throw new HttpError(409, `The key ${finalKey} is already used by another project (it may be archived). Try ${await uniqueKey(db, workspaceId, finalKey)} instead.`);
     }
     const count = (await db.get('SELECT COUNT(*) AS n FROM projects WHERE workspace_id = ?', workspaceId)).n;
     const { lastInsertRowid } = await db.run(
