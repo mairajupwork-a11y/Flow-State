@@ -126,7 +126,7 @@ export function ProgressRing({ value, label, size = 64 }: { value: number; label
     <div className="progress-ring-mini" style={{ width: size, height: size }} role="img" aria-label={`${value}% ${label ?? ''}`}>
       <svg viewBox="0 0 64 64" width={size} height={size}>
         <circle cx="32" cy="32" r={r} className="ring-track" />
-        <circle cx="32" cy="32" r={r} className="ring-fill" strokeDasharray={`${(c * value) / 100} ${c}`} transform="rotate(-90 32 32)" />
+        {value > 0 && <circle cx="32" cy="32" r={r} className="ring-fill" strokeDasharray={`${(c * value) / 100} ${c}`} transform="rotate(-90 32 32)" />}
       </svg>
       <span><b>{value}%</b>{label && <small>{label}</small>}</span>
     </div>

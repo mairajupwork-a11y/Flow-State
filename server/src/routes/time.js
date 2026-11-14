@@ -34,7 +34,8 @@ const csvCell = (v) => { const s = String(v ?? ''); return /[",\n]/.test(s) ? `"
 
 export function timeRoutes({ db, events }) {
   const r = Router();
-  r.use(requireUser);
+  // Signed-in only, and only on these paths (other /api routers, like public share links, pass through).
+  r.use(['/time', '/issues/:ref/time', '/workspaces/:ws/timesheet'], requireUser);
   const changed = (wsId, actorId) => events.changed(wsId, ['time', 'issues'], actorId);
 
   // ---- The running timer ----

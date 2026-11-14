@@ -20,6 +20,7 @@ import { notifySettingsRoutes } from './routes/notify-settings.js';
 import { timeRoutes } from './routes/time.js';
 import { integrationRoutes, hookReceiver } from './routes/integrations.js';
 import { createChatRelay } from './services/integrations.js';
+import { teamToolRoutes } from './routes/team-tools.js';
 import { createDelivery } from './delivery.js';
 
 /** Value of the X-Requested-With header our web app sends ('flowstate' from tabs opened before the rename). */
@@ -83,6 +84,7 @@ export function createApp({ db, secret, production = false, staticDir = null, ol
   app.use('/api', notifySettingsRoutes(ctx));
   app.use('/api', timeRoutes(ctx));
   app.use('/api', integrationRoutes(ctx));
+  app.use('/api', teamToolRoutes(ctx));
   app.use('/api', (_req, _res, next) => next(new HttpError(404, 'Unknown API route.')));
 
   if (staticDir && existsSync(staticDir)) {

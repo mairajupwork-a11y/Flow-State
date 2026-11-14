@@ -13,6 +13,7 @@ import { SectionBar, useProjectCtx } from './ProjectLayout';
 import { AutomationsCard, CustomFieldsCard } from './ProjectExtensions';
 import { ResourcesCard } from './ProjectResources';
 import { ImportModal } from './ImportModal';
+import { ShareCard } from './ShareCard';
 
 const COLORS = ['#282c20', '#5b7a1e', '#535450', '#8a9468', '#3f4a2a', '#6b7a56', '#7c8c2a', '#9a9e86'];
 const CATEGORY_LABEL: Record<StatusCategory, string> = { todo: 'To do', progress: 'In progress', done: 'Done' };
@@ -24,8 +25,8 @@ export default function ProjectSettings() {
   const qc = useQueryClient();
   const navigate = useNavigate();
   const refresh = () => { invalidateWork(qc); qc.invalidateQueries({ queryKey: ['ws'] }); };
-  const [details, setDetails] = useState({ name: project.name, description: project.description, color: project.color, leadId: project.leadId });
-  useEffect(() => setDetails({ name: project.name, description: project.description, color: project.color, leadId: project.leadId }), [project]);
+  const [details, setDetails] = useState({ name: project.name, description: project.description, client: project.client ?? '', color: project.color, leadId: project.leadId });
+  useEffect(() => setDetails({ name: project.name, description: project.description, client: project.client ?? '', color: project.color, leadId: project.leadId }), [project]);
 
   const save = useMutation({ mutationFn: (body: object) => api.patch(`/projects/${project.id}`, body), onSuccess: () => { refresh(); toast('Project updated.'); } });
   const addStatus = useMutation({ mutationFn: (body: object) => api.post(`/projects/${project.id}/statuses`, body), onSuccess: () => { refresh(); toast('Column added.'); } });
@@ -56,6 +57,7 @@ export default function ProjectSettings() {
           <fieldset disabled={!canEdit} className="plain stack-14" style={{ marginTop: 16 }}>
             <label className="form-field"><span>Name</span><input className="text-input" value={details.name} maxLength={80} onChange={(e) => setDetails({ ...details, name: e.target.value })} required /></label>
             <label className="form-field"><span>Description</span><textarea className="text-input field-textarea" value={details.description} maxLength={500} onChange={(e) => setDetails({ ...details, description: e.target.value })} placeholder="What is this project about?" /></label>
+            <label className="form-field"><span>Client <small className="muted-inline">(optional — shown on timesheets and share links)</small></span><input className="text-input" value={details.client} maxLength={80} onChange={(e) => setDetails({ ...details, client: e.target.value })} placeholder="e.g. Acme Corp" /></label>
             <label className="form-field"><span>Project lead</span>
               <select className="field-select" value={details.leadId ?? ''} onChange={(e) => setDetails({ ...details, leadId: e.target.value ? Number(e.target.value) : null })}>
                 <option value="">No lead</option>
@@ -101,6 +103,7 @@ export default function ProjectSettings() {
         </div>
       )}
       {importing && <ImportModal project={project} onClose={() => setImporting(false)} />}
+      {canEdit && <div style={{ marginTop: 16 }}><ShareCard project={project} /></div>}
 
       <div className="two-col" style={{ marginTop: 16 }}>
         <CustomFieldsCard project={project} />

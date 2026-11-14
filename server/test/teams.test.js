@@ -255,3 +255,29 @@ test('audit log: admins see who changed roles, people and projects; others canno
   const csv = await admin('GET', `/workspaces/${ws.slug}/audit?format=csv`);
   assert.match(csv.data, /member\.role/);
 });
+
+test('workload and client share links', async () => {
+  const { admin, dev, devUser, ws, web, card } = await org();
+  await admin('PATCH', `/issues/${card.key}`, { dueDate: '2020-01-01' });
+  const wl = (await admin('GET', `/workspaces/${ws.slug}/workload`)).data;
+  const dan = wl.people.find((p) => p.userId === devUser.id);
+  assert.equal(dan.open, 1);
+  assert.equal(dan.overdue, 1);
+  assert.equal(dan.load, 'high');
+  assert.equal((await dev('GET', `/workspaces/${ws.slug}/workload`)).status, 403);
+  // share link
+  await admin('POST', `/issues/${card.key}/comments`, { body: 'internal note' });
+  const link = (await admin('POST', `/projects/${web.id}/share`, { label: 'Acme Corp' })).data;
+  assert.match(link.url, /\/share\/[\w-]{20,}$/);
+  const token = link.url.split('/share/')[1];
+  const anon = client();
+  const viewRes = await anon('GET', `/share/${token}`);
+  const view = viewRes.data;
+  assert.equal(view.project.name, 'Web');
+  assert.equal(view.progress.total, 1);
+  const text = JSON.stringify(view);
+  assert.ok(!text.includes('internal note') && !text.includes('Dev Dan') && !text.includes('example.com'), 'no comments, people or emails');
+  assert.equal((await dev('POST', `/projects/${web.id}/share`, {})).status, 403);
+  assert.equal((await admin('DELETE', `/share-links/${link.id}`)).status, 200);
+  assert.equal((await anon('GET', `/share/${token}`)).status, 404, 'revoked links stop working');
+});

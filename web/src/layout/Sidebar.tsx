@@ -78,6 +78,7 @@ export function Sidebar({ activeKey }: { activeKey?: string }) {
         <NavItem to={`${base}/my-day`} icon="sun" label="My day" counter={remaining} />
         <NavItem to={`${base}/timesheets`} icon="clock" label="Timesheets" />
         <NavItem to={`${base}/team`} icon="people" label="Team" />
+        {canEdit && <NavItem to={`${base}/workload`} icon="chart" label="Workload" />}
         {canEdit && <NavItem to={`${base}/integrations`} icon="link" label="Integrations" />}
         <NavItem to={`${base}/settings`} icon="settings" label="Settings" />
       </nav>

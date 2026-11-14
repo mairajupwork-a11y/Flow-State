@@ -17,6 +17,8 @@ import { MyTasks } from './features/personal/MyTasks';
 import { MyDay } from './features/personal/MyDay';
 const Timesheets = lazy(() => import('./features/personal/Timesheets'));
 const Integrations = lazy(() => import('./features/settings/Integrations'));
+const Workload = lazy(() => import('./features/team/Workload'));
+import { SharedProject } from './features/auth/SharedProject';
 import { NotFound } from './features/home/NotFound';
 
 // Heavier, less-visited screens load on demand.
@@ -83,6 +85,7 @@ export function App() {
     <Routes>
       <Route path="/" element={<Home />} />
       <Route path="/welcome" element={<Welcome />} />
+      <Route path="/share/:token" element={<SharedProject />} />
       <Route path="/login" element={<AuthPage mode="login" />} />
       <Route path="/signup" element={<AuthPage mode="signup" />} />
       <Route path="/forgot-password" element={<ForgotPassword />} />
@@ -108,6 +111,7 @@ export function App() {
         <Route path="my-day" element={<MyDay />} />
         <Route path="timesheets" element={lazyEl(<Timesheets />)} />
         <Route path="integrations" element={lazyEl(<Integrations />)} />
+        <Route path="workload" element={lazyEl(<Workload />)} />
         <Route path="team" element={lazyEl(<Team />)} />
         <Route path="settings" element={lazyEl(<Settings />)} />
         <Route path="*" element={<NotFound />} />
