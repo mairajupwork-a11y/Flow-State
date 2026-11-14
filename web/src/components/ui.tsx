@@ -38,8 +38,17 @@ export function AssigneeAvatars({ issue, size = 'sm', max = 3 }: { issue: { assi
   );
 }
 
+/** A small drawn glyph per priority: a flame for urgent, rising bars for high, level bars for medium, a falling chevron for low. */
+export function PriorityGlyph({ priority, size = 14 }: { priority: Priority; size?: number }) {
+  const common = { width: size, height: size, viewBox: '0 0 16 16', 'aria-hidden': true, className: 'prio-glyph' } as const;
+  if (priority === 'urgent') return <svg {...common}><path d="M8 1.5c.6 2.4 3.9 3.8 3.9 7.6A3.9 3.9 0 0 1 8 13a3.9 3.9 0 0 1-3.9-3.9c0-1.9 1.1-2.8 1.8-3.8.2 1.3.9 2 1.6 2.2C7.2 5.6 7.4 3.4 8 1.5Z" fill="currentColor" /><path d="M8 13c-1.2 0-2-.9-2-2 0-1 .8-1.6 1.2-2.3.3.8.8 1.1 1.3 1.2.6.3.9.7.9 1.2 0 1-.6 1.9-1.4 1.9Z" fill="#fff" opacity=".55" /></svg>;
+  if (priority === 'high') return <svg {...common}><rect x="2" y="9" width="3" height="5" rx="1.2" fill="currentColor" /><rect x="6.5" y="5.5" width="3" height="8.5" rx="1.2" fill="currentColor" /><rect x="11" y="2" width="3" height="12" rx="1.2" fill="currentColor" /></svg>;
+  if (priority === 'medium') return <svg {...common}><rect x="2" y="9" width="3" height="5" rx="1.2" fill="currentColor" /><rect x="6.5" y="5.5" width="3" height="8.5" rx="1.2" fill="currentColor" /><rect x="11" y="2" width="3" height="12" rx="1.2" fill="currentColor" opacity=".25" /></svg>;
+  return <svg {...common}><rect x="2" y="9" width="3" height="5" rx="1.2" fill="currentColor" /><rect x="6.5" y="5.5" width="3" height="8.5" rx="1.2" fill="currentColor" opacity=".25" /><rect x="11" y="2" width="3" height="12" rx="1.2" fill="currentColor" opacity=".25" /></svg>;
+}
+
 export function PriorityPill({ priority, suffix = '' }: { priority: Priority; suffix?: string }) {
-  return <span className={`priority ${priority}`}><Icon name="flag" size={11} /> {PRIORITY_LABEL[priority]}{suffix}</span>;
+  return <span className={`priority ${priority}`}><PriorityGlyph priority={priority} size={12} /> {PRIORITY_LABEL[priority]}{suffix}</span>;
 }
 
 export function StatusPill({ name, category }: { name: string; category: StatusCategory }) {

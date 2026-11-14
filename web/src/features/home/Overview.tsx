@@ -1,12 +1,11 @@
-import { useState, type CSSProperties } from 'react';
-import { SCENES, sceneStyle } from '../../lib/scenes';
+import { useState } from 'react';
 import { Link, useNavigate, useSearchParams } from 'react-router-dom';
 import { Icon } from '../../components/Icon';
-import { Avatar, Empty, PageHeader, PriorityPill, TypeIcon } from '../../components/ui';
+import { Avatar, Empty, PageHeader, PriorityGlyph } from '../../components/ui';
 import { useActivity, useIssues, useMyIssues, useProject, useTodos } from '../../lib/queries';
 import { useWs, useCurrentProject } from '../../lib/workspace';
 import { openCreate, openGuide, ui } from '../../lib/store';
-import { greeting, relativeDay, timeAgo, todayISO } from '../../lib/format';
+import { PRIORITY_LABEL, greeting, relativeDay, timeAgo, todayISO } from '../../lib/format';
 import { Metrics, ProjectHero } from '../project/ProjectLayout';
 import type { Activity } from '../../lib/types';
 
@@ -24,7 +23,7 @@ export function Overview() {
   return (
     <>
       <PageHeader eyebrow="Workspace / Overview" title={`${greeting()}, ${me.name.split(' ')[0]}.`}
-        subtitle={overdue ? `The big picture, beautifully clear — and ${overdue} of your items could use a nudge today.` : 'The big picture, beautifully clear. Track momentum without getting lost in the details.'}
+        subtitle={overdue ? `${overdue} of your items could use a nudge today.` : 'Here’s where things stand today.'}
         actions={<>
           <button className="btn btn-light" onClick={() => openGuide()}><Icon name="sparkles" size={16} /><span className="btn-label-mobile">Ask Mars guide</span></button>
           {canEdit && <button className="btn btn-primary" onClick={() => openCreate()}><Icon name="plus" size={16} /> Create task</button>}
@@ -37,32 +36,35 @@ export function Overview() {
       ) : (
         <>
           {project.data && issues.data && <><ProjectHero project={project.data} issues={issues.data} /><Metrics issues={issues.data} /></>}
-          <div className="two-col">
-            <div className="content-card">
-              <div className="section-bar" style={{ marginTop: 0 }}>
-                <div><h3>Up next for you</h3><p className="muted hide-phone">Your open work across every project, soonest first</p></div>
-                <Link className="btn btn-soft btn-sm" to={`${base}/my-tasks`}>All my tasks <Icon name="right" size={13} /></Link>
+          <div className="dash-grid">
+            <div className="content-card dash-card">
+              <div className="dash-card-head">
+                <h3><span className="dash-ico lime"><Icon name="target" size={15} /></span> Up next for you</h3>
+                <Link className="link-btn" to={`${base}/my-tasks`}>All my tasks</Link>
               </div>
-              {upNext.map((t) => (
-                <button key={t.id} className="todo-item clickable row-btn" onClick={() => setParams({ issue: t.key })}>
-                  <TypeIcon type={t.type} size={15} />
-                  <div className="todo-copy"><strong>{t.title}</strong><small>{t.key} · {t.statusName} · <span className={t.dueDate && t.dueDate < today ? 'overdue' : ''}>{t.dueDate ? `Due ${relativeDay(t.dueDate)}` : 'No due date'}</span></small></div>
-                  <PriorityPill priority={t.priority} />
-                </button>
-              ))}
-              {!upNext.length && <Empty title="You’re all clear" icon="checkcircle">Nothing is assigned to you right now. Enjoy the breathing room — or pick something from the board.</Empty>}
+              <div className="next-list">
+                {upNext.map((t) => {
+                  const late = !!t.dueDate && t.dueDate < today;
+                  return (
+                    <button key={t.id} className="next-row" onClick={() => setParams({ issue: t.key })}>
+                      <span className={`prio-dot ${t.priority}`} title={`${PRIORITY_LABEL[t.priority]} priority`}><PriorityGlyph priority={t.priority} size={14} /></span>
+                      <span className="next-copy"><b>{t.title}</b><small>{t.key} · {t.statusName}</small></span>
+                      <span className={`due-chip ${late ? 'late' : ''}`}><Icon name="calendar" size={12} />{t.dueDate ? relativeDay(t.dueDate) : 'No date'}</span>
+                    </button>
+                  );
+                })}
+              </div>
+              {!upNext.length && <Empty title="You’re all clear" icon="checkcircle">Nothing is assigned to you right now.</Empty>}
             </div>
-            <div className="stack-16">
+            <div className="dash-side">
               <ProjectsCard />
-              <div className="content-card scene scene-card" style={sceneStyle(SCENES[1]) as CSSProperties}>
-                <div className="row-12">
-                  <span className="metric-symbol"><Icon name="sparkles" size={18} /></span>
-                  <div><h3>Need a fresh perspective?</h3><p className="muted">Your free Mars guide can plan your day or spot what’s at risk.</p></div>
-                </div>
-                <div className="row-8 wrap" style={{ marginTop: 14 }}>
-                  <button className="btn btn-soft btn-sm" onClick={() => openGuide('Prioritise my day')}>Plan my day</button>
-                  <button className="btn btn-soft btn-sm" onClick={() => openGuide('What needs attention?')}>What needs attention?</button>
-                  <button className="btn btn-soft btn-sm" onClick={() => openGuide('Write my stand-up')}>Write my stand-up</button>
+              <div className="content-card dash-card guide-card">
+                <h3><span className="dash-ico violet"><Icon name="sparkles" size={15} /></span> Mars guide</h3>
+                <p className="muted">Free AI that reads your board.</p>
+                <div className="guide-chips">
+                  <button onClick={() => openGuide('Prioritise my day')}><Icon name="sun" size={13} /> Plan my day</button>
+                  <button onClick={() => openGuide('What needs attention?')}><Icon name="flag" size={13} /> What needs attention?</button>
+                  <button onClick={() => openGuide('Write my stand-up')}><Icon name="message" size={13} /> Write my stand-up</button>
                 </div>
               </div>
               <RecentActivity />
@@ -77,9 +79,8 @@ export function Overview() {
 function ProjectsCard() {
   const { projects, base } = useWs();
   return (
-    <div className="content-card">
-      <h3>Projects</h3>
-      <p className="muted">{projects.length} active · progress at a glance</p>
+    <div className="content-card dash-card">
+      <div className="dash-card-head"><h3><span className="dash-ico sky"><Icon name="folder" size={15} /></span> Projects</h3><span className="muted">{projects.length} active</span></div>
       {projects.map((p) => {
         const pct = p.issueCount ? Math.round(((p.doneCount ?? 0) / p.issueCount) * 100) : 0;
         return (
@@ -119,11 +120,10 @@ function RecentActivity() {
   const { data } = useActivity(workspace.slug);
   const [, setParams] = useSearchParams();
   return (
-    <div className="content-card">
-      <h3>Recent activity</h3>
-      <p className="muted">What your team has been up to</p>
+    <div className="content-card dash-card">
+      <h3><span className="dash-ico peach"><Icon name="clock" size={15} /></span> Recent activity</h3>
       <ul className="activity-feed">
-        {(data ?? []).slice(0, 8).map((a) => (
+        {(data ?? []).slice(0, 5).map((a) => (
           <li key={a.id}>
             <Avatar user={member(a.actorId)} size="sm" />
             <button className="link-plain" onClick={() => a.issueKey && setParams({ issue: a.issueKey })} disabled={!a.issueKey}>
@@ -163,7 +163,7 @@ function GettingStarted() {
   const dismiss = () => { try { localStorage.removeItem(key); } catch { /* */ } setVisible(false); };
   return (
     <div className="content-card getting-started">
-      <div className="row-between card-scene scene" style={sceneStyle(SCENES[0]) as CSSProperties}>
+      <div className="row-between">
         <div><h3>Getting started · {done}/{steps.length}</h3><p className="muted">Five small steps to feel at home in WorkMars.</p></div>
         <button className="icon-btn" onClick={dismiss} aria-label="Dismiss getting started"><Icon name="close" size={16} /></button>
       </div>

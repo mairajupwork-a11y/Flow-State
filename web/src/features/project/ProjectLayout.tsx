@@ -1,4 +1,3 @@
-import { sceneFor, sceneStyle } from '../../lib/scenes';
 import { useEffect, useMemo, useRef, useState, type CSSProperties } from 'react';
 import { Navigate, NavLink, Outlet, useLocation, useOutletContext, useParams } from 'react-router-dom';
 import { useIssues, useProject } from '../../lib/queries';
@@ -102,17 +101,34 @@ export function ProjectHero({ project, issues }: { project: ProjectDetail; issue
     phase = `${m.name} · ${sprint.name} · ${left == null ? 'In progress' : left > 0 ? `${left} day${left === 1 ? '' : 's'} remaining` : left === 0 ? 'Ends today' : `Ended ${fmtDate(sprint.endDate, locale)}`}`;
   }
   const people = members.filter((m) => issues.some((i) => assigned(i).includes(m.id)));
+  const pct = work.length ? Math.round((done / work.length) * 100) : 0;
   return (
-    <div className="project-hero scene" style={{ '--project-tint': project.color, ...sceneStyle(sceneFor(project.id)) } as CSSProperties}>
+    <div className="project-hero glass-hero" style={{ '--project-tint': project.color } as CSSProperties}>
+      <span className="hero-glyph" style={{ background: project.color }}>{project.key.slice(0, 2)}</span>
       <div className="hero-content">
         <div className="hero-overline"><Icon name="bolt" size={13} /> {phase}</div>
         <h2>{project.name}</h2>
         <p>{sprint?.goal || project.description || 'Everything your team is working on, in one place.'}</p>
       </div>
       <div className="hero-right">
-        <div className="hero-metric"><strong>{work.length ? Math.round((done / work.length) * 100) : 0}%</strong><span>work completed</span></div>
         <div className="hero-people"><AvatarGroup users={people.length ? people : members} /></div>
+        <ProgressRing value={pct} label="done" />
       </div>
+    </div>
+  );
+}
+
+/** A small circular progress meter with the percentage in the middle. */
+export function ProgressRing({ value, label, size = 64 }: { value: number; label?: string; size?: number }) {
+  const r = 26;
+  const c = 2 * Math.PI * r;
+  return (
+    <div className="progress-ring-mini" style={{ width: size, height: size }} role="img" aria-label={`${value}% ${label ?? ''}`}>
+      <svg viewBox="0 0 64 64" width={size} height={size}>
+        <circle cx="32" cy="32" r={r} className="ring-track" />
+        <circle cx="32" cy="32" r={r} className="ring-fill" strokeDasharray={`${(c * value) / 100} ${c}`} transform="rotate(-90 32 32)" />
+      </svg>
+      <span><b>{value}%</b>{label && <small>{label}</small>}</span>
     </div>
   );
 }
@@ -126,19 +142,18 @@ export function Metrics({ issues }: { issues: Issue[] }) {
   const progress = work.filter((x) => x.statusCategory === 'progress').length;
   const overdue = work.filter((x) => x.dueDate && x.dueDate < today && x.statusCategory !== 'done').length;
   const weekDone = work.filter((x) => x.resolvedAt && daysBetween(x.resolvedAt.slice(0, 10), today) <= 7).length;
-  const m: [string, number, string, string, string, string][] = [
-    ['Total work items', work.length, 'All tracked tasks', 'grid', '#e9ead8', '#b6bc75'],
-    ['Completed', done, weekDone ? `${weekDone} finished this week` : 'Moving forward', 'checkcircle', '#ecf1ec', '#537e51'],
-    ['In progress', progress, 'Active workstream', 'loader', '#f2f7f3', '#8caf92'],
-    ['Need attention', overdue, overdue ? 'Overdue items' : 'Nothing overdue', 'flag', '#f9f9f3', '#b9bc81'],
+  const m: [string, number, string, string, string][] = [
+    ['Total work', work.length, 'tracked items', 'grid', 'lime'],
+    ['Completed', done, weekDone ? `${weekDone} this week` : 'keep going', 'checkcircle', 'mint'],
+    ['In progress', progress, 'being worked on', 'loader', 'sky'],
+    ['Overdue', overdue, overdue ? 'need attention' : 'all on time', 'clock', overdue ? 'rose' : 'peach'],
   ];
   return (
-    <div className="metric-grid">
-      {m.map(([label, num, sub, ic, bg, color]) => (
-        <div className="metric" key={label}>
-          <div className="metric-head"><span>{label}</span><span className="metric-symbol" style={{ background: bg, color }}><Icon name={ic} size={17} /></span></div>
-          <div className="metric-val">{num}</div>
-          <div className="metric-foot"><span className="trend"><Icon name="trend" size={12} /></span> {sub}</div>
+    <div className="metric-grid stat-grid">
+      {m.map(([label, num, sub, ic, tone]) => (
+        <div className={`metric stat tone-${tone}`} key={label}>
+          <span className="stat-ico"><Icon name={ic} size={18} /></span>
+          <div className="stat-body"><span className="stat-label">{label}</span><span className="metric-val">{num}</span><span className="stat-sub">{sub}</span></div>
         </div>
       ))}
     </div>

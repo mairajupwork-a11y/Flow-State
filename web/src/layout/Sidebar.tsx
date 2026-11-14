@@ -1,6 +1,5 @@
-import { SCENES, sceneStyle } from '../lib/scenes';
 import { Logo } from '../components/Logo';
-import { useEffect, useRef, useState, type CSSProperties } from 'react';
+import { useEffect, useRef, useState } from 'react';
 import { NavLink, useNavigate } from 'react-router-dom';
 import { useQueryClient } from '@tanstack/react-query';
 import { Icon } from '../components/Icon';
@@ -82,10 +81,9 @@ export function Sidebar({ activeKey }: { activeKey?: string }) {
       </nav>
 
       <div className="side-bottom">
-        <div className="free-banner scene" style={sceneStyle(SCENES[0]) as CSSProperties}>
-          <span className="mini-label">FREE. NO SEAT LIMITS.</span>
-          <strong>Make room for everyone.</strong>
-          <p>Invite your whole team — every feature is free for unlimited users.</p>
+        <div className="free-banner glass-banner">
+          <span className="mini-label"><Icon name="heart" size={12} /> Free for everyone</span>
+          <p>No seat limits — invite your whole team.</p>
           {isAdmin && <button className="btn btn-soft btn-sm" style={{ marginTop: 10, position: 'relative', zIndex: 1 }} onClick={() => ui.set({ inviteOpen: true, sidebarOpen: false })}><Icon name="plus" size={13} /> Invite people</button>}
         </div>
         <UserBox />
