@@ -510,3 +510,16 @@
 :root { --ui-zoom: 1; }
 @media (min-width: 1200px) and (hover: hover) and (pointer: fine) { :root { --ui-zoom: .75; } }
 html { zoom: var(--ui-zoom); }
+
+/* ---------- WorkMars logo ---------- */
+.wm-logo { display: inline-flex; align-items: center; flex-shrink: 0; line-height: 0; user-select: none; }
+.wm-logo img { height: 100%; width: auto; display: block; }
+.wm-logo .for-dark { display: none; }
+.wm-logo.dark-bg .for-light, .sidebar .wm-logo .for-light, [data-theme="dark"] .wm-logo .for-light { display: none; }
+.wm-logo.dark-bg .for-dark, .sidebar .wm-logo .for-dark, [data-theme="dark"] .wm-logo .for-dark { display: block; }
+.wm-mark-img { display: block; object-fit: contain; transition: transform .8s var(--pd-ease, ease); }
+.pd-mono:hover .wm-mark-img { transform: rotate(-20deg); }
+@media (max-width: 600px) {
+  .pd-chrome .wm-logo { height: 38px !important; }
+  .auth-mobile-brand .wm-logo, .onboard-top .wm-logo { height: 40px !important; }
+}

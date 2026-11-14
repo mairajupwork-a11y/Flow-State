@@ -4,6 +4,14 @@ const esc = (s) => String(s).replace(/[&<>"']/g, (c) => ({ '&': '&amp;', '<': '&
 const oneLine = (s) => String(s).replace(/[\r\n]+/g, ' ').trim();
 const ROLE = { admin: 'an admin', manager: 'a manager', member: 'a team member', viewer: 'a viewer' };
 
+/** The WorkMars logo, served by the app the email links to; the alt text shows if images are blocked. */
+function brandLogo(url) {
+  let origin = '';
+  try { origin = new URL(url).origin; } catch { /* relative or missing link */ }
+  const text = '<span style="font-size:22px;font-weight:800;letter-spacing:-.5px;color:#282c20">WORKMARS</span>';
+  return origin ? `<img src="${origin}/brand/logo-email.png" width="180" height="81" alt="WorkMars" style="display:block;border:0;width:180px;height:auto;font-size:22px;font-weight:800;color:#282c20">` : text;
+}
+
 export function inviteEmail({ to, inviter, workspace, role, designation = '', url }) {
   const as = designation ? designation : ROLE[role] ?? 'a member';
   const asText = designation ? `as ${designation}` : `as ${as}`;
@@ -23,7 +31,7 @@ export function inviteEmail({ to, inviter, workspace, role, designation = '', ur
   <table role="presentation" width="100%" cellpadding="0" cellspacing="0" style="padding:32px 12px">
     <tr><td align="center">
       <table role="presentation" width="100%" cellpadding="0" cellspacing="0" style="max-width:520px;background:#fbfbf6;border-radius:0;padding:32px">
-        <tr><td style="font-size:22px;font-weight:800;letter-spacing:-.5px;color:#282c20;padding-bottom:20px"><span style="font-family:Georgia,serif">WORK</span><span style="color:#282c20">MARS</span></td></tr>
+        <tr><td style="padding-bottom:20px">${brandLogo(url)}</td></tr>
         <tr><td style="font-size:22px;font-weight:700;line-height:1.3;padding-bottom:12px">You're invited to ${esc(workspace)}</td></tr>
         <tr><td style="font-size:15px;line-height:1.6;color:#535450;padding-bottom:24px">
           <b style="color:#282c20">${esc(inviter)}</b> has invited you to join <b style="color:#282c20">${esc(workspace)}</b> on WorkMars ${designation ? `as <b style="color:#282c20">${esc(designation)}</b>` : `as ${as}`}.
@@ -49,7 +57,7 @@ function frame({ heading, body, button, url, footer }) {
   <table role="presentation" width="100%" cellpadding="0" cellspacing="0" style="padding:32px 12px">
     <tr><td align="center">
       <table role="presentation" width="100%" cellpadding="0" cellspacing="0" style="max-width:520px;background:#fbfbf6;border-radius:0;padding:32px">
-        <tr><td style="font-size:22px;font-weight:800;letter-spacing:-.5px;color:#282c20;padding-bottom:20px"><span style="font-family:Georgia,serif">WORK</span><span style="color:#282c20">MARS</span></td></tr>
+        <tr><td style="padding-bottom:20px">${brandLogo(url)}</td></tr>
         <tr><td style="font-size:21px;font-weight:700;line-height:1.3;padding-bottom:12px">${heading}</td></tr>
         <tr><td style="font-size:15px;line-height:1.6;color:#535450;padding-bottom:24px">${body}</td></tr>
         ${url ? `<tr><td style="padding-bottom:24px"><a href="${esc(url)}" style="display:inline-block;background:#d2ff00;color:#282c20;text-decoration:none;font-weight:800;text-transform:uppercase;letter-spacing:.02em;font-size:15px;padding:12px 24px;border-radius:8px">${button}</a></td></tr>

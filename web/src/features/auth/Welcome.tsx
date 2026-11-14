@@ -171,7 +171,7 @@ export function Welcome() {
       {/* ---------- Floating chrome ---------- */}
       <header className={`pd-chrome on-${menu ? 'dark' : ground}`}>
         <Brand to="/welcome" onDark={menu || ground === 'dark'} height={34} />
-        <button className="pd-mono" onClick={() => go('top')} aria-label="Back to top"><Mark size={40} /></button>
+        <button className="pd-mono" onClick={() => go('top')} aria-label="Back to top"><Mark size={58} /></button>
         <div className="pd-chrome-right">
           <Link to="/login" className="pd-login">Log in</Link>
           <Link to="/signup" className="pd-btn"><Icon name="bolt" size={16} /> Start free</Link>
@@ -356,7 +356,7 @@ export function Welcome() {
               <button onClick={() => go('features')}>Features</button><button onClick={() => go('methods')}>Methods</button><button onClick={() => go('pricing')}>Pricing</button>
             </div>
             <div className="pd-footer-mid">
-              <Mark size={64} />
+              <Mark size={88} />
               <Link to="/signup" className="pd-btn">Create free account</Link>
             </div>
             <div>
