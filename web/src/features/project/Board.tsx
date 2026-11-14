@@ -1,3 +1,4 @@
+import { fmtMinutes } from '../../lib/time';
 import { memo, useEffect, useMemo, useState, type FormEvent } from 'react';
 import { Link, useSearchParams } from 'react-router-dom';
 import {
@@ -354,6 +355,7 @@ export const CardBody = memo(function CardBody({ issue, overlay = false }: { iss
         <div className="card-meta">
           {issue.dueDate && <span className={overdue ? 'overdue' : ''} title={`Due ${fmtDate(issue.dueDate, locale, true)}`}><Icon name="calendar" size={13} />{fmtDate(issue.dueDate, locale)}</span>}
           {issue.checklistTotal > 0 && <span title="Checklist progress"><Icon name="checkcircle" size={13} /> {issue.checklistDone}/{issue.checklistTotal}</span>}
+          {(issue.timeMinutes ?? 0) > 0 && <span title="Time logged"><Icon name="clock" size={13} />{fmtMinutes(issue.timeMinutes ?? 0)}</span>}
           {issue.commentCount > 0 && <span title="Comments"><Icon name="message" size={13} />{issue.commentCount}</span>}
           {(issue.attachmentCount ?? 0) > 0 && <span title="Attachments"><Icon name="attachment" size={13} />{issue.attachmentCount}</span>}
           {issue.subtaskCount > 0 && <span title="Sub-tasks"><Icon name="list" size={13} />{issue.subtaskCount}</span>}

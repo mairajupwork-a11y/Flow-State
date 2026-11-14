@@ -5,6 +5,7 @@ import { recolorSql, recolorSqlV6, recolorSqlV9 } from './schema/recolor.js';
 import { removeSamplesSql } from './schema/remove-samples.js';
 import { v8Sqlite } from './schema/v8.js';
 import { v10Sqlite } from './schema/v10.js';
+import { v11Sqlite } from './schema/v11.js';
 
 /**
  * Schema is applied idempotently on boot. Each entry in MIGRATIONS runs once,
@@ -331,6 +332,8 @@ export const MIGRATIONS = [
   recolorSqlV9(),
   // v10: managers, project resources, several assignees per item, to-do reminders.
   v10Sqlite(),
+  // v11: time tracking, GitHub/GitLab + chat integrations, audit log, two-factor sign-in, client share links.
+  v11Sqlite(),
 ];
 
 export function openDatabase(file = process.env.DATABASE_FILE || 'data/workmars.db') {

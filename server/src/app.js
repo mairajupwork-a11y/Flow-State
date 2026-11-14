@@ -17,6 +17,7 @@ import { recoveryRoutes } from './routes/recovery.js';
 import { fileRoutes } from './routes/files.js';
 import { extensionRoutes } from './routes/extensions.js';
 import { notifySettingsRoutes } from './routes/notify-settings.js';
+import { timeRoutes } from './routes/time.js';
 import { createDelivery } from './delivery.js';
 
 /** Value of the X-Requested-With header our web app sends ('flowstate' from tabs opened before the rename). */
@@ -76,6 +77,7 @@ export function createApp({ db, secret, production = false, staticDir = null, ol
   app.use('/api', fileRoutes(ctx));
   app.use('/api', extensionRoutes(ctx));
   app.use('/api', notifySettingsRoutes(ctx));
+  app.use('/api', timeRoutes(ctx));
   app.use('/api', (_req, _res, next) => next(new HttpError(404, 'Unknown API route.')));
 
   if (staticDir && existsSync(staticDir)) {

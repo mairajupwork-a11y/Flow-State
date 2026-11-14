@@ -24,7 +24,7 @@ export interface Session { user: Me | null; workspaces: Workspace[] }
 export interface Project {
   id: number; workspaceId: number; key: string; name: string; description: string; color: string; template: Template;
   methodology: MethodologyId; settings: ProjectSettings;
-  leadId: number | null; archived: boolean; createdAt: string; issueCount?: number; doneCount?: number;
+  leadId: number | null; archived: boolean; client?: string; createdAt: string; issueCount?: number; doneCount?: number;
 }
 export interface Status { id: number; name: string; category: StatusCategory; color: string; position: number; wipLimit: number | null }
 export interface Sprint {
@@ -62,7 +62,7 @@ export interface Issue {
   assigneeId: number | null; assigneeIds: number[]; reporterId: number | null; sprintId: number | null; epicId: number | null; parentId: number | null;
   phaseId: number | null; storyPoints: number | null; startDate: string | null; dueDate: string | null; labels: string[]; rank: number;
   createdAt: string; updatedAt: string; resolvedAt: string | null;
-  checklistTotal: number; checklistDone: number; commentCount: number; subtaskCount: number; attachmentCount?: number;
+  checklistTotal: number; checklistDone: number; commentCount: number; subtaskCount: number; attachmentCount?: number; timeMinutes?: number;
 }
 
 export interface Comment { id: number; body: string; createdAt: string; editedAt: string | null; authorId: number | null; author: User | null }

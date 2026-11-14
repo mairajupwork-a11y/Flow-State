@@ -52,6 +52,7 @@ export function projectRoutes({ db, events }) {
     const body = parse(z.object({
       name: z.string().trim().min(1).max(80).optional(),
       description: z.string().trim().max(500).optional(),
+      client: z.string().trim().max(80).optional(),
       color: z.string().regex(/^#[0-9a-fA-F]{6}$/).optional(),
       leadId: z.number().int().nullable().optional(),
       archived: z.boolean().optional(),
@@ -63,7 +64,7 @@ export function projectRoutes({ db, events }) {
     if (body.leadId && !await db.get('SELECT 1 FROM memberships WHERE workspace_id = ? AND user_id = ?', p.workspace_id, body.leadId)) {
       throw new HttpError(400, 'The project lead must be a workspace member.');
     }
-    const cols = { name: 'name', description: 'description', color: 'color', leadId: 'lead_id', archived: 'archived' };
+    const cols = { name: 'name', description: 'description', client: 'client', color: 'color', leadId: 'lead_id', archived: 'archived' };
     for (const [k, col] of Object.entries(cols)) {
       if (body[k] !== undefined) await db.run(`UPDATE projects SET ${col} = ? WHERE id = ?`, typeof body[k] === 'boolean' ? Number(body[k]) : body[k], p.id);
     }

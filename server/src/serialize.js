@@ -23,7 +23,7 @@ export function workspace(w, role) {
 export function project(p, extra = {}) {
   return {
     id: p.id, workspaceId: p.workspace_id, key: p.key, name: p.name, description: p.description, color: p.color,
-    template: p.template, methodology: p.methodology ?? p.template, settings: parseJson(p.settings, {}), leadId: p.lead_id, archived: !!p.archived, createdAt: p.created_at, ...extra,
+    template: p.template, methodology: p.methodology ?? p.template, settings: parseJson(p.settings, {}), leadId: p.lead_id, archived: !!p.archived, client: p.client ?? '', createdAt: p.created_at, ...extra,
   };
 }
 
@@ -73,7 +73,7 @@ export function issue(i) {
     parentId: i.parent_id, phaseId: i.phase_id ?? null, storyPoints: i.story_points, startDate: i.start_date, dueDate: i.due_date,
     labels: JSON.parse(i.labels || '[]'), rank: i.rank, createdAt: i.created_at, updatedAt: i.updated_at, resolvedAt: i.resolved_at,
     checklistTotal: i.checklist_total ?? 0, checklistDone: i.checklist_done ?? 0, commentCount: i.comment_count ?? 0,
-    subtaskCount: i.subtask_count ?? 0, attachmentCount: i.attachment_count ?? 0,
+    subtaskCount: i.subtask_count ?? 0, attachmentCount: i.attachment_count ?? 0, timeMinutes: i.time_minutes ?? 0,
   };
 }
 
@@ -84,7 +84,8 @@ export const ISSUE_SELECT = `
     (SELECT COUNT(*) FROM comments c WHERE c.issue_id = i.id) AS comment_count,
     (SELECT COUNT(*) FROM issues k WHERE k.parent_id = i.id) AS subtask_count,
     (SELECT COUNT(*) FROM attachments f WHERE f.issue_id = i.id) AS attachment_count,
-    (SELECT group_concat(ia.user_id) FROM issue_assignees ia WHERE ia.issue_id = i.id) AS assignee_ids
+    (SELECT group_concat(ia.user_id) FROM issue_assignees ia WHERE ia.issue_id = i.id) AS assignee_ids,
+    (SELECT COALESCE(SUM(te.minutes), 0) FROM time_entries te WHERE te.issue_id = i.id) AS time_minutes
   FROM issues i
   JOIN projects p ON p.id = i.project_id
   JOIN statuses s ON s.id = i.status_id`;

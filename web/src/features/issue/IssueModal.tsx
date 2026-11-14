@@ -7,6 +7,7 @@ import { api } from '../../lib/api';
 import { invalidateWork, keys, useIssue, useIssues, useProject } from '../../lib/queries';
 import { useWs } from '../../lib/workspace';
 import { AssigneePicker } from '../../components/AssigneePicker';
+import { TimeSection } from './TimeSection';
 import { askConfirm, copyText, openCreate, toast, toastError } from '../../lib/store';
 import { PRIORITIES, PRIORITY_LABEL, fmtDate, timeAgo, todayISO } from '../../lib/format';
 import { estimateLabel, methodologyOf, term, typeLabel } from '../../lib/methodology';
@@ -144,6 +145,8 @@ function IssueDetailView({ issue, onClose }: { issue: IssueDetail; onClose: () =
                 {canEdit && <button className="link-btn" onClick={() => openCreate({ epicId: issue.id, projectId: issue.projectId })}><Icon name="plus" size={13} /> Add work to this {typeLabel(m, 'epic').toLowerCase()}</button>}
               </div>
             )}
+
+            <TimeSection issueKey={issue.key} canLog={canContribute} />
 
             <Attachments issue={issue} canEdit={canContribute} />
 

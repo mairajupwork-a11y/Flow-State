@@ -76,6 +76,7 @@ export function Sidebar({ activeKey }: { activeKey?: string }) {
       <div className="side-section-label">Personal</div>
       <nav className="side-nav" aria-label="Personal navigation">
         <NavItem to={`${base}/my-day`} icon="sun" label="My day" counter={remaining} />
+        <NavItem to={`${base}/timesheets`} icon="clock" label="Timesheets" />
         <NavItem to={`${base}/team`} icon="people" label="Team" />
         <NavItem to={`${base}/settings`} icon="settings" label="Settings" />
       </nav>

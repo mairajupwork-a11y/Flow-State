@@ -1,3 +1,4 @@
+import { TimerPill } from '../components/TimerPill';
 import { useState } from 'react';
 import { Link, useLocation, useNavigate } from 'react-router-dom';
 import { useQueryClient } from '@tanstack/react-query';
@@ -14,7 +15,7 @@ import { methodologyOf, viewMeta } from '../lib/methodology';
 
 const VIEW_LABEL: Record<string, string> = {
   board: 'Board', backlog: 'Backlog', list: 'List', timeline: 'Timeline', calendar: 'Calendar', reports: 'Reports', settings: 'Settings',
-  phases: 'Phases', registers: 'Registers', charter: 'Charter', 'my-tasks': 'My tasks', 'my-day': 'My day', team: 'Team',
+  phases: 'Phases', registers: 'Registers', charter: 'Charter', 'my-tasks': 'My tasks', 'my-day': 'My day', team: 'Team', timesheets: 'Timesheets',
 };
 
 export function Topbar({ activeKey }: { activeKey?: string }) {
@@ -23,7 +24,7 @@ export function Topbar({ activeKey }: { activeKey?: string }) {
   const [, setTheme, dark] = useTheme();
   const project = projects.find((p) => p.key === activeKey);
   const last = location.pathname.split('/').filter(Boolean).pop() ?? '';
-  const view = project && VIEW_LABEL[last] && !['my-tasks', 'my-day', 'team'].includes(last) ? viewMeta(methodologyOf(project), last).label : VIEW_LABEL[last];
+  const view = project && VIEW_LABEL[last] && !['my-tasks', 'my-day', 'team', 'timesheets'].includes(last) ? viewMeta(methodologyOf(project), last).label : VIEW_LABEL[last];
   const isMac = typeof navigator !== 'undefined' && /Mac|iPhone|iPad/.test(navigator.platform);
 
   return (
@@ -39,6 +40,7 @@ export function Topbar({ activeKey }: { activeKey?: string }) {
         </nav>
       </div>
       <div className="top-right">
+        <TimerPill />
         <button className="search-box" onClick={() => ui.set({ paletteOpen: true })} aria-label="Search and commands">
           <Icon name="search" size={16} />
           <span className="search-placeholder">Search or jump to…</span>
