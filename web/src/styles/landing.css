@@ -407,3 +407,98 @@
   .pd-footer-grid a, .pd-footer-grid button:not(.pd-btn) { font-size: 20px; }
 }
 .install-help { margin: 4px 0 0; font-size: 13px; line-height: 1.5; color: var(--lichen); max-width: 320px; }
+
+/* ==========================================================================
+   Soft glass: rounded corners and frosted surfaces across the public site.
+   Pictures stay; they get rounded frames and gentle depth.
+   ========================================================================== */
+.pd {
+  --g-light: rgba(255, 255, 252, .5);
+  --g-light-edge: rgba(255, 255, 255, .8);
+  --g-dark: rgba(255, 255, 255, .055);
+  --g-dark-edge: rgba(255, 255, 255, .12);
+  --g-blur: blur(18px) saturate(1.4);
+  --g-shadow: 0 1px 0 rgba(255, 255, 255, .6) inset, 0 24px 50px -28px rgba(40, 44, 32, .35);
+  --g-shadow-dark: 0 1px 0 rgba(255, 255, 255, .06) inset, 0 30px 60px -30px rgba(0, 0, 0, .7);
+}
+
+/* Controls */
+.pd-btn { border-radius: 14px; }
+.pd-tile { border-radius: 18px; box-shadow: 0 12px 24px -14px rgba(120, 150, 0, .7); }
+.pd-tile:hover { transform: translateY(-3px); }
+.pd-menu-btn { border-radius: 16px; }
+.pd-chrome .pd-btn { border-radius: 16px; }
+.pd-login { height: 46px; display: inline-flex; align-items: center; padding: 0 16px; border-radius: 14px; background: var(--g-light); border: 1px solid var(--g-light-edge); -webkit-backdrop-filter: var(--g-blur); backdrop-filter: var(--g-blur); }
+.pd-chrome.on-dark .pd-login { background: var(--g-dark); border-color: var(--g-dark-edge); }
+.pd-login:hover { text-decoration: none; background: rgba(255, 255, 255, .75); }
+.pd-chrome.on-dark .pd-login:hover { background: rgba(255, 255, 255, .12); }
+.pd-chrome:not(.on-dark) .pd-menu-btn { background: var(--g-light); border-color: var(--g-light-edge); -webkit-backdrop-filter: var(--g-blur); backdrop-filter: var(--g-blur); }
+.pd-mono .wm-mono { border-radius: 12px; }
+
+/* Hero: the explorer photo in a rounded frame, the ticket as a glass card */
+.pd-portrait { clip-path: inset(0 round 30px); }
+.pd-ticket {
+  clip-path: none; border-radius: 20px; border: 1px solid var(--g-light-edge); background: var(--g-light);
+  -webkit-backdrop-filter: var(--g-blur); backdrop-filter: var(--g-blur); box-shadow: var(--g-shadow); padding-top: 34px; overflow: hidden;
+}
+.pd-ticket-tab { border-radius: 0 0 12px 0; }
+.pd-ticket hr { border-top-color: rgba(40, 44, 32, .15); }
+.pd-laurel { border-color: rgba(40, 44, 32, .25); background: rgba(210, 255, 0, .35); }
+
+/* Story fragments: rounded photos with soft depth */
+.pd-frag img { border-radius: 22px; box-shadow: 0 24px 40px -28px rgba(40, 44, 32, .45); }
+.pd-frag.full img { border: 1px solid var(--g-light-edge); box-shadow: 0 30px 60px -30px rgba(40, 44, 32, .5); }
+.pd-frag figcaption { display: inline-block; padding: 6px 10px; border-radius: 99px; background: var(--g-light); border: 1px solid var(--g-light-edge); -webkit-backdrop-filter: var(--g-blur); backdrop-filter: var(--g-blur); }
+
+/* Mars guide: a frosted console and glass stat tiles */
+.pd-console {
+  clip-path: none; border-radius: 26px; background: rgba(17, 17, 18, .55); border: 1px solid var(--g-dark-edge);
+  -webkit-backdrop-filter: blur(22px) saturate(1.3); backdrop-filter: blur(22px) saturate(1.3); box-shadow: var(--g-shadow-dark); overflow: hidden;
+}
+.pd-console-head { background: rgba(255, 255, 255, .03); }
+.pd-msg.me, .pd-msg.ai, .pd-msg.typing { border-radius: 16px; }
+.pd-msg.me { border-bottom-right-radius: 6px; }
+.pd-msg.ai, .pd-msg.typing { border-bottom-left-radius: 6px; }
+.pd-draft-meta i { border-radius: 99px; }
+.pd-draft-btn, .pd-console-input { border-radius: 14px; }
+.pd-send { border-radius: 10px; }
+.pd-stats { border-top: 0; padding-top: 0; gap: 12px; grid-template-columns: repeat(3, minmax(0, 1fr)); max-width: 520px; }
+.pd-stats div { padding: 16px; border-radius: 18px; background: var(--g-dark); border: 1px solid var(--g-dark-edge); -webkit-backdrop-filter: var(--g-blur); backdrop-filter: var(--g-blur); }
+
+/* Method hall: frosted rounded cards with a glass label */
+.pd-hcard { border-radius: 26px; background: var(--g-dark); border: 1px solid var(--g-dark-edge); -webkit-backdrop-filter: var(--g-blur); backdrop-filter: var(--g-blur); box-shadow: var(--g-shadow-dark); transition: border-color .5s var(--pd-ease), background .5s var(--pd-ease); overflow: hidden; }
+.pd-hcard::before { display: none; }
+.pd-hcard:hover { border-color: rgba(210, 255, 0, .35); background: rgba(255, 255, 255, .08); }
+.pd-hcard-tab { right: 14px; bottom: 14px; width: auto; height: auto; padding: 9px 14px; border-radius: 14px; background: rgba(255, 255, 255, .07); border: 1px solid var(--g-dark-edge); display: flex; flex-direction: row; align-items: baseline; gap: 10px; }
+.pd-hcard-art { inset: 12% 12% 28%; }
+
+/* Pricing: price in a glass card, screenshots with rounded frames */
+.pd-price { display: flex; width: fit-content; padding: 18px 22px; border-radius: 22px; background: var(--g-light); border: 1px solid var(--g-light-edge); -webkit-backdrop-filter: var(--g-blur); backdrop-filter: var(--g-blur); box-shadow: var(--g-shadow); }
+.pd-collage img { border-radius: 20px; border: 1px solid var(--g-light-edge); box-shadow: 0 30px 60px -32px rgba(40, 44, 32, .55); }
+
+/* Works with: a glass ribbon instead of two hard lines */
+.pd-logos { border: 1px solid var(--g-light-edge); border-radius: 999px; margin: 0 var(--pd-side); background: var(--g-light); -webkit-backdrop-filter: var(--g-blur); backdrop-filter: var(--g-blur); box-shadow: var(--g-shadow); }
+
+/* Footer: a rounded panel instead of the notched tab */
+.pd .pd-footer-panel { clip-path: none; border-radius: 36px; overflow: hidden; box-shadow: 0 40px 80px -40px rgba(40, 44, 32, .6); }
+.pd-footer-mid .wm-mono { border-radius: 18px; }
+
+/* Menu overlay links */
+.pd-menu-side .pd-btn { border-radius: 14px; }
+
+@media (max-width: 980px) {
+  .pd .pd-footer-panel { clip-path: none; border-radius: 28px; }
+  .pd-logos { margin: 0 16px; }
+}
+@media (max-width: 560px) {
+  .pd-hcard { border-radius: 20px; }
+  .pd-hcard::before { clip-path: none; display: none; }
+  .pd-hcard-tab { right: 10px; bottom: 10px; padding: 7px 10px; }
+  .pd-stats { grid-template-columns: repeat(3, minmax(0, 1fr)); }
+  .pd-stats div { padding: 12px; }
+  .pd-portrait { clip-path: inset(0 round 22px); }
+  .pd-logos { border-radius: 22px; }
+}
+.pd-login { white-space: nowrap; }
+@media (max-width: 560px) { .pd-login { height: 46px; padding: 0 12px; font-size: 12px; } .pd-chrome-right { gap: 6px; } }
+@media (max-width: 380px) { .pd-login { display: none; } }
