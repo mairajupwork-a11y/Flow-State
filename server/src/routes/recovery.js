@@ -76,6 +76,11 @@ export function recoveryRoutes({ db, signer, mailer, appUrl, production, log = c
       await db.run('UPDATE password_resets SET used_at = ? WHERE user_id = ? AND used_at IS NULL', iso(new Date()), u.id);
       return { ...u, session_version: version };
     });
+    // With two-step sign-in on, a new password alone is not enough: ask for the code next.
+    if (user.totp_enabled) {
+      const { twoFactorTicket } = await import('./auth.js');
+      return res.json({ needsTwoFactor: true, ticket: twoFactorTicket(signer, user) });
+    }
     res.cookie(SESSION_COOKIE, signer.issue(user.id, user.session_version), sessionCookieOptions(production && req.secure));
     res.json(await session(db, user.id));
   });

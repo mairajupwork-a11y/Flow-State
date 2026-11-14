@@ -853,3 +853,22 @@ body::before { opacity: .55; }
 .import-big { width: 56px; height: 56px; border-radius: 18px; display: grid; place-items: center; background: var(--t-mint); color: var(--t-mint-ink); }
 .import-result details { text-align: left; font-size: 12.5px; color: var(--muted); }
 @media (max-width: 760px) { .import-map, .import-help { grid-template-columns: 1fr; } .import-card { flex-wrap: wrap; } }
+
+/* ---------- Two-step sign-in + audit ---------- */
+.twofa-badge { width: 48px; height: 48px; border-radius: 16px; display: grid; place-items: center; background: var(--t-lime); color: var(--t-lime-ink); margin-bottom: 14px; }
+.code-input { font-size: 22px !important; letter-spacing: .3em; text-align: center; font-variant-numeric: tabular-nums; height: 56px !important; }
+.twofa-setup { display: grid; gap: 12px; }
+.twofa-qr { display: grid; place-items: center; padding: 14px; border-radius: 18px; background: #fff; width: fit-content; margin: 0 auto; box-shadow: 0 0 0 1px var(--glass-line), 0 10px 24px -16px rgba(40, 44, 32, .4); }
+.twofa-qr img { display: block; }
+.recovery-grid { display: grid; grid-template-columns: repeat(2, 1fr); gap: 8px; }
+.recovery-grid code { padding: 10px; border-radius: 10px; text-align: center; background: rgba(40, 44, 32, .05); font-size: 15px; letter-spacing: .08em; }
+[data-theme="dark"] .recovery-grid code { background: rgba(255, 255, 255, .06); }
+.on-chip { margin-left: 6px; background: var(--t-mint) !important; color: var(--t-mint-ink) !important; padding: 2px 8px; border-radius: 99px; font-size: 10.5px; }
+.setting-row strong .icon { vertical-align: -2px; margin-right: 4px; }
+.audit-list { list-style: none; margin: 8px 0; padding: 0; display: grid; }
+.audit-list li { display: flex; justify-content: space-between; gap: 12px; padding: 10px 0; border-top: 1px solid var(--glass-line); font-size: 13px; }
+.audit-list li:first-child { border-top: 0; }
+.audit-list small { color: var(--muted); white-space: nowrap; font-size: 11.5px; }
+.center { text-align: center; }
+@media (max-width: 560px) { .audit-list li { flex-direction: column; gap: 2px; } }
+.twofa-card .setting-row { border-bottom: 0; padding: 0; }

@@ -104,6 +104,11 @@ export function googleRoutes({ db, signer, production, google, mailer }) {
       await db.run('UPDATE users SET email_verified = 1, password_hash = ?, session_version = ? WHERE id = ?', NO_PASSWORD, version, user.id);
       user = { ...user, session_version: version };
     }
+    // Two-step sign-in applies to Google too: finish on the sign-in page with the code.
+    if (user.totp_enabled) {
+      const { twoFactorTicket } = await import('./auth.js');
+      return res.redirect(`/login?twofactor=${encodeURIComponent(twoFactorTicket(signer, user))}${saved.next !== '/' ? `&next=${encodeURIComponent(saved.next)}` : ''}`);
+    }
     res.cookie(SESSION_COOKIE, signer.issue(user.id, user.session_version ?? 0), sessionCookieOptions(production && req.secure));
     res.redirect(saved.next);
   });

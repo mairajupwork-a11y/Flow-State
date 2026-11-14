@@ -11,6 +11,7 @@ import { useTheme } from '../../lib/theme';
 import type { Locale, Session, Theme } from '../../lib/types';
 import { CalendarCard, NotificationsCard } from './NotifySettings';
 import { InstallCard } from '../../components/InstallApp';
+import { AuditCard, TwoFactorRow } from './Security';
 
 const LOCALES: [Locale, string, string][] = [
   ['en-GB', 'United Kingdom', '14 Oct 2026'], ['en-US', 'United States', 'Oct 14, 2026'], ['en-IN', 'India', '14 Oct 2026'],
@@ -131,6 +132,8 @@ export default function Settings() {
               </button>
             </div>
           </form>
+          <div className="content-card twofa-card"><TwoFactorRow /></div>
+          {isAdmin && <AuditCard />}
 
           <div className="content-card">
             <div className="card-scene scene" style={sceneStyle(SCENES[1]) as CSSProperties}>

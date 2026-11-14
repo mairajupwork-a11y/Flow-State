@@ -108,7 +108,9 @@ export function ResetPassword() {
     setError('');
     setBusy(true);
     try {
-      const session = await api.post<Session>('/auth/reset', { token, password });
+      const session = await api.post<Session & { needsTwoFactor?: boolean; ticket?: string }>('/auth/reset', { token, password });
+      // Two-step sign-in is on: finish with the code on the sign-in page.
+      if (session.needsTwoFactor && session.ticket) return navigate(`/login?twofactor=${encodeURIComponent(session.ticket)}`, { replace: true });
       qc.setQueryData(keys.session, session);
       navigate(session.workspaces.length ? '/' : '/onboarding', { replace: true });
     } catch (err) {

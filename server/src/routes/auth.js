@@ -5,6 +5,7 @@ import { googleRoutes } from './google.js';
 import { HttpError, parse, isUniqueViolation } from '../http.js';
 import { me as serializeMe, workspace as serializeWorkspace } from '../serialize.js';
 import { USER_COLORS } from '../templates.js';
+import { newRecoveryCodes, newSecret, otpauthUri, useRecoveryCode, verifyCode } from '../totp.js';
 
 const email = z.string().trim().toLowerCase().email('enter a valid email address').max(200);
 const password = z.string().min(8, 'use at least 8 characters').max(200);
@@ -54,7 +55,55 @@ export function authRoutes(ctx) {
     if (!user || !verifyPassword(body.password, user.password_hash)) {
       throw new HttpError(401, 'That email and password combination did not match. Please try again.');
     }
+    // Two-step sign-in: the password is right, now ask for the code before starting a session.
+    if (user.totp_enabled) return res.json({ needsTwoFactor: true, ticket: twoFactorTicket(signer, user) });
     startSession(req, res, user);
+    res.json(await session(db, user.id));
+  });
+
+  // ---- Two-step sign-in (authenticator app codes) ----
+  const codeLimiter = rateLimit({ windowMs: 15 * 60_000, max: production ? 10 : 1000, key: (req) => `2fa:${String(req.body?.ticket ?? '').slice(0, 40)}:${req.ip}`, message: 'Too many codes tried. Please wait 15 minutes and sign in again.' });
+  r.post('/2fa', limiter, codeLimiter, async (req, res) => {
+    const body = parse(z.object({ ticket: z.string().min(10).max(2000), code: z.string().trim().min(6).max(20) }), req.body);
+    const t = signer.unseal(body.ticket);
+    if (!t || t.step !== '2fa') throw new HttpError(401, 'That sign-in took too long. Please sign in again.');
+    const user = await db.get('SELECT * FROM users WHERE id = ?', t.uid);
+    if (!user || !user.totp_enabled || (user.session_version ?? 0) !== t.sv) throw new HttpError(401, 'Please sign in again.');
+    if (verifyCode(user.totp_secret, body.code) < 0) {
+      const left = useRecoveryCode(user.totp_recovery, body.code);
+      if (!left) throw new HttpError(401, 'That code didn’t match. Check your authenticator app (codes change every 30 seconds) or use a recovery code.');
+      await db.run('UPDATE users SET totp_recovery = ? WHERE id = ?', JSON.stringify(left), user.id);
+    }
+    startSession(req, res, user);
+    res.json(await session(db, user.id));
+  });
+
+  /** Step 1 of turning it on: a new secret for the authenticator app (not active until a code confirms it). */
+  r.post('/2fa/setup', requireUser, limiter, async (req, res) => {
+    if (req.user.totp_enabled) throw new HttpError(400, 'Two-step sign-in is already on.');
+    const secret = newSecret();
+    await db.run('UPDATE users SET totp_secret = ? WHERE id = ?', secret, req.user.id);
+    res.json({ secret, uri: otpauthUri(secret, req.user.email) });
+  });
+
+  r.post('/2fa/enable', requireUser, limiter, async (req, res) => {
+    const { code } = parse(z.object({ code: z.string().trim().min(6).max(10) }), req.body);
+    const user = await db.get('SELECT * FROM users WHERE id = ?', req.user.id);
+    if (!user.totp_secret) throw new HttpError(400, 'Start the setup again.');
+    if (verifyCode(user.totp_secret, code) < 0) throw new HttpError(400, 'That code didn’t match. Make sure your phone’s clock is set automatically and try the newest code.');
+    const { codes, hashes } = newRecoveryCodes();
+    await db.run('UPDATE users SET totp_enabled = 1, totp_recovery = ? WHERE id = ?', JSON.stringify(hashes), user.id);
+    await auditUser(db, user.id, 'security.2fa_on', req.ip);
+    res.json({ recoveryCodes: codes, ...await session(db, user.id) });
+  });
+
+  r.post('/2fa/disable', requireUser, limiter, async (req, res) => {
+    const { code } = parse(z.object({ code: z.string().trim().min(6).max(20) }), req.body);
+    const user = await db.get('SELECT * FROM users WHERE id = ?', req.user.id);
+    if (!user.totp_enabled) return res.json(await session(db, user.id));
+    if (verifyCode(user.totp_secret, code) < 0 && !useRecoveryCode(user.totp_recovery, code)) throw new HttpError(400, 'That code didn’t match.');
+    await db.run("UPDATE users SET totp_enabled = 0, totp_secret = '', totp_recovery = '[]' WHERE id = ?", user.id);
+    await auditUser(db, user.id, 'security.2fa_off', req.ip);
     res.json(await session(db, user.id));
   });
 
@@ -98,6 +147,16 @@ export function authRoutes(ctx) {
   });
 
   return r;
+}
+
+/** Short-lived proof that the password (or Google) step passed; the code step turns it into a session. */
+export const twoFactorTicket = (signer, user) => signer.seal({ uid: user.id, sv: user.session_version ?? 0, step: '2fa' }, 5 * 60_000);
+
+/** Security events are recorded in every workspace the person belongs to. */
+async function auditUser(db, userId, action, ip) {
+  for (const m of await db.all('SELECT workspace_id FROM memberships WHERE user_id = ?', userId)) {
+    await db.run('INSERT INTO audit_log (workspace_id, user_id, action, ip) VALUES (?, ?, ?, ?)', m.workspace_id, userId, action, ip ?? '');
+  }
 }
 
 export async function session(db, userId) {

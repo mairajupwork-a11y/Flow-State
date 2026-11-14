@@ -9,6 +9,7 @@ import { createProject } from '../services/projects.js';
 import { METHODOLOGY_IDS } from '../../../shared/methodologies.js';
 import { ISSUE_SELECT, issue as serializeIssue, user as serializeUser, workspace as serializeWorkspace, project as serializeProject, activity as serializeActivity } from '../serialize.js';
 import { session } from './auth.js';
+import { audit } from '../services/audit.js';
 import { inviteEmail, mailHint } from '../emails.js';
 
 const REGIONS = { uk: { locale: 'en-GB', weekStart: 1 }, us: { locale: 'en-US', weekStart: 0 }, asia: { locale: 'en-SG', weekStart: 1 }, other: { locale: 'en-GB', weekStart: 1 } };
@@ -134,6 +135,7 @@ export function workspaceRoutes({ db, events, hub, mailer, appUrl, production })
     if (body.region) await db.run('UPDATE workspaces SET region = ? WHERE id = ?', body.region, ws.id);
     if (body.locale) await db.run('UPDATE workspaces SET locale = ? WHERE id = ?', body.locale, ws.id);
     if (body.weekStart !== undefined) await db.run('UPDATE workspaces SET week_start = ? WHERE id = ?', body.weekStart, ws.id);
+    await audit(db, { workspaceId: ws.id, userId: req.user.id, action: 'workspace.settings', detail: Object.keys(body).join(', '), ip: req.ip });
     events.changed(ws.id, ['workspace'], req.user.id);
     res.json(serializeWorkspace(await db.get('SELECT * FROM workspaces WHERE id = ?', ws.id), membership.role));
   });
@@ -152,6 +154,9 @@ export function workspaceRoutes({ db, events, hub, mailer, appUrl, production })
       }
       if (body.designation !== undefined) await db.run('UPDATE users SET job_title = ? WHERE id = ?', body.designation, target);
     });
+    const who = (await db.get('SELECT name FROM users WHERE id = ?', target))?.name ?? 'someone';
+    if (body.role) await audit(db, { workspaceId: ws.id, userId: req.user.id, action: 'member.role', target: who, detail: body.role, ip: req.ip });
+    if (body.designation !== undefined) await audit(db, { workspaceId: ws.id, userId: req.user.id, action: 'member.designation', target: who, detail: body.designation, ip: req.ip });
     events.changed(ws.id, ['workspace'], req.user.id);
     res.json({ ok: true });
   });
@@ -173,6 +178,7 @@ export function workspaceRoutes({ db, events, hub, mailer, appUrl, production })
       await db.run(`UPDATE entries SET owner_id = NULL WHERE owner_id = ? AND project_id ${inWs}`, target, ws.id);
       await db.run('DELETE FROM memberships WHERE workspace_id = ? AND user_id = ?', ws.id, target);
     });
+    await audit(db, { workspaceId: ws.id, userId: req.user.id, action: target === req.user.id ? 'member.left' : 'member.removed', target: (await db.get('SELECT name FROM users WHERE id = ?', target))?.name ?? '', ip: req.ip });
     hub.kick(ws.id, target);
     events.changed(ws.id, ['workspace', 'issues'], req.user.id);
     res.json({ ok: true });
@@ -208,6 +214,7 @@ export function workspaceRoutes({ db, events, hub, mailer, appUrl, production })
       }
       return out;
     });
+    await audit(db, { workspaceId: ws.id, userId: req.user.id, action: 'invite.created', target: created.map((c) => c.email || 'team link').join(', '), detail: body.role, ip: req.ip });
     res.status(201).json(await emailInvites(req, ws.name, created));
   });
 
@@ -224,8 +231,25 @@ export function workspaceRoutes({ db, events, hub, mailer, appUrl, production })
 
   r.delete('/:ws/invites/:token', async (req, res) => {
     const { ws } = await loadWorkspace(db, req.user, req.params.ws, 'admin');
+    const inv = await db.get('SELECT email FROM invites WHERE workspace_id = ? AND token = ?', ws.id, req.params.token);
     await db.run('DELETE FROM invites WHERE workspace_id = ? AND token = ?', ws.id, req.params.token);
+    if (inv) await audit(db, { workspaceId: ws.id, userId: req.user.id, action: 'invite.revoked', target: inv.email || 'team link', ip: req.ip });
     res.json({ ok: true });
+  });
+
+  // ---- Audit log (admins): who changed what ----
+  r.get('/:ws/audit', async (req, res) => {
+    const { ws } = await loadWorkspace(db, req.user, req.params.ws, 'admin');
+    const rows = await db.all(`SELECT a.*, u.name AS user_name FROM audit_log a LEFT JOIN users u ON u.id = a.user_id
+      WHERE a.workspace_id = ? ORDER BY a.id DESC LIMIT 500`, ws.id);
+    const items = rows.map((a) => ({ id: a.id, action: a.action, target: a.target, detail: a.detail, ip: a.ip, userName: a.user_name ?? 'System', createdAt: a.created_at }));
+    if (req.query.format === 'csv') {
+      const cell = (v) => { const t = String(v ?? ''); return /[",\n]/.test(t) ? `"${t.replace(/"/g, '""')}"` : t; };
+      res.setHeader('Content-Type', 'text/csv; charset=utf-8');
+      res.setHeader('Content-Disposition', `attachment; filename="audit-${ws.slug}.csv"`);
+      return res.send('\uFEFF' + ['When (UTC),Who,Action,Target,Detail,IP', ...items.map((a) => [a.createdAt, a.userName, a.action, a.target, a.detail, a.ip].map(cell).join(','))].join('\r\n'));
+    }
+    res.json(items);
   });
 
   // ---- Cross-project views ----

@@ -75,8 +75,28 @@ export function AuthPage({ mode }: { mode: 'login' | 'signup' }) {
   const providers = useProviders();
   const [busy, setBusy] = useState(false);
   const [showPw, setShowPw] = useState(false);
+  // Two-step sign-in: after the password (or Google / a password reset) we hold a short-lived ticket and ask for the code.
+  const [ticket, setTicket] = useState<string | null>(() => params.get('twofactor'));
+  const [code, setCode] = useState('');
+  const [useRecovery, setUseRecovery] = useState(false);
 
   if (data?.user && !busy) return <Navigate to={safeNext ?? '/'} replace />;
+
+  async function submitCode(e: FormEvent) {
+    e.preventDefault();
+    if (!ticket || code.replace(/\s/g, '').length < 6) return setError(useRecovery ? 'Enter one of your recovery codes.' : 'Enter the 6-digit code from your authenticator app.');
+    setError(''); setBusy(true);
+    try {
+      const session = await api.post<Session>('/auth/2fa', { ticket, code });
+      qc.setQueryData(keys.session, session);
+      navigate(safeNext ?? (session.workspaces.length ? '/' : '/onboarding'), { replace: true });
+    } catch (err) {
+      const msg = err instanceof Error ? err.message : 'Something went wrong.';
+      setError(msg);
+      if (/sign in again|took too long/i.test(msg)) { setTicket(null); setCode(''); }
+      setBusy(false);
+    }
+  }
 
   async function submit(e: FormEvent) {
     e.preventDefault();
@@ -85,7 +105,8 @@ export function AuthPage({ mode }: { mode: 'login' | 'signup' }) {
     setError('');
     setBusy(true);
     try {
-      const session = await api.post<Session>(mode === 'login' ? '/auth/login' : '/auth/signup', mode === 'login' ? { email: form.email, password: form.password } : form);
+      const session = await api.post<Session & { needsTwoFactor?: boolean; ticket?: string }>(mode === 'login' ? '/auth/login' : '/auth/signup', mode === 'login' ? { email: form.email, password: form.password } : form);
+      if (session.needsTwoFactor && session.ticket) { setTicket(session.ticket); setBusy(false); return; }
       qc.setQueryData(keys.session, session);
       navigate(safeNext ?? (session.workspaces.length ? '/' : '/onboarding'), { replace: true });
     } catch (err) {
@@ -120,6 +141,25 @@ export function AuthPage({ mode }: { mode: 'login' | 'signup' }) {
       </aside>
 
       <main className="auth-main">
+        {ticket ? (
+          <form className="auth-card" onSubmit={submitCode} noValidate>
+            <div className="auth-mobile-brand"><Brand to="/welcome" /></div>
+            <span className="twofa-badge"><Icon name="lock" size={20} /></span>
+            <h1>Two-step sign-in</h1>
+            <p className="page-subtitle">{useRecovery ? 'Enter one of the recovery codes you saved when you turned this on. Each works once.' : 'Open your authenticator app and enter the 6-digit code for WorkMars.'}</p>
+            {error && <div className="form-error" role="alert"><Icon name="flag" size={15} /> {error}</div>}
+            <label className="form-field">
+              <span>{useRecovery ? 'Recovery code' : 'Code'}</span>
+              <input className="text-input code-input" autoFocus autoComplete="one-time-code" inputMode={useRecovery ? 'text' : 'numeric'} maxLength={useRecovery ? 12 : 7}
+                value={code} onChange={(e) => { setCode(useRecovery ? e.target.value.toUpperCase() : e.target.value.replace(/[^0-9]/g, '')); if (error) setError(''); }} placeholder={useRecovery ? 'XXXX-XXXX' : '123456'} />
+            </label>
+            <button className="btn btn-primary btn-block btn-xl" disabled={busy} type="submit">{busy ? 'Checking…' : 'Verify and sign in'} {!busy && <Icon name="right" size={16} />}</button>
+            <p className="auth-switch">
+              <button type="button" className="link-btn" onClick={() => { setUseRecovery(!useRecovery); setCode(''); setError(''); }}>{useRecovery ? 'Use the authenticator app instead' : 'Lost your phone? Use a recovery code'}</button>
+              {' · '}<button type="button" className="link-btn" onClick={() => { setTicket(null); setCode(''); setError(''); }}>Start over</button>
+            </p>
+          </form>
+        ) : (
         <form className="auth-card" onSubmit={submit} noValidate>
           <div className="auth-mobile-brand"><Brand to="/welcome" /></div>
           <h1>{isSignup ? 'Create your account' : 'Sign in to WorkMars'}</h1>
@@ -169,6 +209,7 @@ export function AuthPage({ mode }: { mode: 'login' | 'signup' }) {
           </p>
           {isSignup && <p className="auth-legal">By continuing you agree to use WorkMars kindly and lawfully. We never sell your data.</p>}
         </form>
+        )}
       </main>
     </div>
   );

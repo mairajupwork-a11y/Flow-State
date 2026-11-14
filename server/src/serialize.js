@@ -10,7 +10,7 @@ export function user(u) {
 }
 
 export function me(u) {
-  return { ...user(u), locale: u.locale, theme: u.theme, hasPassword: u.password_hash !== NO_PASSWORD, notifyEmail: u.notify_email ?? 'important', notifyPush: u.notify_push ?? 'important' };
+  return { ...user(u), locale: u.locale, theme: u.theme, hasPassword: u.password_hash !== NO_PASSWORD, twoFactor: !!u.totp_enabled, notifyEmail: u.notify_email ?? 'important', notifyPush: u.notify_push ?? 'important' };
 }
 
 export function workspace(w, role) {

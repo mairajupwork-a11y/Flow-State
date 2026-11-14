@@ -1,5 +1,6 @@
 import { Router } from 'express';
 import { importRows } from '../services/importer.js';
+import { audit } from '../services/audit.js';
 import { z } from 'zod';
 import { requireUser } from '../auth.js';
 import { HttpError, parse, notFound } from '../http.js';
@@ -57,6 +58,7 @@ export function projectRoutes({ db, events }) {
       }
       await events.record({ workspaceId: p.workspace_id, projectId: p.id, actorId: req.user.id, verb: 'resources_updated', data: { name: p.name, count: wanted.length } });
     });
+    await audit(db, { workspaceId: p.workspace_id, userId: req.user.id, action: 'project.team', target: p.name, detail: `${wanted.length} people`, ip: req.ip });
     events.changed(p.workspace_id, ['workspace', `project:${p.id}`], req.user.id);
     res.json(await projectPayload(db, p));
   });
@@ -79,6 +81,8 @@ export function projectRoutes({ db, events }) {
       throw new HttpError(400, 'The project lead must be a workspace member.');
     }
     const cols = { name: 'name', description: 'description', client: 'client', color: 'color', leadId: 'lead_id', archived: 'archived' };
+    if (body.archived !== undefined) await audit(db, { workspaceId: p.workspace_id, userId: req.user.id, action: body.archived ? 'project.archived' : 'project.restored', target: p.name, ip: req.ip });
+    if (body.methodology && body.methodology !== p.methodology) await audit(db, { workspaceId: p.workspace_id, userId: req.user.id, action: 'project.methodology', target: p.name, detail: body.methodology, ip: req.ip });
     for (const [k, col] of Object.entries(cols)) {
       if (body[k] !== undefined) await db.run(`UPDATE projects SET ${col} = ? WHERE id = ?`, typeof body[k] === 'boolean' ? Number(body[k]) : body[k], p.id);
     }
@@ -96,6 +100,7 @@ export function projectRoutes({ db, events }) {
   r.delete('/:id', async (req, res) => {
     const p = await loadProject(db, req.user, req.params.id, 'admin');
     await db.run('DELETE FROM projects WHERE id = ?', p.id);
+    await audit(db, { workspaceId: p.workspace_id, userId: req.user.id, action: 'project.deleted', target: p.name, ip: req.ip });
     events.changed(p.workspace_id, ['workspace', 'issues'], req.user.id);
     res.json({ ok: true });
   });

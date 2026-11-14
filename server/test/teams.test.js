@@ -204,3 +204,54 @@ test('import: Jira-style rows become work items with matched columns, people, pr
   assert.deepEqual(copy.assigneeIds, [devUser.id], 'matched by name');
   assert.equal(items.find((i) => i.title === 'Plan Q3').dueDate, '2026-03-15');
 });
+
+import { codeAt } from '../src/totp.js';
+const codeFor = (secret) => codeAt(secret, Math.floor(Date.now() / 30000));
+
+test('two-step sign-in: set up with an app code, then password + code, recovery codes work once', async () => {
+  const { tag } = await org();
+  const me = client();
+  const email = `ada${tag}@example.com`;
+  await me('POST', '/auth/login', { email, password: 'correct-horse' });
+  const setup = (await me('POST', '/auth/2fa/setup', {})).data;
+  assert.match(setup.uri, /^otpauth:\/\/totp\/WorkMars/);
+  assert.equal((await me('POST', '/auth/2fa/enable', { code: '000000' })).status, 400);
+  const on = (await me('POST', '/auth/2fa/enable', { code: codeFor(setup.secret) })).data;
+  assert.equal(on.recoveryCodes.length, 10);
+  assert.equal(on.user.twoFactor, true);
+  // signing in now needs the code
+  const fresh = client();
+  const step1 = (await fresh('POST', '/auth/login', { email, password: 'correct-horse' })).data;
+  assert.equal(step1.needsTwoFactor, true);
+  assert.equal((await fresh('GET', '/auth/me')).data.user, null, 'no session after the password alone');
+  assert.equal((await fresh('POST', '/auth/2fa', { ticket: step1.ticket, code: '123456' })).status, 401);
+  const ok = await fresh('POST', '/auth/2fa', { ticket: step1.ticket, code: codeFor(setup.secret) });
+  assert.equal(ok.status, 200);
+  assert.equal((await fresh('GET', '/auth/me')).data.user.email, email);
+  // a recovery code works exactly once
+  const other = client();
+  const t2 = (await other('POST', '/auth/login', { email, password: 'correct-horse' })).data.ticket;
+  assert.equal((await other('POST', '/auth/2fa', { ticket: t2, code: on.recoveryCodes[0] })).status, 200);
+  const third = client();
+  const t3 = (await third('POST', '/auth/login', { email, password: 'correct-horse' })).data.ticket;
+  assert.equal((await third('POST', '/auth/2fa', { ticket: t3, code: on.recoveryCodes[0] })).status, 401);
+  assert.equal((await third('POST', '/auth/2fa', { ticket: 'forged.ticket', code: codeFor(setup.secret) })).status, 401);
+  // turning it off needs a code
+  assert.equal((await fresh('POST', '/auth/2fa/disable', { code: '000000' })).status, 400);
+  assert.equal((await fresh('POST', '/auth/2fa/disable', { code: codeFor(setup.secret) })).data.user.twoFactor, false);
+  assert.equal((await client()('POST', '/auth/login', { email, password: 'correct-horse' })).data.user.email, email);
+});
+
+test('audit log: admins see who changed roles, people and projects; others cannot', async () => {
+  const { admin, dev, devUser, ws, web } = await org();
+  await admin('PATCH', `/workspaces/${ws.slug}/members/${devUser.id}`, { role: 'manager' });
+  await admin('PATCH', `/projects/${web.id}`, { archived: true });
+  await admin('POST', `/workspaces/${ws.slug}/integrations`, { kind: 'github' });
+  const log = (await admin('GET', `/workspaces/${ws.slug}/audit`)).data;
+  const actions = log.map((a) => a.action);
+  for (const a of ['member.role', 'project.archived', 'integration.added', 'invite.created']) assert.ok(actions.includes(a), `${a} recorded`);
+  assert.equal(log.find((a) => a.action === 'member.role').target, 'Dev Dan');
+  assert.equal((await dev('GET', `/workspaces/${ws.slug}/audit`)).status, 403);
+  const csv = await admin('GET', `/workspaces/${ws.slug}/audit?format=csv`);
+  assert.match(csv.data, /member\.role/);
+});

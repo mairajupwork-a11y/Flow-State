@@ -11,7 +11,7 @@ export type TimeBlock = 'morning' | 'afternoon' | 'evening' | 'anytime';
 
 export interface User { id: number; name: string; email: string; initials: string; color: string; jobTitle: string }
 export type NotifyPref = 'all' | 'important' | 'off';
-export interface Me extends User { locale: Locale; theme: Theme; hasPassword?: boolean; notifyEmail?: NotifyPref; notifyPush?: NotifyPref }
+export interface Me extends User { locale: Locale; theme: Theme; hasPassword?: boolean; twoFactor?: boolean; notifyEmail?: NotifyPref; notifyPush?: NotifyPref }
 export interface Member extends User { role: Role; joinedAt: string }
 
 export interface Workspace {
