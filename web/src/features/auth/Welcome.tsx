@@ -13,8 +13,14 @@ import shotOverview from '../../assets/shots/overview.webp';
 import shotIssue from '../../assets/shots/issue.webp';
 import shotDay from '../../assets/shots/myday.webp';
 import shotReports from '../../assets/shots/reports.webp';
-import shotAutomations from '../../assets/shots/automations.webp';
-import shotGuide from '../../assets/shots/guide.webp';
+import { InstallButton } from '../../components/InstallApp';
+import tabDay from '../../assets/shots/tab-myday.webp';
+import tabReports from '../../assets/shots/tab-reports.webp';
+import tabGuide from '../../assets/shots/tab-guide.webp';
+import tabBoard from '../../assets/shots/tab-board.webp';
+import tabAutomations from '../../assets/shots/tab-automations.webp';
+import tabIssue from '../../assets/shots/tab-issue.webp';
+import tabOverview from '../../assets/shots/tab-overview.webp';
 
 export function Brand({ to = '/', onDark = false, height = 28 }: { to?: string; onDark?: boolean; height?: number }) {
   return (
@@ -123,13 +129,13 @@ const METHODS: { name: string; year: string; glyph: ReactNode }[] = [
 ];
 
 const DECK: { img: string; label: string; serif: string }[] = [
-  { img: shotDay, label: 'My', serif: 'day' },
-  { img: shotReports, label: 'Live', serif: 'reports' },
-  { img: shotGuide, label: 'Mars', serif: 'guide' },
-  { img: shotBoard, label: 'Team', serif: 'board' },
-  { img: shotAutomations, label: 'Auto', serif: 'mations' },
-  { img: shotIssue, label: 'Every', serif: 'detail' },
-  { img: shotOverview, label: 'Big', serif: 'picture' },
+  { img: tabDay, label: 'My', serif: 'day' },
+  { img: tabReports, label: 'Live', serif: 'reports' },
+  { img: tabGuide, label: 'Mars', serif: 'guide' },
+  { img: tabBoard, label: 'Team', serif: 'board' },
+  { img: tabAutomations, label: 'Auto', serif: 'mations' },
+  { img: tabIssue, label: 'Every', serif: 'detail' },
+  { img: tabOverview, label: 'Big', serif: 'picture' },
 ];
 
 const TOOLS = ['Google Calendar', 'Gmail', 'Outlook', 'Apple Calendar', 'Supabase', 'PostgreSQL', 'Google sign-in', 'Ollama', 'Any SMTP', 'Web push'];
@@ -188,6 +194,7 @@ export function Welcome() {
               <Link to="/signup" className="pd-btn" tabIndex={menu ? 0 : -1}>Create a free account <Hook size={16} /></Link>
               <Link to="/login" className="pd-btn ghost" tabIndex={menu ? 0 : -1}>Log in</Link>
             </div>
+            <InstallButton className="pd-theme" tabIndex={menu ? 0 : -1} />
             <button className="pd-theme" tabIndex={menu ? 0 : -1} onClick={() => setTheme(dark ? 'light' : 'dark')}><Icon name={dark ? 'sun' : 'moon'} size={15} /> {dark ? 'Light' : 'Dark'} app theme</button>
           </div>
         </div>

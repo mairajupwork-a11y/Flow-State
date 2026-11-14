@@ -390,3 +390,36 @@ html.reduce-motion .page > * { animation: none; }
 .team-banner.scene h3 { font-size: 26px; color: var(--chalk); }
 .ai-welcome .serif-accent, .scene-card .serif-accent { color: var(--moss) !important; }
 .ai-bot .wm-mono, .ai-head .wm-mono { background: var(--lime); }
+
+/* ---------- Tablet / iPad portrait (761–1100px) ----------
+   The full sidebar ate a quarter of an iPad screen. On tablets it becomes the same
+   slide-in drawer phones use, and the page gets the whole width. */
+@media (min-width: 761px) and (max-width: 1100px) {
+  .sidebar {
+    position: fixed; top: 0; left: 0; z-index: 29;
+    width: 290px !important; flex: none !important; height: 100dvh;
+    transform: translateX(-105%); transition: transform .26s cubic-bezier(.2, .7, .2, 1);
+  }
+  .sidebar.open { transform: translateX(0); }
+  .sidebar-shade.visible { display: block; position: fixed; inset: 0; background: rgba(17, 17, 18, .42); z-index: 28; }
+  .sidebar-resizer { display: none; }
+  .main-shell { width: 100%; min-width: 0; }
+  .mobile-menu { display: grid; }
+  .topbar { padding: 0 24px; }
+  .page { padding: 26px 24px 48px; }
+  .title-section { flex-wrap: wrap; gap: 14px; }
+  .title-actions { flex-wrap: wrap; }
+  .toolbar { flex-wrap: wrap; row-gap: 10px; }
+  .modal { max-width: calc(100vw - 48px); }
+}
+@media (pointer: coarse) {
+  .btn, .icon-btn, .tab, .nav-link { min-height: 40px; }
+}
+.person-card { min-width: 0; }
+.person-card small.ellipsis, .person-card b.ellipsis { display: block; overflow: hidden; text-overflow: ellipsis; white-space: nowrap; }
+.person-role { flex-shrink: 0; }
+@media (max-width: 760px) { .people-grid { grid-template-columns: minmax(0, 1fr); } }
+.offline-screen { min-height: 100dvh; display: grid; place-content: center; justify-items: center; text-align: center; gap: 12px; padding: 24px; }
+.offline-screen img { border-radius: 14px; }
+.offline-screen h1 { font-family: var(--head); font-weight: 750; font-stretch: 93%; text-transform: uppercase; font-size: clamp(28px, 6vw, 44px); letter-spacing: -.02em; line-height: .95; margin: 10px 0 0; }
+.offline-screen p { margin: 0 0 8px; color: var(--muted); max-width: 360px; }

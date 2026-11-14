@@ -303,24 +303,29 @@
 
 /* ---------- Fanned deck ---------- */
 .pd-deck { padding: var(--pd-sec) 0; overflow: hidden; }
-.pd-fan { position: relative; height: 560px; margin-top: var(--pd-head-gap); }
+.pd-fan {
+  /* Card width follows the screen: 270px on desktop, about a quarter of the width on tablets, 140px floor on phones. */
+  --cw: clamp(140px, 25vw, 270px); --fan: 9deg;
+  position: relative; height: calc(var(--cw) * 2.05); margin-top: var(--pd-head-gap);
+}
 .pd-fan-card {
-  --a: calc(var(--k) * 9deg);
-  position: absolute; left: 50%; top: 40px; width: 270px; aspect-ratio: 3 / 4.2; margin: 0 0 0 -135px; border-radius: 22px; overflow: hidden;
+  --a: calc(var(--k) * var(--fan));
+  position: absolute; left: 50%; top: calc(var(--cw) * .15); width: var(--cw); aspect-ratio: 820 / 1148; margin: 0 0 0 calc(var(--cw) / -2); border-radius: clamp(14px, calc(var(--cw) * .08), 22px); overflow: hidden;
   background: var(--olive); border: 1px solid rgba(40, 44, 32, .4); transform-origin: 50% 160%;
   --s: clamp(0, calc((var(--v, .5) - .14) * 3.4), 1);
   transform: translateY(calc((1 - var(--s)) * 70px)) rotate(calc(var(--a) * var(--s))) translateY(calc(var(--ak) * 18px * var(--s)));
   z-index: calc(10 - var(--ak)); transition: translate .6s var(--pd-ease);
 }
-.pd-fan-card.center { width: 300px; margin-left: -150px; }
+.pd-fan-card.center { width: calc(var(--cw) * 1.11); margin-left: calc(var(--cw) * -.555); }
 .pd-fan-card:hover { z-index: 20; translate: 0 -22px; }
-.pd-fan-card img { width: 100%; height: 100%; object-fit: cover; object-position: top left; display: block; opacity: .92; }
+.pd-fan-card img { width: 100%; height: 100%; object-fit: cover; object-position: top center; display: block; opacity: .95; }
 .pd-fan-card figcaption {
   position: absolute; left: 0; right: 0; bottom: 0; padding: 60px 18px 18px; background: linear-gradient(transparent, rgba(40, 44, 32, .95));
   color: var(--chalk); text-transform: uppercase; display: flex; align-items: baseline; gap: 6px; flex-wrap: wrap;
 }
-.pd-fan-card figcaption span { font-family: var(--head); font-weight: 750; font-stretch: 93%; font-size: 30px; letter-spacing: -.03em; line-height: .9; }
-.pd-fan-card figcaption .pd-serif { color: var(--moss); font-size: 31px; line-height: .9; }
+.pd-fan-card figcaption { padding: calc(var(--cw) * .22) calc(var(--cw) * .07) calc(var(--cw) * .07); }
+.pd-fan-card figcaption span { font-family: var(--head); font-weight: 750; font-stretch: 93%; font-size: clamp(18px, calc(var(--cw) * .11), 30px); letter-spacing: -.03em; line-height: .9; }
+.pd-fan-card figcaption .pd-serif { color: var(--moss); font-size: clamp(19px, calc(var(--cw) * .115), 31px); line-height: .9; }
 
 /* ---------- Footer ---------- */
 .pd-footer { position: relative; padding: var(--pd-sec) var(--pd-in) var(--pd-in); background: radial-gradient(circle at 50% -190%, rgba(210, 255, 0, 0) 68%, rgb(210, 255, 0) 83%), var(--chalk) !important; }
@@ -387,8 +392,6 @@
   .pd .pd-footer-panel { clip-path: polygon(0 30px, 30% 30px, 36% 0, 64% 0, 70% 30px, 100% 30px, 100% 100%, 0 100%); }
   .pd-footer-grid { grid-template-columns: 1fr 1fr; }
   .pd-footer-mid { grid-column: 1 / -1; order: -1; }
-  .pd-fan { height: 470px; }
-  .pd-fan-card { width: 210px; margin-left: -105px; }
 }
 @media (max-width: 560px) {
   .pd { --pd-in: 12px; }
@@ -400,7 +403,7 @@
   .pd-hall-grid { grid-template-columns: 1fr 1fr; gap: 10px; }
   .pd-hcard-tab { width: 118px; padding-left: 16px; }
   .pd-hcard::before { clip-path: polygon(0 0, 100% 0, 100% calc(100% - 46px), calc(100% - 110px) calc(100% - 46px), calc(100% - 128px) 100%, 0 100%, 0 0, 1px 1px, 1px calc(100% - 1px), calc(100% - 128.4px) calc(100% - 1px), calc(100% - 110.4px) calc(100% - 47px), calc(100% - 1px) calc(100% - 47px), calc(100% - 1px) 1px, 1px 1px); }
-  .pd-fan-card { width: 170px; margin-left: -85px; border-radius: 16px; }
-  .pd-fan-card figcaption span, .pd-fan-card figcaption .pd-serif { font-size: 22px; }
+  .pd-fan { --cw: clamp(132px, 38vw, 170px); --fan: 7deg; }
   .pd-footer-grid a, .pd-footer-grid button:not(.pd-btn) { font-size: 20px; }
 }
+.install-help { margin: 4px 0 0; font-size: 13px; line-height: 1.5; color: var(--lichen); max-width: 320px; }

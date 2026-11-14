@@ -1,6 +1,6 @@
-import { lazy, Suspense, type ReactNode } from 'react';
+import { lazy, Suspense, useEffect, type ReactNode } from 'react';
 import { Navigate, Route, Routes, useLocation } from 'react-router-dom';
-import { useSession } from './lib/queries';
+import { queryClient, keys, useSession } from './lib/queries';
 import { PageLoader } from './components/ui';
 import { AuthPage } from './features/auth/AuthPage';
 import { Welcome } from './features/auth/Welcome';
@@ -28,17 +28,37 @@ const Charter = lazy(() => import('./features/project/Charter'));
 const Team = lazy(() => import('./features/team/Team'));
 const Settings = lazy(() => import('./features/settings/Settings'));
 
+/** Shown when the app opened (for example from the home screen) but the server can't be reached. */
+function Offline() {
+  useEffect(() => {
+    const retry = () => void queryClient.invalidateQueries({ queryKey: keys.session });
+    addEventListener('online', retry);
+    return () => removeEventListener('online', retry);
+  }, []);
+  return (
+    <div className="boot offline-screen" role="alert">
+      <img src="/icon-192.png" alt="" width={64} height={64} />
+      <h1>{navigator.onLine ? 'Can’t reach WorkMars' : 'You’re offline'}</h1>
+      <p>{navigator.onLine ? 'The server isn’t answering right now.' : 'Reconnect and we’ll pick up where you left off.'}</p>
+      <button className="btn btn-primary" onClick={() => void queryClient.invalidateQueries({ queryKey: keys.session })}>Try again</button>
+    </div>
+  );
+}
+const unreachable = (data: unknown, error: unknown) => { const st = (error as { status?: number } | null)?.status; return !data && !!error && (!st || st >= 500); };
+
 function RequireAuth({ children }: { children: ReactNode }) {
-  const { data, isLoading } = useSession();
+  const { data, isLoading, error } = useSession();
   const location = useLocation();
   if (isLoading) return <div className="boot"><PageLoader /></div>;
+  if (unreachable(data, error)) return <Offline />;
   if (!data?.user) return <Navigate to={`/login?next=${encodeURIComponent(location.pathname + location.search)}`} replace />;
   return <>{children}</>;
 }
 
 function Home() {
-  const { data, isLoading } = useSession();
+  const { data, isLoading, error } = useSession();
   if (isLoading) return <div className="boot"><PageLoader /></div>;
+  if (unreachable(data, error)) return <Offline />;
   if (!data?.user) return <Navigate to="/welcome" replace />;
   if (!data.workspaces.length) return <Navigate to="/onboarding" replace />;
   let last: string | null = null;
@@ -48,7 +68,10 @@ function Home() {
     /* storage blocked */
   }
   const ws = data.workspaces.find((w) => w.slug === last) ?? data.workspaces[0];
-  return <Navigate to={`/w/${ws.slug}`} replace />;
+  // PWA shortcuts open /?go=my-day etc.
+  const go = new URLSearchParams(window.location.search).get('go');
+  const page = go && ['my-day', 'my-tasks', 'team', 'settings'].includes(go) ? `/${go}` : '';
+  return <Navigate to={`/w/${ws.slug}${page}`} replace />;
 }
 
 const lazyEl = (node: ReactNode) => <Suspense fallback={<PageLoader />}>{node}</Suspense>;

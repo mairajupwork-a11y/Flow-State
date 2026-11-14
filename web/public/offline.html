@@ -1,0 +1,29 @@
+<!doctype html>
+<html lang="en">
+<head>
+<meta charset="utf-8" />
+<meta name="viewport" content="width=device-width, initial-scale=1, viewport-fit=cover" />
+<meta name="theme-color" content="#282c20" />
+<title>WorkMars · Offline</title>
+<style>
+  :root { color-scheme: light dark; }
+  * { box-sizing: border-box; }
+  body { margin: 0; min-height: 100dvh; display: grid; place-items: center; padding: 24px; background: #f4f4ed; color: #282c20; font: 16px/1.5 system-ui, -apple-system, "Segoe UI", sans-serif; }
+  main { max-width: 420px; text-align: center; }
+  img { width: 72px; height: 72px; border-radius: 16px; }
+  h1 { font-size: 30px; line-height: 1; text-transform: uppercase; letter-spacing: -.02em; margin: 22px 0 10px; }
+  p { color: #535450; margin: 0 0 22px; }
+  button { height: 46px; padding: 0 22px; border: 0; border-radius: 8px; background: #d2ff00; color: #282c20; font: 700 14px system-ui, sans-serif; text-transform: uppercase; cursor: pointer; }
+  @media (prefers-color-scheme: dark) { body { background: #111112; color: #f4f4ed; } p { color: #b4b8a5; } }
+</style>
+</head>
+<body>
+<main>
+  <img src="/icon-192.png" alt="" />
+  <h1>You're offline</h1>
+  <p>WorkMars needs a connection to load your workspace. We'll pick up where you left off as soon as you're back online.</p>
+  <button onclick="location.reload()">Try again</button>
+</main>
+<script>addEventListener('online', () => location.reload());</script>
+</body>
+</html>
