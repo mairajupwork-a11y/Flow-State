@@ -58,12 +58,18 @@ export function sprint(s) {
   };
 }
 
+/** Primary assignee first, then everyone else assigned. */
+function assigneeList(i) {
+  const rest = String(i.assignee_ids ?? '').split(',').filter(Boolean).map(Number).filter((id) => id !== i.assignee_id).sort((a, b) => a - b);
+  return i.assignee_id ? [i.assignee_id, ...rest] : rest;
+}
+
 /** Issue rows are expected to be selected via ISSUE_SELECT so derived columns are present. */
 export function issue(i) {
   return {
     id: i.id, key: `${i.project_key}-${i.number}`, number: i.number, projectId: i.project_id, type: i.type, title: i.title,
     description: i.description, statusId: i.status_id, statusName: i.status_name, statusCategory: i.status_category,
-    priority: i.priority, assigneeId: i.assignee_id, reporterId: i.reporter_id, sprintId: i.sprint_id, epicId: i.epic_id,
+    priority: i.priority, assigneeId: i.assignee_id, assigneeIds: assigneeList(i), reporterId: i.reporter_id, sprintId: i.sprint_id, epicId: i.epic_id,
     parentId: i.parent_id, phaseId: i.phase_id ?? null, storyPoints: i.story_points, startDate: i.start_date, dueDate: i.due_date,
     labels: JSON.parse(i.labels || '[]'), rank: i.rank, createdAt: i.created_at, updatedAt: i.updated_at, resolvedAt: i.resolved_at,
     checklistTotal: i.checklist_total ?? 0, checklistDone: i.checklist_done ?? 0, commentCount: i.comment_count ?? 0,
@@ -77,7 +83,8 @@ export const ISSUE_SELECT = `
     (SELECT COUNT(*) FROM checklist_items c WHERE c.issue_id = i.id AND c.done = 1) AS checklist_done,
     (SELECT COUNT(*) FROM comments c WHERE c.issue_id = i.id) AS comment_count,
     (SELECT COUNT(*) FROM issues k WHERE k.parent_id = i.id) AS subtask_count,
-    (SELECT COUNT(*) FROM attachments f WHERE f.issue_id = i.id) AS attachment_count
+    (SELECT COUNT(*) FROM attachments f WHERE f.issue_id = i.id) AS attachment_count,
+    (SELECT group_concat(ia.user_id) FROM issue_assignees ia WHERE ia.issue_id = i.id) AS assignee_ids
   FROM issues i
   JOIN projects p ON p.id = i.project_id
   JOIN statuses s ON s.id = i.status_id`;
@@ -86,6 +93,7 @@ export function todo(t) {
   return {
     id: t.id, text: t.text, note: t.note, done: !!t.done, important: !!t.important, day: t.day, timeBlock: t.time_block,
     issueId: t.issue_id, issueKey: t.issue_key ?? null, position: t.position, createdAt: t.created_at, completedAt: t.completed_at,
+    remindAt: t.remind_at ?? null, reminded: !!t.reminded_at,
   };
 }
 

@@ -36,7 +36,7 @@ export async function createPhases(db, projectId, m, { startOffset = 0 } = {}) {
  * and a first sprint or iteration where the practice requires one. Projects
  * start empty; no example work is added.
  */
-export async function createProject(db, { workspaceId, actor, name, key, description = '', methodology: methodId, template, color }) {
+export async function createProject(db, { workspaceId, actor, name, key, description = '', methodology: methodId, template, color, memberIds = [] }) {
   const id = methodId || template || 'scrum';
   const m = methodology(id);
   return await db.tx(async () => {
@@ -50,6 +50,11 @@ export async function createProject(db, { workspaceId, actor, name, key, descrip
       workspaceId, finalKey, name, description, color || PROJECT_COLORS[count % PROJECT_COLORS.length], legacyTemplate(m.id), m.id, actor.id,
     );
     const projectId = Number(lastInsertRowid);
+    // The creator and the chosen resources work on the project.
+    const inWs = new Set((await db.all('SELECT user_id FROM memberships WHERE workspace_id = ?', workspaceId)).map((m) => m.user_id));
+    for (const uid of new Set([actor.id, ...memberIds])) {
+      if (inWs.has(uid) || uid === actor.id) await db.run('INSERT OR IGNORE INTO project_members (project_id, user_id) VALUES (?, ?)', projectId, uid);
+    }
     for (const [position, [sName, category, sColor, wip]] of m.statuses.entries()) {
       await db.run('INSERT INTO statuses (project_id, name, category, color, position, wip_limit) VALUES (?, ?, ?, ?, ?, ?)',
         projectId, sName, category, sColor, position, wip ?? null);

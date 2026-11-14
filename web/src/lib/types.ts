@@ -1,4 +1,4 @@
-export type Role = 'admin' | 'member' | 'viewer';
+export type Role = 'admin' | 'manager' | 'member' | 'viewer';
 export type Priority = 'urgent' | 'high' | 'medium' | 'low';
 export type IssueType = 'epic' | 'feature' | 'story' | 'task' | 'bug' | 'subtask' | 'milestone';
 export type StatusCategory = 'todo' | 'progress' | 'done';
@@ -45,7 +45,7 @@ export interface Entry {
 export type FieldType = 'text' | 'number' | 'date' | 'select' | 'multiselect' | 'checkbox' | 'url' | 'person';
 export interface CustomField { id: number; projectId: number; name: string; type: FieldType; options: string[]; position: number }
 export type CustomValue = string | number | boolean | string[] | null;
-export interface ProjectDetail extends Project { statuses: Status[]; sprints: Sprint[]; phases: Phase[]; fields: CustomField[] }
+export interface ProjectDetail extends Project { statuses: Status[]; sprints: Sprint[]; phases: Phase[]; fields: CustomField[]; memberIds: number[]; myRole: Role | null }
 export interface Attachment { id: number; issueId: number; name: string; mime: string; size: number; uploaderId: number | null; uploaderName: string | null; createdAt: string; url: string }
 export type TriggerEvent = 'created' | 'status' | 'assigned' | 'priority' | 'comment' | 'due_soon' | 'overdue';
 export type ActionKind = 'notify' | 'assign' | 'priority' | 'label' | 'move' | 'comment' | 'due';
@@ -59,7 +59,7 @@ export interface WorkspaceDetail { workspace: Workspace; members: Member[]; proj
 export interface Issue {
   id: number; key: string; number: number; projectId: number; type: IssueType; title: string; description: string;
   statusId: number; statusName: string; statusCategory: StatusCategory; priority: Priority;
-  assigneeId: number | null; reporterId: number | null; sprintId: number | null; epicId: number | null; parentId: number | null;
+  assigneeId: number | null; assigneeIds: number[]; reporterId: number | null; sprintId: number | null; epicId: number | null; parentId: number | null;
   phaseId: number | null; storyPoints: number | null; startDate: string | null; dueDate: string | null; labels: string[]; rank: number;
   createdAt: string; updatedAt: string; resolvedAt: string | null;
   checklistTotal: number; checklistDone: number; commentCount: number; subtaskCount: number; attachmentCount?: number;
@@ -77,6 +77,7 @@ export interface IssueDetail extends Issue {
 export interface Todo {
   id: number; text: string; note: string; done: boolean; important: boolean; day: string; timeBlock: TimeBlock;
   issueId: number | null; issueKey: string | null; position: number; createdAt: string; completedAt: string | null;
+  remindAt: string | null; reminded: boolean;
 }
 export interface TodoDay { day: string; items: Todo[]; history: { day: string; total: number; done: number }[] }
 

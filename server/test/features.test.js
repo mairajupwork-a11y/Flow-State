@@ -23,7 +23,7 @@ async function testDatabase() {
   if (!url) return openDatabase(':memory:');
   const { openPostgres } = await import('../src/db-postgres.js');
   const pg = await openPostgres(url, { migrate: false });
-  await pg.exec(`DROP TABLE IF EXISTS automation_runs, automations, issue_field_values, custom_fields, attachments, password_resets, push_subscriptions, app_kv,
+  await pg.exec(`DROP TABLE IF EXISTS project_members, issue_assignees, automation_runs, automations, issue_field_values, custom_fields, attachments, password_resets, push_subscriptions, app_kv,
     measurements, entries, todos, notifications, activity, watchers, issue_links, comments, checklist_items,
     issues, phases, sprints, statuses, projects, invites, memberships, workspaces, users, workmars_meta, flowstate_meta CASCADE`);
   await pg.close();
@@ -64,7 +64,8 @@ async function team() {
   const tag = ++seq;
   await a('POST', '/auth/signup', { name: 'Alex Morgan', email: `alex${tag}@example.com`, password: 'correct-horse' });
   const ws = (await a('POST', '/workspaces', { name: `Studio ${tag}`, project: { name: 'Web', key: `W${tag}`, methodology: 'scrum' } })).data.workspace;
-  const inv = (await a('POST', `/workspaces/${ws.slug}/invites`, { emails: [`sam${tag}@example.com`], role: 'member' })).data;
+  const first = (await a('GET', `/workspaces/${ws.slug}`)).data.projects[0];
+  const inv = (await a('POST', `/workspaces/${ws.slug}/invites`, { emails: [`sam${tag}@example.com`], role: 'member', projectIds: [first.id] })).data;
   await b('POST', '/auth/signup', { name: 'Sam Lee', email: `sam${tag}@example.com`, password: 'correct-horse' });
   await b('POST', `/invites/${inv[0].token}/accept`);
   const detail = (await a('GET', `/workspaces/${ws.slug}`)).data;
@@ -179,6 +180,8 @@ test('custom fields: define, validate values, show in detail and log changes', a
 
 test('automations: event rules act and notify, never loop, and timed rules fire once', async () => {
   const { a, b, ws, project, alex, sam } = await team();
+  // Sam reports work here, so Sam needs to be a manager (team members can't create cards).
+  await a('PATCH', `/workspaces/${ws.slug}/members/${sam.id}`, { role: 'manager' });
   const done = project.statuses.find((s) => s.category === 'done');
   const review = project.statuses.find((s) => s.name === 'In review');
   const rule = (body) => a('POST', `/projects/${project.id}/automations`, body);

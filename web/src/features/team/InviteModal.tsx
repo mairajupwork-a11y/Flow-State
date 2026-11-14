@@ -8,6 +8,8 @@ import { useProviders } from '../../lib/queries';
 import { copyText } from '../../lib/store';
 import type { Role } from '../../lib/types';
 import { DesignationSelect } from './DesignationSelect';
+import { ACCESS_LEVELS, accessForDesignation } from '../../../../shared/designations.js';
+import { roleName } from '../../components/AssigneePicker';
 
 interface Invite { token: string; email: string; role: Role; designation?: string; emailed?: boolean; emailError?: string }
 export const inviteUrl = (token: string) => `${location.origin}/invite/${token}`;
@@ -17,11 +19,17 @@ export function copy(text: string, message = 'Link copied.') {
 }
 
 export function InviteModal({ onClose }: { onClose: () => void }) {
-  const { workspace, isAdmin } = useWs();
+  const { workspace, isAdmin, projects } = useWs();
   const qc = useQueryClient();
   const [raw, setRaw] = useState('');
   const [role, setRole] = useState<Role>('member');
   const [designation, setDesignation] = useState('');
+  const [roleTouched, setRoleTouched] = useState(false);
+  const [projectIds, setProjectIds] = useState<number[]>(() => (projects.length === 1 ? [projects[0].id] : []));
+  const pickDesignation = (d: string) => {
+    setDesignation(d);
+    if (!roleTouched) setRole(accessForDesignation(d) as Role); // e.g. Project Manager → Manager, React Developer → Team member
+  };
   const [created, setCreated] = useState<Invite[] | null>(null);
   const [error, setError] = useState('');
   const [busy, setBusy] = useState(false);
@@ -37,7 +45,7 @@ export function InviteModal({ onClose }: { onClose: () => void }) {
     setBusy(true);
     setError('');
     try {
-      const res = await api.post<Invite[]>(`/workspaces/${workspace.slug}/invites`, link ? { link: true, role } : { emails, role, designation: designation.trim() });
+      const res = await api.post<Invite[]>(`/workspaces/${workspace.slug}/invites`, link ? { link: true, role, projectIds } : { emails, role, designation: designation.trim(), projectIds });
       setCreated(res);
       qc.invalidateQueries({ queryKey: ['invites'] });
     } catch (err) {
@@ -54,7 +62,7 @@ export function InviteModal({ onClose }: { onClose: () => void }) {
   return (
     <Modal title="Invite teammates" subtitle="Free for unlimited people — invite your whole organisation" onClose={onClose}
       footer={created
-        ? <><button className="btn btn-light" onClick={() => { setCreated(null); setRaw(''); setDesignation(''); }}>Invite more</button><button className="btn btn-primary" onClick={onClose}>Done</button></>
+        ? <><button className="btn btn-light" onClick={() => { setCreated(null); setRaw(''); setDesignation(''); setRoleTouched(false); }}>Invite more</button><button className="btn btn-primary" onClick={onClose}>Done</button></>
         : <><button className="btn btn-light" onClick={() => create(true)} disabled={busy}><Icon name="link" size={14} /> Get a team link</button><button className="btn btn-primary" onClick={() => create()} disabled={busy || !emails.length || !designation.trim()}><Icon name="mail" size={14} /> {emailOn ? 'Send' : 'Create'} {emails.length > 1 ? `${emails.length} invites` : 'invite'}</button></>}>
       <div className="modal-body">
         {created ? (
@@ -65,7 +73,7 @@ export function InviteModal({ onClose }: { onClose: () => void }) {
               if (sent) return (
                 <div className="form-success" role="status"><Icon name="mail" size={15} /> Invitation email sent to {sent === 1 ? created.find((i) => i.emailed)!.email : `${sent} people`}. {failed.length ? `${failed.length} could not be emailed — share their link below.` : 'They can also use the link below.'}</div>
               );
-              return <p className="page-subtitle" style={{ marginTop: 0 }}>Share {created.length === 1 ? 'this link' : 'these links'} with your {created.length === 1 && !created[0].email ? 'team — anyone with it can join as a ' + role : 'teammates'}. Each one opens a quick, free sign-up.</p>;
+              return <p className="page-subtitle" style={{ marginTop: 0 }}>Share {created.length === 1 ? 'this link' : 'these links'} with your {created.length === 1 && !created[0].email ? 'team — anyone with it can join as a ' + roleName(role).toLowerCase() : 'teammates'}. Each one opens a quick, free sign-up.</p>;
             })()}
             <div className="invite-links">
               {created.map((i) => (
@@ -98,15 +106,33 @@ export function InviteModal({ onClose }: { onClose: () => void }) {
                 Not a full email address, so it won’t be invited: {invalid.slice(0, 5).join(', ')}{invalid.length > 5 ? ` and ${invalid.length - 5} more` : ''}
               </div>
             )}
-            <DesignationSelect value={designation} onChange={setDesignation} required
+            <DesignationSelect value={designation} onChange={pickDesignation} required
               hint={emails.length > 1 ? `All ${emails.length} people are invited with this designation — send separate invites for different roles.` : 'Shown in the invitation email and set as their job title when they join.'} />
-            <label className="form-field" style={{ marginTop: 14 }}><span>Access</span>
-              <select className="field-select" value={role} onChange={(e) => setRole(e.target.value as Role)}>
-                <option value="member">Member — create and edit work</option>
-                <option value="viewer">Viewer — read-only, ideal for stakeholders</option>
-                <option value="admin">Admin — manage people and settings</option>
-              </select>
-            </label>
+            <fieldset className="form-field plain" style={{ marginTop: 14 }}>
+              <legend>Access</legend>
+              <div className="access-options">
+                {ACCESS_LEVELS.map((l) => (
+                  <label key={l.id} className={`access-option ${role === l.id ? 'selected' : ''}`}>
+                    <input type="radio" name="access" value={l.id} checked={role === l.id} onChange={() => { setRole(l.id as Role); setRoleTouched(true); }} />
+                    <span><b>{l.label}</b><small>{l.blurb}</small></span>
+                  </label>
+                ))}
+              </div>
+            </fieldset>
+            {(role === 'member' || role === 'viewer') && projects.length > 0 && (
+              <fieldset className="form-field plain" style={{ marginTop: 14 }}>
+                <legend>Projects they’ll work on</legend>
+                <div className="check-list">
+                  {projects.map((pr) => (
+                    <label key={pr.id} className="check-row">
+                      <input type="checkbox" checked={projectIds.includes(pr.id)} onChange={(e) => setProjectIds((ids) => e.target.checked ? [...ids, pr.id] : ids.filter((x) => x !== pr.id))} />
+                      <span className="project-glyph" style={{ background: pr.color }}>{pr.key.slice(0, 2)}</span> {pr.name}
+                    </label>
+                  ))}
+                </div>
+                <small className="tiny-note">Team members and viewers only see the projects they’re on. Managers can add them to more later.</small>
+              </fieldset>
+            )}
             {blocker && <p className="tiny-note" role="status" style={{ marginTop: 10 }}>{blocker}</p>}
           </>
         )}

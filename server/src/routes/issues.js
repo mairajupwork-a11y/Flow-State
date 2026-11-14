@@ -2,7 +2,7 @@ import { Router } from 'express';
 import { z } from 'zod';
 import { requireUser } from '../auth.js';
 import { HttpError, parse, notFound } from '../http.js';
-import { loadIssue } from '../access.js';
+import { loadIssue, isManager } from '../access.js';
 import { issue as serializeIssue } from '../serialize.js';
 import { updateIssue, moveIssue, issueDetail, issueKey } from '../services/issues.js';
 import { runAutomations } from '../services/automations.js';
@@ -18,6 +18,7 @@ export const issueInput = z.object({
   statusId: z.number().int().positive(),
   priority: z.enum(['urgent', 'high', 'medium', 'low']),
   assigneeId: nullableId,
+  assigneeIds: z.array(z.number().int().positive()).max(25),
   sprintId: nullableId,
   epicId: nullableId,
   parentId: nullableId,
@@ -27,6 +28,16 @@ export const issueInput = z.object({
   dueDate: nullableDate,
   labels: z.array(z.string().max(30)).max(12),
 }).partial();
+
+/** What team members (not managers) may change on a work item: just where it is on the board. */
+const MEMBER_FIELDS = new Set(['statusId']);
+function assertMemberEdit(project, input) {
+  if (isManager(project.viewerRole)) return;
+  const blocked = Object.keys(input).filter((k) => !MEMBER_FIELDS.has(k));
+  if (blocked.length) {
+    throw new HttpError(403, 'Team members can move cards, comment, upload files and add links. Ask a manager to change dates, assignees or details.');
+  }
+}
 
 export function issueRoutes({ db, events }) {
   const r = Router();
@@ -40,6 +51,7 @@ export function issueRoutes({ db, events }) {
   r.patch('/:ref', async (req, res) => {
     const { issue, project } = await loadIssue(db, req.user, req.params.ref, 'member');
     const input = parse(issueInput, req.body);
+    assertMemberEdit(project, input);
     if (input.dueDate && input.startDate && input.startDate > input.dueDate) throw new HttpError(400, 'The start date needs to be before the due date.');
     const row = await updateIssue(db, { issueRow: issue, project, actor: req.user, input, events });
     res.json(serializeIssue(row));
@@ -48,12 +60,13 @@ export function issueRoutes({ db, events }) {
   r.post('/:ref/move', async (req, res) => {
     const { issue, project } = await loadIssue(db, req.user, req.params.ref, 'member');
     const body = parse(z.object({ statusId: z.number().int().positive().optional(), sprintId: nullableId.optional(), beforeId: nullableId.optional(), afterId: nullableId.optional() }), req.body);
+    if (body.sprintId !== undefined && body.sprintId !== issue.sprint_id) assertMemberEdit(project, { sprintId: body.sprintId });
     const row = await moveIssue(db, { issueRow: issue, project, actor: req.user, ...body, events });
     res.json(serializeIssue(row));
   });
 
   r.delete('/:ref', async (req, res) => {
-    const { issue, project } = await loadIssue(db, req.user, req.params.ref, 'member');
+    const { issue, project } = await loadIssue(db, req.user, req.params.ref, 'manager');
     await db.run('DELETE FROM issues WHERE id = ?', issue.id);
     await events.record({ workspaceId: project.workspace_id, projectId: project.id, actorId: req.user.id, verb: 'deleted', data: { key: `${project.key}-${issue.number}`, title: issue.title } });
     events.changed(project.workspace_id, ['issues', `project:${project.id}`], req.user.id);
@@ -96,8 +109,7 @@ export function issueRoutes({ db, events }) {
     const { issue, project } = await loadIssue(db, req.user, req.params.ref, 'member');
     const comment = await db.get('SELECT * FROM comments WHERE id = ? AND issue_id = ?', Number(req.params.commentId), issue.id);
     if (!comment) throw notFound('Comment');
-    const isAdmin = await db.get("SELECT 1 FROM memberships WHERE workspace_id = ? AND user_id = ? AND role = 'admin'", project.workspace_id, req.user.id);
-    if (comment.author_id !== req.user.id && !isAdmin) throw new HttpError(403, 'You can only delete your own comments.');
+    if (comment.author_id !== req.user.id && !isManager(project.viewerRole)) throw new HttpError(403, 'You can only delete your own comments.');
     await db.run('DELETE FROM comments WHERE id = ?', comment.id);
     events.changed(project.workspace_id, [`issue:${issue.id}`, `project:${project.id}`], req.user.id);
     res.json(await issueDetail(db, issue.id));

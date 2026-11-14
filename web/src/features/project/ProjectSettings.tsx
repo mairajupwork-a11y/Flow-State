@@ -11,6 +11,7 @@ import { MethodologyPicker } from '../../components/MethodologyPicker';
 import { METHODOLOGIES, methodologyOf } from '../../lib/methodology';
 import { SectionBar, useProjectCtx } from './ProjectLayout';
 import { AutomationsCard, CustomFieldsCard } from './ProjectExtensions';
+import { ResourcesCard } from './ProjectResources';
 
 const COLORS = ['#282c20', '#5b7a1e', '#535450', '#8a9468', '#3f4a2a', '#6b7a56', '#7c8c2a', '#9a9e86'];
 const CATEGORY_LABEL: Record<StatusCategory, string> = { todo: 'To do', progress: 'In progress', done: 'Done' };
@@ -45,6 +46,7 @@ export default function ProjectSettings() {
     <>
       <SectionBar title="Project settings" sub={`${project.key} · ${methodologyOf(project).name}`} />
       <MethodologyCard />
+      <ResourcesCard project={project} />
       <div className="two-col">
         <form className="content-card" onSubmit={submitDetails}>
           <h3>Details</h3>

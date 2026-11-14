@@ -5,7 +5,7 @@ import { SortableContext, sortableKeyboardCoordinates, useSortable, verticalList
 import { CSS } from '@dnd-kit/utilities';
 import { useMutation, useQueryClient } from '@tanstack/react-query';
 import { Icon } from '../../components/Icon';
-import { Avatar, Modal, StatusPill, TypeIcon, PriorityPill } from '../../components/ui';
+import { AssigneeAvatars, Modal, StatusPill, TypeIcon, PriorityPill } from '../../components/ui';
 import { announcements } from '../../lib/dnd';
 import { api } from '../../lib/api';
 import { invalidateWork, useMoveIssue } from '../../lib/queries';
@@ -197,7 +197,7 @@ function SortableRow({ issue, disabled }: { issue: Issue; disabled: boolean }) {
 }
 
 function Row({ issue, overlay }: { issue: Issue; overlay?: boolean }) {
-  const { member, projects } = useWs();
+  const { projects } = useWs();
   const m = methodologyOf(projects.find((p) => p.id === issue.projectId));
   return (
     <div className={`backlog-row ${overlay ? 'overlay' : ''}`}>
@@ -209,7 +209,7 @@ function Row({ issue, overlay }: { issue: Issue; overlay?: boolean }) {
       <PriorityPill priority={issue.priority} />
       <StatusPill name={issue.statusName} category={issue.statusCategory} />
       <span className="points" title={estimateLabel(m)}>{issue.storyPoints ?? '–'}</span>
-      <Avatar user={member(issue.assigneeId)} size="sm" />
+      <AssigneeAvatars issue={issue} />
     </div>
   );
 }

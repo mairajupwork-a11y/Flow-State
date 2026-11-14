@@ -9,7 +9,10 @@ interface WorkspaceCtx {
   members: Member[];
   projects: Project[];
   locale: Locale;
+  /** Managers and admins: create and edit cards, project details, dates and assignees. */
   canEdit: boolean;
+  /** Team members too: comment, upload files, add links, tick checklists and move cards. */
+  canContribute: boolean;
   isAdmin: boolean;
   member: (id: number | null | undefined) => Member | undefined;
   base: string; // e.g. /w/studio-north
@@ -17,13 +20,14 @@ interface WorkspaceCtx {
 
 const Ctx = createContext<WorkspaceCtx | null>(null);
 
-export function WorkspaceProvider({ value, children }: { value: Omit<WorkspaceCtx, 'member' | 'canEdit' | 'isAdmin' | 'base' | 'locale'>; children: ReactNode }) {
+export function WorkspaceProvider({ value, children }: { value: Omit<WorkspaceCtx, 'member' | 'canEdit' | 'canContribute' | 'isAdmin' | 'base' | 'locale'>; children: ReactNode }) {
   const ctx = useMemo<WorkspaceCtx>(() => {
     const byId = new Map(value.members.map((m) => [m.id, m]));
     return {
       ...value,
       locale: value.me.locale || value.workspace.locale,
-      canEdit: value.workspace.role !== 'viewer',
+      canEdit: value.workspace.role === 'admin' || value.workspace.role === 'manager',
+      canContribute: value.workspace.role !== 'viewer',
       isAdmin: value.workspace.role === 'admin',
       member: (id) => (id == null ? undefined : byId.get(id)),
       base: `/w/${value.workspace.slug}`,

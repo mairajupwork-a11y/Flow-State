@@ -1,13 +1,38 @@
 import { HttpError, notFound } from './http.js';
 
-const RANK = { viewer: 0, member: 1, admin: 2 };
+/**
+ * Access levels, lowest first:
+ *  viewer  — read-only, on the projects they're a resource of
+ *  member  — team member: comments, uploads, links, moves cards, on the projects they're on
+ *  manager — sees every project; creates and edits cards, project details, dates and assignees
+ *  admin   — everything, including people and roles
+ */
+export const RANK = { viewer: 0, member: 1, manager: 2, admin: 3 };
+export const isManager = (role) => RANK[role] >= RANK.manager;
 
-function assertRole(membership, min) {
+const DENIED = {
+  admin: 'Only workspace admins can do that.',
+  manager: 'Only managers and admins can do that. Ask an admin if you need it.',
+  member: 'Viewers can look but not change things. Ask an admin for team member access.',
+};
+
+export function assertRole(membership, min) {
   if (!membership) throw notFound('Workspace');
-  if (RANK[membership.role] < RANK[min]) {
-    throw new HttpError(403, min === 'admin' ? 'Only workspace admins can do that.' : 'Viewers can look but not change things. Ask an admin for member access.');
-  }
+  if (RANK[membership.role] < RANK[min]) throw new HttpError(403, DENIED[min] ?? DENIED.member);
 }
+
+/** Managers and admins see every project; everyone else only the projects they're a resource of. */
+export async function canSeeProject(db, membership, projectId, userId) {
+  if (isManager(membership.role)) return true;
+  return !!await db.get('SELECT 1 FROM project_members WHERE project_id = ? AND user_id = ?', projectId, userId);
+}
+
+/**
+ * SQL condition: the project aliased `alias` is visible to the user. Takes two parameters: (userId, userId).
+ * Use inside queries that already restrict to one workspace.
+ */
+export const VISIBLE_PROJECT = (alias = 'p') => `(EXISTS (SELECT 1 FROM memberships vm WHERE vm.workspace_id = ${alias}.workspace_id AND vm.user_id = ? AND vm.role IN ('admin','manager'))
+  OR EXISTS (SELECT 1 FROM project_members vpm WHERE vpm.project_id = ${alias}.id AND vpm.user_id = ?))`;
 
 export async function membershipFor(db, workspaceId, userId) {
   return await db.get('SELECT * FROM memberships WHERE workspace_id = ? AND user_id = ?', workspaceId, userId);
@@ -27,8 +52,10 @@ export async function loadWorkspace(db, user, ref, min = 'viewer') {
 export async function loadProject(db, user, projectId, min = 'viewer') {
   const project = await db.get('SELECT * FROM projects WHERE id = ?', Number(projectId));
   if (!project) throw notFound('Project');
-  assertRole(await membershipFor(db, project.workspace_id, user.id), min);
-  return project;
+  const membership = await membershipFor(db, project.workspace_id, user.id);
+  if (!membership || !await canSeeProject(db, membership, project.id, user.id)) throw notFound('Project');
+  assertRole(membership, min);
+  return Object.assign(project, { viewerRole: membership.role });
 }
 
 /** Accepts a numeric id or a human key such as WEB-101 (scoped to the caller's workspaces). */

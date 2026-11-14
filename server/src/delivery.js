@@ -1,7 +1,7 @@
 import { notificationEmail } from './emails.js';
 
 /** Kinds worth interrupting someone for when they chose "important only". */
-export const IMPORTANT = new Set(['assigned', 'mention', 'automation']);
+export const IMPORTANT = new Set(['assigned', 'mention', 'automation', 'reminder']);
 export const wants = (pref, kind) => pref === 'all' || (pref === 'important' && IMPORTANT.has(kind));
 
 /**

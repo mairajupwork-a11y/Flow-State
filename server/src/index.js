@@ -7,6 +7,7 @@ import { createApp } from './app.js';
 import { createMailer, mailHint } from './mail.js';
 import { createPush } from './push.js';
 import { runScheduledAutomations } from './services/automations.js';
+import { runReminders } from './services/reminders.js';
 
 const here = dirname(fileURLToPath(import.meta.url));
 // Settings such as DATABASE_URL can live in a .env file at the repo root.
@@ -112,6 +113,11 @@ const runTimed = () => runScheduledAutomations(db, { events: app.locals.events }
   .catch((err) => console.warn(`Scheduled automations failed: ${err.message}`));
 setTimeout(runTimed, 20_000).unref();
 setInterval(runTimed, 15 * 60_000).unref();
+
+// Personal to-do reminders are checked every minute.
+const runDueReminders = () => runReminders(db, { events: app.locals.events })
+  .catch((err) => console.warn(`Reminders failed: ${err.message}`));
+setInterval(runDueReminders, 60_000).unref();
 
 function shutdown() {
   app.locals.hub.closeAll();

@@ -2,6 +2,7 @@ import { useEffect, useRef, type ReactNode } from 'react';
 import { createPortal } from 'react-dom';
 import { Icon } from './Icon';
 import { dismissToast, useToasts } from '../lib/store';
+import { useWs } from '../lib/workspace';
 import { PRIORITY_LABEL, TYPE_ICON, TYPE_LABEL } from '../lib/format';
 import type { IssueType, Priority, StatusCategory, User } from '../lib/types';
 
@@ -19,6 +20,21 @@ export function AvatarGroup({ users, max = 4 }: { users: Pick<User, 'id' | 'name
       {users.slice(0, max).map((u) => <Avatar key={u.id} user={u} />)}
       {extra > 0 && <span className="avatar avatar-more" title={`${extra} more`}>+{extra}</span>}
     </div>
+  );
+}
+
+/** Everyone assigned to a work item, overlapped; "Unassigned" when nobody is. */
+export function AssigneeAvatars({ issue, size = 'sm', max = 3 }: { issue: { assigneeId: number | null; assigneeIds?: number[] }; size?: '' | 'card-avatar' | 'sm'; max?: number }) {
+  const { member } = useWs();
+  const ids = issue.assigneeIds?.length ? issue.assigneeIds : issue.assigneeId ? [issue.assigneeId] : [];
+  const people = ids.map((id) => member(id)).filter(Boolean) as NonNullable<ReturnType<typeof member>>[];
+  if (people.length <= 1) return <Avatar user={people[0]} size={size} />;
+  const extra = people.length - max;
+  return (
+    <span className="avatar-group assignees" title={people.map((p) => p.name).join(', ')} aria-label={`Assigned to ${people.map((p) => p.name).join(', ')}`}>
+      {people.slice(0, max).map((p) => <Avatar key={p.id} user={p} size={size} />)}
+      {extra > 0 && <span className={`avatar avatar-more ${size}`}>+{extra}</span>}
+    </span>
   );
 }
 

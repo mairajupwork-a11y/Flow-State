@@ -106,6 +106,7 @@ function describe(a: Activity, name: string) {
     case 'sprint_completed': return <><b>{name}</b> completed {d.name}</>;
     case 'member_joined': return <><b>{d.name}</b> joined the workspace 👋</>;
     case 'project_created': return <><b>{name}</b> created project {d.name}</>;
+    case 'resources_updated': return <><b>{name}</b> updated the team on {d.name}</>;
     case 'workspace_created': return <><b>{name}</b> created this workspace</>;
     case 'deleted': return <><b>{name}</b> deleted {d.key}</>;
     case 'linked': return <><b>{name}</b> linked <i>{a.issueKey}</i> to {d.target}</>;

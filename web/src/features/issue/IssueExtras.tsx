@@ -15,7 +15,7 @@ const fileIcon = (mime: string) => (mime.startsWith('image/') ? 'image' : mime =
 
 /** Files on a work item: drop, pick or paste to upload; images preview inline. */
 export function Attachments({ issue, canEdit }: { issue: IssueDetail; canEdit: boolean }) {
-  const { me, isAdmin, locale } = useWs();
+  const { me, canEdit: isLead, locale } = useWs();
   const qc = useQueryClient();
   const input = useRef<HTMLInputElement>(null);
   const [uploading, setUploading] = useState<string[]>([]);
@@ -93,7 +93,7 @@ export function Attachments({ issue, canEdit }: { issue: IssueDetail; canEdit: b
             <figure className="attach-thumb" key={a.id}>
               <button type="button" onClick={() => setPreview(a)} aria-label={`Preview ${a.name}`}><img src={a.url} alt={a.name} loading="lazy" /></button>
               <figcaption><span className="ellipsis">{a.name}</span>
-                {canEdit && (a.uploaderId === me.id || isAdmin) && <button className="icon-btn tiny" onClick={() => remove(a)} aria-label={`Remove ${a.name}`}><Icon name="trash" size={12} /></button>}
+                {canEdit && (a.uploaderId === me.id || isLead) && <button className="icon-btn tiny" onClick={() => remove(a)} aria-label={`Remove ${a.name}`}><Icon name="trash" size={12} /></button>}
               </figcaption>
             </figure>
           ))}
@@ -105,7 +105,7 @@ export function Attachments({ issue, canEdit }: { issue: IssueDetail; canEdit: b
           <a className="ellipsis attach-name" href={`${a.url}?download`} download={a.name}>{a.name}</a>
           <span className="tiny-note">{fmtBytes(a.size)} · {a.uploaderName ?? 'Former member'} · {timeAgo(a.createdAt, locale)}</span>
           <a className="icon-btn tiny" href={`${a.url}?download`} download={a.name} aria-label={`Download ${a.name}`}><Icon name="download" size={13} /></a>
-          {canEdit && (a.uploaderId === me.id || isAdmin) && <button className="icon-btn tiny" onClick={() => remove(a)} aria-label={`Remove ${a.name}`}><Icon name="trash" size={12} /></button>}
+          {canEdit && (a.uploaderId === me.id || isLead) && <button className="icon-btn tiny" onClick={() => remove(a)} aria-label={`Remove ${a.name}`}><Icon name="trash" size={12} /></button>}
         </div>
       ))}
       {uploading.map((name, i) => <div className="attach-row uploading" key={`${name}-${i}`}><span className="spinner-dot" /> <span className="ellipsis">Uploading {name}…</span></div>)}

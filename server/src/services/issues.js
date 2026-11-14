@@ -5,7 +5,7 @@ import { runAutomations, rearmTimed } from './automations.js';
 import { readFieldValue } from './fields.js';
 
 export const PRIORITY_ORDER = { urgent: 0, high: 1, medium: 2, low: 3 };
-const TRACKED = ['title', 'description', 'type', 'statusId', 'priority', 'assigneeId', 'sprintId', 'epicId', 'parentId', 'phaseId', 'storyPoints', 'startDate', 'dueDate', 'labels'];
+const TRACKED = ['title', 'description', 'type', 'statusId', 'priority', 'assigneeIds', 'sprintId', 'epicId', 'parentId', 'phaseId', 'storyPoints', 'startDate', 'dueDate', 'labels'];
 const COLUMN = {
   title: 'title', description: 'description', type: 'type', statusId: 'status_id', priority: 'priority', assigneeId: 'assignee_id',
   sprintId: 'sprint_id', epicId: 'epic_id', parentId: 'parent_id', phaseId: 'phase_id', storyPoints: 'story_points', startDate: 'start_date', dueDate: 'due_date', labels: 'labels',
@@ -25,8 +25,10 @@ async function validateRefs(db, project, input) {
   if (input.statusId != null && !await db.get('SELECT 1 FROM statuses WHERE id = ? AND project_id = ?', input.statusId, project.id)) {
     throw new HttpError(400, 'That status does not belong to this project.');
   }
-  if (input.assigneeId != null && !await db.get('SELECT 1 FROM memberships WHERE workspace_id = ? AND user_id = ?', project.workspace_id, input.assigneeId)) {
-    throw new HttpError(400, 'The assignee must be a member of this workspace.');
+  for (const uid of input.assigneeIds ?? (input.assigneeId != null ? [input.assigneeId] : [])) {
+    const m = await db.get('SELECT role FROM memberships WHERE workspace_id = ? AND user_id = ?', project.workspace_id, uid);
+    if (!m) throw new HttpError(400, 'Everyone assigned must be a member of this workspace.');
+    if (m.role === 'viewer') throw new HttpError(400, 'Viewers can’t be assigned work. Ask an admin to make them a team member first.');
   }
   if (input.sprintId != null) {
     const sprint = await db.get('SELECT state FROM sprints WHERE id = ? AND project_id = ?', input.sprintId, project.id);
@@ -47,6 +49,24 @@ async function validateRefs(db, project, input) {
   }
 }
 
+/** The assignee list an input asks for: assigneeIds wins, a lone assigneeId means just that person. */
+function wantedAssignees(input) {
+  if (Array.isArray(input.assigneeIds)) return [...new Set(input.assigneeIds)].slice(0, 25);
+  if ('assigneeId' in input) return input.assigneeId ? [input.assigneeId] : [];
+  return undefined;
+}
+
+/** Replaces an item's assignees; assigning someone also makes them a resource of the project. */
+async function setAssignees(db, issueId, projectId, ids) {
+  await db.run('DELETE FROM issue_assignees WHERE issue_id = ?', issueId);
+  for (const [position, uid] of ids.entries()) {
+    await db.run('INSERT OR IGNORE INTO issue_assignees (issue_id, user_id, position) VALUES (?, ?, ?)', issueId, uid, position);
+    await db.run('INSERT OR IGNORE INTO project_members (project_id, user_id) VALUES (?, ?)', projectId, uid);
+    await db.run('INSERT OR IGNORE INTO watchers (issue_id, user_id) VALUES (?, ?)', issueId, uid);
+  }
+  await db.run('UPDATE issues SET assignee_id = ? WHERE id = ?', ids[0] ?? null, issueId);
+}
+
 async function nextRank(db, statusId) {
   return ((await db.get('SELECT MAX(rank) AS r FROM issues WHERE status_id = ?', statusId)).r ?? 0) + 1024;
 }
@@ -57,6 +77,9 @@ export async function createIssue(db, { projectId, actor, input, events, silent 
     if (!project) throw notFound('Project');
     const statusId = input.statusId ?? (await db.get('SELECT id FROM statuses WHERE project_id = ? ORDER BY position LIMIT 1', projectId)).id;
     const data = { ...input, statusId };
+    const assignees = wantedAssignees(input) ?? [];
+    data.assigneeId = assignees[0] ?? null;
+    data.assigneeIds = assignees;
     if (!data.type) data.type = methodology(project.methodology).types.includes('task') ? 'task' : methodology(project.methodology).types[0];
     if (data.type === 'subtask' && !data.parentId) throw new HttpError(400, 'Choose the parent work item for this sub-task.');
     if (data.startDate && data.dueDate && data.dueDate < data.startDate) throw new HttpError(400, 'The due date can’t be before the start date.');
@@ -77,13 +100,13 @@ export async function createIssue(db, { projectId, actor, input, events, silent 
     );
     const id = Number(lastInsertRowid);
     await db.run('INSERT OR IGNORE INTO watchers (issue_id, user_id) VALUES (?, ?)', id, actor.id);
-    if (data.assigneeId) await db.run('INSERT OR IGNORE INTO watchers (issue_id, user_id) VALUES (?, ?)', id, data.assigneeId);
+    if (assignees.length) await setAssignees(db, id, projectId, assignees);
 
     if (!silent && events) {
       const key = `${project.key}-${number}`;
       await events.record({ workspaceId: project.workspace_id, projectId, issueId: id, actorId: actor.id, verb: 'created', data: { title: data.title } });
-      if (data.assigneeId) {
-        await events.notify({ workspaceId: project.workspace_id, issueId: id, actorId: actor.id, kind: 'assigned', recipients: [data.assigneeId],
+      if (assignees.length) {
+        await events.notify({ workspaceId: project.workspace_id, issueId: id, actorId: actor.id, kind: 'assigned', recipients: assignees,
           text: `${actor.name} assigned ${key} to you: “${data.title}”` });
       }
       events.changed(project.workspace_id, ['issues', `project:${projectId}`], actor.id);
@@ -100,6 +123,10 @@ export async function updateIssue(db, { issueRow, project, actor, input, events,
   return await db.tx(async () => {
     const current = serializeIssue(await getIssueRow(db, issueRow.id));
     const patch = {};
+    const wanted = wantedAssignees(input);
+    input = { ...input };
+    delete input.assigneeId;
+    if (wanted) input.assigneeIds = wanted;
     for (const field of TRACKED) {
       if (!(field in input)) continue;
       const next = field === 'labels' ? cleanLabels(input.labels) : input[field];
@@ -126,7 +153,9 @@ export async function updateIssue(db, { issueRow, project, actor, input, events,
 
     const sets = [];
     const params = [];
+    if (patch.assigneeIds) await setAssignees(db, current.id, project.id, patch.assigneeIds);
     for (const [field, value] of Object.entries(patch)) {
+      if (field === 'assigneeIds') continue;
       sets.push(`${COLUMN[field]} = ?`);
       params.push(field === 'labels' ? JSON.stringify(value) : value ?? null);
     }
@@ -157,9 +186,10 @@ async function logChanges(db, { project, actor, current, patch, events }) {
     if (field === 'statusId') {
       from = current.statusName;
       to = (await db.get('SELECT name FROM statuses WHERE id = ?', value)).name;
-    } else if (field === 'assigneeId') {
-      from = from ? (await db.get('SELECT name FROM users WHERE id = ?', from))?.name : null;
-      to = value ? (await db.get('SELECT name FROM users WHERE id = ?', value))?.name : null;
+    } else if (field === 'assigneeIds') {
+      const names = async (ids) => (ids?.length ? (await Promise.all(ids.map(async (id) => (await db.get('SELECT name FROM users WHERE id = ?', id))?.name))).filter(Boolean).join(', ') : null);
+      from = await names(from);
+      to = await names(value);
     } else if (field === 'sprintId') {
       from = from ? (await db.get('SELECT name FROM sprints WHERE id = ?', from))?.name : null;
       to = value ? (await db.get('SELECT name FROM sprints WHERE id = ?', value))?.name : null;
@@ -172,10 +202,12 @@ async function logChanges(db, { project, actor, current, patch, events }) {
     }
     await events.record({ workspaceId: project.workspace_id, projectId: project.id, issueId: current.id, actorId: actor.id, verb: 'updated', data: { field, from, to } });
   }
-  if (patch.assigneeId) {
-    await db.run('INSERT OR IGNORE INTO watchers (issue_id, user_id) VALUES (?, ?)', current.id, patch.assigneeId);
-    await events.notify({ workspaceId: project.workspace_id, issueId: current.id, actorId: actor.id, kind: 'assigned', recipients: [patch.assigneeId],
-      text: `${actor.name} assigned ${key} to you: “${current.title}”` });
+  if (patch.assigneeIds) {
+    const added = patch.assigneeIds.filter((id) => !(current.assigneeIds ?? []).includes(id));
+    if (added.length) {
+      await events.notify({ workspaceId: project.workspace_id, issueId: current.id, actorId: actor.id, kind: 'assigned', recipients: added,
+        text: `${actor.name} assigned ${key} to you: “${current.title}”` });
+    }
   }
   if (patch.statusId) {
     const to = (await db.get('SELECT name FROM statuses WHERE id = ?', patch.statusId)).name;

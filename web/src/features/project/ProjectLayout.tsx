@@ -11,6 +11,9 @@ import { methodologyOf, typeLabel, viewMeta, gateWord, term } from '../../lib/me
 import type { Issue, IssueType, Priority, ProjectDetail } from '../../lib/types';
 import { NotFound } from '../home/NotFound';
 
+/** Everyone assigned to an item (older data may only have the primary assignee). */
+export const assigned = (i: Issue) => (i.assigneeIds?.length ? i.assigneeIds : i.assigneeId ? [i.assigneeId] : []);
+
 export interface Filters { q: string; assignee: string; priority: Priority | ''; type: IssueType | ''; label: string }
 const EMPTY: Filters = { q: '', assignee: '', priority: '', type: '', label: '' };
 
@@ -59,7 +62,7 @@ export function ProjectLayout() {
       (!filters.priority || i.priority === filters.priority) &&
       (!filters.type || i.type === filters.type) &&
       (!filters.label || i.labels.includes(filters.label)) &&
-      (!filters.assignee || (filters.assignee === 'me' ? i.assigneeId === me.id : filters.assignee === 'none' ? !i.assigneeId : String(i.assigneeId) === filters.assignee)));
+      (!filters.assignee || (filters.assignee === 'me' ? assigned(i).includes(me.id) : filters.assignee === 'none' ? !assigned(i).length : assigned(i).includes(Number(filters.assignee)))));
   }, [issues.data, filters, me.id]);
 
   if (!summary) return <NotFound />;
@@ -98,7 +101,7 @@ export function ProjectHero({ project, issues }: { project: ProjectDetail; issue
     const left = sprint.endDate ? daysBetween(todayISO(), sprint.endDate) : null;
     phase = `${m.name} · ${sprint.name} · ${left == null ? 'In progress' : left > 0 ? `${left} day${left === 1 ? '' : 's'} remaining` : left === 0 ? 'Ends today' : `Ended ${fmtDate(sprint.endDate, locale)}`}`;
   }
-  const people = members.filter((m) => issues.some((i) => i.assigneeId === m.id));
+  const people = members.filter((m) => issues.some((i) => assigned(i).includes(m.id)));
   return (
     <div className="project-hero scene" style={{ '--project-tint': project.color, ...sceneStyle(sceneFor(project.id)) } as CSSProperties}>
       <div className="hero-content">
@@ -179,7 +182,7 @@ export function FilterBar({ count }: { count: number }) {
   const labels = useMemo(() => [...new Set(issues.flatMap((i) => i.labels))].sort(), [issues]);
   const active = Object.values(filters).some(Boolean);
   const set = (patch: Partial<Filters>) => setFilters({ ...filters, ...patch });
-  const assignees = members.filter((m) => issues.some((i) => i.assigneeId === m.id));
+  const assignees = members.filter((m) => issues.some((i) => assigned(i).includes(m.id)));
   return (
     <div className="toolbar">
       <div className="toolbar-left">

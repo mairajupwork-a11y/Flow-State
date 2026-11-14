@@ -4,6 +4,7 @@ import pg from 'pg';
 import { recolorSql, recolorSqlV6, recolorSqlV9 } from './schema/recolor.js';
 import { removeSamplesSql } from './schema/remove-samples.js';
 import { v8Postgres } from './schema/v8.js';
+import { v10Postgres } from './schema/v10.js';
 
 /**
  * PostgreSQL adapter (Supabase or any Postgres) with the same surface as
@@ -14,6 +15,7 @@ import { v8Postgres } from './schema/v8.js';
  *   datetime('now')      → UTC timestamp text in the same format
  *   INSERT OR IGNORE     → INSERT … ON CONFLICT DO NOTHING
  *   LIKE                 → ILIKE (SQLite's LIKE is case-insensitive)
+ *   group_concat(x)      → string_agg(x::text, ',')
  *   run() on INSERT      → RETURNING id, exposed as lastInsertRowid
  */
 
@@ -23,14 +25,14 @@ pg.types.setTypeParser(1700, (v) => (v === null ? null : Number(v)));
 
 const NOW = "to_char(now() AT TIME ZONE 'utc', 'YYYY-MM-DD HH24:MI:SS')";
 /** Tables whose primary key is not an `id` column. */
-const NO_ID = new Set(['memberships', 'watchers', 'invites', 'app_kv', 'issue_field_values', 'automation_runs']);
+const NO_ID = new Set(['memberships', 'watchers', 'invites', 'app_kv', 'issue_field_values', 'automation_runs', 'project_members', 'issue_assignees']);
 const cache = new Map();
 
 export function translate(original) {
   const hit = cache.get(original);
   if (hit) return hit;
   // Rewrite only code outside string literals and comments.
-  const code = (part) => part.replaceAll('\0now\0', NOW).replace(/\bLIKE\b/g, 'ILIKE');
+  const code = (part) => part.replaceAll('\0now\0', NOW).replace(/\bLIKE\b/g, 'ILIKE').replace(/\bgroup_concat\(([^()]+)\)/g, "string_agg(($1)::text, ',')");
   const sql = original.replaceAll("datetime('now')", '\0now\0'); // its quotes aren't a string literal
   let out = '';
   let n = 0;
@@ -154,6 +156,7 @@ export async function migratePostgres(pool) {
     removeSamplesSql(),
     v8Postgres(),
     recolorSqlV9(),
+    v10Postgres(),
   ];
   const VERSION = UPGRADES.length;
   const client = await pool.connect();

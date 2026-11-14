@@ -46,7 +46,7 @@ export function invalidateWork(qc: QueryClient) {
   for (const k of ['issues', 'issue', 'my-issues', 'reports', 'activity', 'project']) qc.invalidateQueries({ queryKey: [k] });
 }
 
-type IssuePatch = Partial<Pick<Issue, 'title' | 'description' | 'type' | 'statusId' | 'priority' | 'assigneeId' | 'sprintId' | 'epicId' | 'parentId' | 'storyPoints' | 'startDate' | 'dueDate' | 'labels'>>;
+type IssuePatch = Partial<Pick<Issue, 'title' | 'description' | 'type' | 'statusId' | 'priority' | 'assigneeId' | 'assigneeIds' | 'sprintId' | 'epicId' | 'parentId' | 'storyPoints' | 'startDate' | 'dueDate' | 'labels'>>;
 
 /** Optimistically patches the issue in its project list so boards feel instant. */
 export function useUpdateIssue() {

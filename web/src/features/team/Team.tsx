@@ -11,8 +11,13 @@ import { askConfirm, toast, ui } from '../../lib/store';
 import { fmtDate, timeAgo } from '../../lib/format';
 import type { Role, Session } from '../../lib/types';
 import { copy, inviteUrl } from './InviteModal';
+import { DesignationSelect } from './DesignationSelect';
+import { ACCESS_LEVELS, accessForDesignation } from '../../../../shared/designations.js';
+import { roleName } from '../../components/AssigneePicker';
 
-const ROLE_HELP: Record<Role, string> = { admin: 'Manages people & settings', member: 'Creates and edits work', viewer: 'Read-only access' };
+const ROLE_HELP = Object.fromEntries(ACCESS_LEVELS.map((l) => [l.id, l.blurb])) as Record<Role, string>;
+const ROLE_ICON: Record<Role, string> = { admin: 'shield', manager: 'target', member: 'edit', viewer: 'eye' };
+const RANK: Record<Role, number> = { admin: 0, manager: 1, member: 2, viewer: 3 };
 
 export default function Team() {
   const { workspace, members, me, isAdmin, locale } = useWs();
@@ -20,7 +25,13 @@ export default function Team() {
   const navigate = useNavigate();
   const invites = useQuery({ queryKey: ['invites', workspace.slug], queryFn: () => api.get<{ token: string; email: string; role: Role; designation?: string; createdAt: string }[]>(`/workspaces/${workspace.slug}/invites`), enabled: isAdmin });
   const refresh = () => { qc.invalidateQueries({ queryKey: ['ws'] }); qc.invalidateQueries({ queryKey: ['invites'] }); };
-  const setRole = useMutation({ mutationFn: ({ id, role }: { id: number; role: Role }) => api.patch(`/workspaces/${workspace.slug}/members/${id}`, { role }), onSuccess: () => { refresh(); toast('Role updated.'); } });
+  const setRole = useMutation({ mutationFn: ({ id, role }: { id: number; role: Role }) => api.patch(`/workspaces/${workspace.slug}/members/${id}`, { role }), onSuccess: () => { refresh(); toast('Access level updated.'); } });
+  // A new designation also suggests the usual access level (admins stay admins).
+  const setDesignation = useMutation({
+    mutationFn: ({ id, designation, role }: { id: number; designation: string; role?: Role }) => api.patch(`/workspaces/${workspace.slug}/members/${id}`, { designation, ...(role && { role }) }),
+    onSuccess: (_d, v) => { refresh(); qc.invalidateQueries({ queryKey: keys.session }); toast(v.role ? `Designation saved — access set to ${roleName(v.role)}.` : 'Designation saved.'); },
+  });
+  const sorted = [...members].sort((a, b) => RANK[a.role] - RANK[b.role] || a.name.localeCompare(b.name));
   const removeMember = useMutation({
     mutationFn: (id: number) => api.del(`/workspaces/${workspace.slug}/members/${id}`),
     onSuccess: (_d, id) => {
@@ -47,20 +58,31 @@ export default function Team() {
       </div>
 
       <div className="people-grid">
-        {members.map((p) => (
-          <div className="content-card person-card" key={p.id}>
+        {sorted.map((p) => (
+          <div className={`content-card person-card ${isAdmin ? 'editable' : ''}`} key={p.id}>
             <Avatar user={p} size="lg" />
             <div style={{ flex: 1, minWidth: 0 }}>
               <b className="ellipsis">{p.name}{p.id === me.id && <span className="you-badge">You</span>}</b>
               <small className="ellipsis">{p.jobTitle || p.email}</small>
               <small>Joined {fmtDate(p.joinedAt.slice(0, 10), locale, true)}</small>
             </div>
+            {isAdmin && (
+              <div className="person-controls">
+                <label><span>Designation</span>
+                  <DesignationSelect compact label={`Designation for ${p.name}`} value={p.jobTitle} onChange={(designation) => {
+                    const suggested = accessForDesignation(designation) as Role;
+                    setDesignation.mutate({ id: p.id, designation, role: p.role !== 'admin' && suggested !== p.role ? suggested : undefined });
+                  }} />
+                </label>
+                <label><span>Access</span>
+                  <select className="filter-select" value={p.role} onChange={(e) => setRole.mutate({ id: p.id, role: e.target.value as Role })} aria-label={`Access level for ${p.name}`} title={ROLE_HELP[p.role]}>
+                    {ACCESS_LEVELS.map((l) => <option key={l.id} value={l.id}>{l.label}</option>)}
+                  </select>
+                </label>
+              </div>
+            )}
             <div className="person-role">
-              {isAdmin ? (
-                <select className="filter-select" value={p.role} onChange={(e) => setRole.mutate({ id: p.id, role: e.target.value as Role })} aria-label={`Role for ${p.name}`} title={ROLE_HELP[p.role]}>
-                  <option value="admin">Admin</option><option value="member">Member</option><option value="viewer">Viewer</option>
-                </select>
-              ) : <span className="status-pill">{p.role}</span>}
+              {!isAdmin && <span className={`status-pill role-${p.role}`}>{roleName(p.role)}</span>}
               {(isAdmin || p.id === me.id) && (
                 <button className="icon-btn tiny" aria-label={p.id === me.id ? 'Leave workspace' : `Remove ${p.name}`} title={p.id === me.id ? 'Leave workspace' : 'Remove from workspace'}
                   onClick={async () => (await askConfirm(p.id === me.id ? { title: `Leave ${workspace.name}?`, confirmLabel: 'Leave', danger: true } : { title: `Remove ${p.name}?`, body: `They lose access to ${workspace.name}. Their work stays but becomes unassigned.`, confirmLabel: 'Remove', danger: true })) && removeMember.mutate(p.id)}>
@@ -84,7 +106,7 @@ export default function Team() {
           <p className="muted">{emailOn ? 'Resend the email, share the link, or withdraw it' : 'Share a link again or withdraw it'}</p>
           {invites.data.map((i) => (
             <div className="setting-row" key={i.token}>
-              <div style={{ minWidth: 0 }}><strong>{i.email || 'Reusable team link'}</strong><small>{i.designation ? `${i.designation} · ` : ''}{i.role} · created {timeAgo(i.createdAt, locale)}</small></div>
+              <div style={{ minWidth: 0 }}><strong>{i.email || 'Reusable team link'}</strong><small>{i.designation ? `${i.designation} · ` : ''}{roleName(i.role)} · created {timeAgo(i.createdAt, locale)}</small></div>
               <div className="row-8">
                 {emailOn && i.email && <button className="btn btn-soft btn-sm" disabled={resend.isPending} onClick={() => resend.mutate(i.token)}><Icon name="mail" size={13} /> Resend</button>}
                 <button className="btn btn-soft btn-sm" onClick={() => copy(inviteUrl(i.token))}><Icon name="copy" size={13} /> Copy link</button>
@@ -95,9 +117,9 @@ export default function Team() {
         </div>
       )}
 
-      <div className="three-col" style={{ marginTop: 16 }}>
-        {(['admin', 'member', 'viewer'] as Role[]).map((r) => (
-          <div className="tip-box" key={r}><Icon name={r === 'admin' ? 'shield' : r === 'member' ? 'edit' : 'eye'} size={17} /><span><b style={{ textTransform: 'capitalize' }}>{r}s</b> — {ROLE_HELP[r].toLowerCase()}.</span></div>
+      <div className="role-legend" style={{ marginTop: 16 }}>
+        {ACCESS_LEVELS.map((l) => (
+          <div className="tip-box" key={l.id}><Icon name={ROLE_ICON[l.id]} size={17} /><span><b>{l.label}</b> — {l.blurb}</span></div>
         ))}
       </div>
     </>

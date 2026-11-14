@@ -15,6 +15,8 @@ export function todoRoutes({ db }) {
   r.use(requireUser);
   const day = z.string().regex(ISO_DATE);
   const block = z.enum(['morning', 'afternoon', 'evening', 'anytime']);
+  /** When to be reminded, as a UTC ISO timestamp (e.g. 2026-11-14T09:30:00.000Z); null clears it. */
+  const remindAt = z.string().datetime({ message: 'choose a valid reminder time' }).transform((v) => new Date(v).toISOString()).nullable();
 
   r.get('/', async (req, res) => {
     const d = parse(day.optional(), req.query.day) ?? isoDay();
@@ -32,13 +34,14 @@ export function todoRoutes({ db }) {
       text: z.string().trim().min(1, 'write a to-do first').max(200),
       day: day.optional(), timeBlock: block.default('anytime'), important: z.boolean().default(false),
       issueRef: z.string().optional(), note: z.string().max(1000).default(''),
+      remindAt: remindAt.optional(),
     }), req.body);
     let issueId = null;
     if (body.issueRef) issueId = (await loadIssue(db, req.user, body.issueRef)).issue.id;
     const pos = ((await db.get('SELECT MIN(position) AS p FROM todos WHERE user_id = ?', req.user.id)).p ?? 1024) - 1;
     const { lastInsertRowid } = await db.run(
-      'INSERT INTO todos (user_id, text, note, day, time_block, important, issue_id, position) VALUES (?, ?, ?, ?, ?, ?, ?, ?)',
-      req.user.id, body.text, body.note, body.day ?? isoDay(), body.timeBlock, Number(body.important), issueId, pos,
+      'INSERT INTO todos (user_id, text, note, day, time_block, important, issue_id, position, remind_at) VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?)',
+      req.user.id, body.text, body.note, body.day ?? isoDay(), body.timeBlock, Number(body.important), issueId, pos, body.remindAt ?? null,
     );
     res.status(201).json(serializeTodo(await db.get(`${TODO_SELECT} WHERE t.id = ?`, lastInsertRowid)));
   });
@@ -49,7 +52,10 @@ export function todoRoutes({ db }) {
     const body = parse(z.object({
       text: z.string().trim().min(1).max(200).optional(), note: z.string().max(1000).optional(), done: z.boolean().optional(),
       important: z.boolean().optional(), day: day.optional(), timeBlock: block.optional(), position: z.number().optional(),
+      remindAt: remindAt.optional(),
     }), req.body);
+    // A new (or cleared) reminder time re-arms the reminder.
+    if (body.remindAt !== undefined) await db.run('UPDATE todos SET remind_at = ?, reminded_at = NULL WHERE id = ?', body.remindAt, t.id);
     const cols = { text: 'text', note: 'note', important: 'important', day: 'day', timeBlock: 'time_block', position: 'position' };
     for (const [k, col] of Object.entries(cols)) if (body[k] !== undefined) await db.run(`UPDATE todos SET ${col} = ? WHERE id = ?`, typeof body[k] === 'boolean' ? Number(body[k]) : body[k], t.id);
     if (body.done !== undefined) {

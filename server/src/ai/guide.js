@@ -1,6 +1,7 @@
 import { ARTICLES } from './knowledge.js';
 import { parseIssueDraft } from './parse.js';
 import { ISSUE_SELECT, issue as serializeIssue } from '../serialize.js';
+import { VISIBLE_PROJECT } from '../access.js';
 import { PRIORITY_ORDER } from '../services/issues.js';
 import { isoDay, daysBetween } from '../dates.js';
 import { METHODOLOGIES, PRIMARY_METHODOLOGIES, REGISTERS, methodology, recommend, term } from '../../../shared/methodologies.js';
@@ -19,8 +20,9 @@ export function createGuide({ db, llm = null }) {
   async function context(user, ws, projectId) {
     const members = await db.all('SELECT u.id, u.name FROM users u JOIN memberships m ON m.user_id = u.id WHERE m.workspace_id = ?', ws.id);
     const project = projectId ? await db.get('SELECT * FROM projects WHERE id = ? AND workspace_id = ?', projectId, ws.id) : null;
-    const scopeSql = project ? 'i.project_id = ?' : 'p.workspace_id = ? AND p.archived = 0';
-    const issues = (await db.all(`${ISSUE_SELECT} WHERE ${scopeSql}`, project ? project.id : ws.id)).map(serializeIssue);
+    // Team members and viewers only hear about the projects they're on.
+    const scopeSql = project ? 'i.project_id = ?' : `p.workspace_id = ? AND p.archived = 0 AND ${VISIBLE_PROJECT('p')}`;
+    const issues = (await db.all(`${ISSUE_SELECT} WHERE ${scopeSql}`, ...(project ? [project.id] : [ws.id, user.id, user.id]))).map(serializeIssue);
     const open = issues.filter((i) => i.statusCategory !== 'done' && i.type !== 'epic');
     const blockedIds = new Set((await db.all(
       `SELECT l.target_id AS id FROM issue_links l JOIN issues s ON s.id = l.source_id JOIN statuses st ON st.id = s.status_id
@@ -44,7 +46,7 @@ export function createGuide({ db, llm = null }) {
   ];
 
   function greet(c) {
-    const mine = c.open.filter((i) => i.assigneeId === c.user.id);
+    const mine = c.open.filter((i) => (i.assigneeIds ?? []).includes(c.user.id));
     return {
       text: `Hello ${c.user.name.split(' ')[0]} 👋 I'm your Mars guide — free, always.\n\nYou have **${mine.length} open item${mine.length === 1 ? '' : 's'}** assigned to you${c.project ? ` in ${c.project.name}` : ''}. I can plan your day, spot blockers, draft work items from a sentence, or show you around.`,
       suggestions: ['Prioritise my day', 'What needs attention?', 'How do sprints work?', 'Create a task to update the FAQ, due Friday'],
@@ -79,7 +81,7 @@ export function createGuide({ db, llm = null }) {
   }
 
   async function focus(c) {
-    const mine = c.open.filter((i) => i.assigneeId === c.user.id).sort(byUrgency);
+    const mine = c.open.filter((i) => (i.assigneeIds ?? []).includes(c.user.id)).sort(byUrgency);
     const todos = await db.all('SELECT text FROM todos WHERE user_id = ? AND done = 0 AND day <= ? ORDER BY important DESC, position LIMIT 3', c.user.id, c.today);
     if (!mine.length && !todos.length) {
       const unassigned = c.open.filter((i) => !i.assigneeId).sort(byUrgency).slice(0, 3);
@@ -194,7 +196,7 @@ export function createGuide({ db, llm = null }) {
 
   function workload(c) {
     const rows = c.members.map((m) => {
-      const items = c.open.filter((i) => i.assigneeId === m.id);
+      const items = c.open.filter((i) => (i.assigneeIds ?? []).includes(m.id));
       return { name: m.name, n: items.length, pts: items.reduce((a, i) => a + (i.storyPoints ?? 0), 0), overdue: items.filter((i) => i.dueDate && i.dueDate < c.today).length };
     }).sort((a, b) => b.n - a.n);
     const avg = rows.reduce((a, r) => a + r.n, 0) / Math.max(rows.length, 1);
@@ -284,8 +286,8 @@ export function createGuide({ db, llm = null }) {
     )).map((r) => r.issue_id);
     const touched = c.issues.filter((i) => moved.includes(i.id));
     const finished = touched.filter((i) => i.statusCategory === 'done');
-    const doing = c.open.filter((i) => i.assigneeId === c.user.id && i.statusCategory === 'progress');
-    const blocked = c.open.filter((i) => i.assigneeId === c.user.id && c.blockedIds.has(i.id));
+    const doing = c.open.filter((i) => (i.assigneeIds ?? []).includes(c.user.id) && i.statusCategory === 'progress');
+    const blocked = c.open.filter((i) => (i.assigneeIds ?? []).includes(c.user.id) && c.blockedIds.has(i.id));
     const line = (i) => `• ${i.key} ${i.title}`;
     return {
       text: [

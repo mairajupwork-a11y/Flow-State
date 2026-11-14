@@ -17,7 +17,7 @@ function matches(rule, event, patch, item) {
   switch (w.event) {
     case 'created': if (event !== 'created') return false; break;
     case 'status': if (!patch?.statusId || (w.statusId && w.statusId !== patch.statusId)) return false; break;
-    case 'assigned': if (!patch?.assigneeId || (w.userId && w.userId !== patch.assigneeId)) return false; break;
+    case 'assigned': if (!patch?.assigneeIds?.length || (w.userId && !patch.assigneeIds.includes(w.userId))) return false; break;
     case 'priority': if (!patch?.priority || (w.priority && w.priority !== patch.priority)) return false; break;
     case 'comment': if (event !== 'comment') return false; break;
     case 'due_soon': case 'overdue': if (event !== w.event) return false; break;
@@ -46,7 +46,7 @@ async function reason(db, rule, item) {
 async function recipients(db, ids, item) {
   const out = [];
   for (const r of ids ?? []) {
-    if (r === 'assignee') out.push(item.assigneeId);
+    if (r === 'assignee') out.push(...(item.assigneeIds ?? [item.assigneeId]));
     else if (r === 'reporter') out.push(item.reporterId);
     else if (r === 'watchers') out.push(...(await db.all('SELECT user_id FROM watchers WHERE issue_id = ?', item.id)).map((w) => w.user_id));
     else if (Number.isInteger(r)) out.push(r);
@@ -65,7 +65,11 @@ async function apply(db, { rule, project, item, actor, events }) {
       const why = await reason(db, rule, item);
       await events?.notify({ workspaceId: project.workspace_id, issueId: item.id, actorId: actor?.id ?? null, kind: 'automation', includeActor: true,
         recipients: to, text: `${a.message ? `${a.message} — ` : ''}${key} “${item.title}” ${why}` });
-    } else if (a.action === 'assign') patch.assigneeId = a.userId === 'reporter' ? item.reporterId : a.userId ?? null;
+    } else if (a.action === 'assign') {
+      // Adds the person to the item's assignees; "nobody" clears them.
+      const uid = a.userId === 'reporter' ? item.reporterId : a.userId ?? null;
+      patch.assigneeIds = uid ? [...new Set([...(patch.assigneeIds ?? item.assigneeIds ?? []), uid])] : [];
+    }
     else if (a.action === 'priority') patch.priority = a.priority;
     else if (a.action === 'label') patch.labels = [...new Set([...(patch.labels ?? item.labels), a.label])];
     else if (a.action === 'move') patch.statusId = a.statusId;
@@ -77,7 +81,13 @@ async function apply(db, { rule, project, item, actor, events }) {
   if (Object.keys(patch).length) {
     // Only apply references that still exist (a column or person may have been removed since).
     if (patch.statusId && !await db.get('SELECT 1 FROM statuses WHERE id = ? AND project_id = ?', patch.statusId, project.id)) delete patch.statusId;
-    if (patch.assigneeId && !await db.get('SELECT 1 FROM memberships WHERE workspace_id = ? AND user_id = ?', project.workspace_id, patch.assigneeId)) delete patch.assigneeId;
+    if (patch.assigneeIds) {
+      const ok = [];
+      for (const uid of patch.assigneeIds) {
+        if (await db.get("SELECT 1 FROM memberships WHERE workspace_id = ? AND user_id = ? AND role <> 'viewer'", project.workspace_id, uid)) ok.push(uid);
+      }
+      patch.assigneeIds = ok;
+    }
     if (Object.keys(patch).length) {
       await updateIssue(db, { issueRow: await db.get('SELECT * FROM issues WHERE id = ?', item.id), project, actor: actor ?? { id: null, name: 'Automation' }, input: patch, events, automation: true });
     }

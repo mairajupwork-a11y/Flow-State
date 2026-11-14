@@ -1,7 +1,7 @@
 import express, { Router } from 'express';
 import { requireUser } from '../auth.js';
 import { HttpError, notFound } from '../http.js';
-import { loadIssue, loadProject } from '../access.js';
+import { loadIssue, loadProject, isManager } from '../access.js';
 import { attachment as serializeAttachment } from '../serialize.js';
 
 export const MAX_FILE_MB = 10;
@@ -60,8 +60,8 @@ export function fileRoutes({ db, events }) {
     const row = await db.get('SELECT a.id, a.name, a.uploader_id, a.issue_id FROM attachments a WHERE a.id = ?', Number(req.params.id));
     if (!row) throw notFound('File');
     const { issue, project } = await loadIssue(db, req.user, String(row.issue_id), 'member');
-    const isAdmin = await db.get("SELECT 1 FROM memberships WHERE workspace_id = ? AND user_id = ? AND role = 'admin'", project.workspace_id, req.user.id);
-    if (row.uploader_id !== req.user.id && !isAdmin) throw new HttpError(403, 'Only the person who added a file (or an admin) can remove it.');
+    const isAdmin = isManager(project.viewerRole);
+    if (row.uploader_id !== req.user.id && !isAdmin) throw new HttpError(403, 'Only the person who added a file (or a manager) can remove it.');
     await db.run('DELETE FROM attachments WHERE id = ?', row.id);
     await events.record({ workspaceId: project.workspace_id, projectId: project.id, issueId: issue.id, actorId: req.user.id, verb: 'detached', data: { name: row.name } });
     events.changed(project.workspace_id, [`issue:${issue.id}`, `project:${project.id}`, 'issues'], req.user.id);

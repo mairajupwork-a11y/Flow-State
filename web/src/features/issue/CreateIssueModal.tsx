@@ -1,3 +1,4 @@
+import { AssigneePicker } from '../../components/AssigneePicker';
 import { useState, type FormEvent } from 'react';
 import { useNavigate } from 'react-router-dom';
 import { useQueryClient } from '@tanstack/react-query';
@@ -24,13 +25,13 @@ export function CreateIssueModal({ draft, routeKey, onClose }: { draft: CreateDr
   const [error, setError] = useState('');
   const blank = () => ({
     title: draft.title ?? '', description: '', type: (draft.type ?? 'task') as IssueType, priority: 'medium' as Priority,
-    statusId: draft.statusId ?? 0, assigneeId: '' as number | '', sprintId: draft.sprintId === undefined ? ('auto' as number | '' | 'auto') : (draft.sprintId ?? ''),
+    statusId: draft.statusId ?? 0, assigneeIds: [] as number[], sprintId: draft.sprintId === undefined ? ('auto' as number | '' | 'auto') : (draft.sprintId ?? ''),
     epicId: (draft.epicId ?? '') as number | '', phaseId: draft.phaseId === undefined ? ('auto' as number | '' | 'auto') : (draft.phaseId ?? ''), parentId: (draft.parentId ?? '') as number | '', storyPoints: '', startDate: '', dueDate: draft.dueDate ?? '', labels: '',
   });
   const [form, setForm] = useState(blank);
 
   if (!canEdit) {
-    return <Modal title="View-only access" onClose={onClose}><div className="modal-body"><p className="page-subtitle" style={{ marginTop: 0 }}>Viewers can see everything but can’t create work. Ask a workspace admin for member access — it’s free.</p></div></Modal>;
+    return <Modal title="Managers create work items" onClose={onClose}><div className="modal-body"><p className="page-subtitle" style={{ marginTop: 0 }}>New cards are created by project managers, product managers, team leads and admins. You can still comment, upload files, add links and move the cards you’re working on.</p></div></Modal>;
   }
   if (!projects.length) {
     return <Modal title="Create a project first" onClose={onClose}><div className="modal-body"><p className="page-subtitle" style={{ marginTop: 0 }}>Work items live inside projects. Create one from the sidebar, then come back.</p></div></Modal>;
@@ -57,14 +58,14 @@ export function CreateIssueModal({ draft, routeKey, onClose }: { draft: CreateDr
       const phaseId = form.phaseId === 'auto' ? (type !== 'epic' ? activePhase?.id ?? null : null) : form.phaseId || null;
       const created = await api.post<Issue>(`/projects/${p.id}/issues`, {
         title: form.title.trim(), description: form.description, type, priority: form.priority,
-        statusId: form.statusId || undefined, assigneeId: form.assigneeId || null, sprintId, phaseId, epicId: form.epicId || null, parentId: form.parentId || null,
+        statusId: form.statusId || undefined, assigneeIds: form.assigneeIds, sprintId, phaseId, epicId: form.epicId || null, parentId: form.parentId || null,
         storyPoints: form.storyPoints === '' ? null : Number(form.storyPoints), startDate: form.startDate || null, dueDate: form.dueDate || null,
         labels: form.labels.split(',').map((l) => l.trim()).filter(Boolean),
       });
       invalidateWork(qc);
       toast(`${created.key} created.`, { action: { label: 'Open', run: () => navigate(`${base}/p/${p.key}/board?issue=${created.key}`) } });
       if (another) {
-        setForm({ ...blank(), type, statusId: form.statusId, sprintId: form.sprintId, phaseId: form.phaseId, epicId: form.epicId, assigneeId: form.assigneeId });
+        setForm({ ...blank(), type, statusId: form.statusId, sprintId: form.sprintId, phaseId: form.phaseId, epicId: form.epicId, assigneeIds: form.assigneeIds });
         setBusy(false);
       } else onClose();
     } catch (err) {
@@ -115,15 +116,12 @@ export function CreateIssueModal({ draft, routeKey, onClose }: { draft: CreateDr
                 {PRIORITIES.map((x) => <option key={x} value={x}>{PRIORITY_LABEL[x]}</option>)}
               </select>
             </label>
-            <label className="form-field"><span>Assignee</span>
+            <div className="form-field"><span>Assignees</span>
               <div className="row-8">
-                <select className="field-select" value={form.assigneeId} onChange={(e) => set('assigneeId', e.target.value ? Number(e.target.value) : '')}>
-                  <option value="">Unassigned</option>
-                  {members.filter((m) => m.role !== 'viewer').map((m) => <option key={m.id} value={m.id}>{m.id === me.id ? `${m.name} (you)` : m.name}</option>)}
-                </select>
-                {form.assigneeId !== me.id && <button type="button" className="btn btn-soft btn-sm nowrap" onClick={() => set('assigneeId', me.id)}>Me</button>}
+                <AssigneePicker value={form.assigneeIds} onChange={(ids) => set('assigneeIds', ids)} members={members} projectMemberIds={p?.memberIds} meId={me.id} />
+                {!form.assigneeIds.includes(me.id) && <button type="button" className="btn btn-soft btn-sm nowrap" onClick={() => set('assigneeIds', [...form.assigneeIds, me.id])}>+ Me</button>}
               </div>
-            </label>
+            </div>
             <label className="form-field"><span>Due date</span>
               <input className="text-input" type="date" value={form.dueDate} onChange={(e) => set('dueDate', e.target.value)} />
               <span className="quick-dates">

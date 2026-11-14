@@ -1,7 +1,7 @@
 import { useMemo, useState } from 'react';
 import { useSearchParams } from 'react-router-dom';
 import { Icon } from '../../components/Icon';
-import { Avatar, Empty, PriorityPill, StatusPill, TypeIcon } from '../../components/ui';
+import { AssigneeAvatars, Empty, PriorityPill, StatusPill, TypeIcon } from '../../components/ui';
 import { useWs } from '../../lib/workspace';
 import { openCreate } from '../../lib/store';
 import { fmtDate, PRIORITY_RANK, timeAgo, todayISO } from '../../lib/format';
@@ -49,7 +49,7 @@ export function ListView() {
       <FilterBar count={rows.length} />
       <div className="content-card table-wrap" style={{ padding: '7px 8px' }}>
         <table className="list-table list-view">
-          <thead><tr>{th('title', 'Work item')}{th('status', 'Status')}{th('priority', 'Priority')}{th('assignee', 'Owner')}{th('due', 'Due')}{th('points', 'Pts')}{th('updated', 'Updated')}</tr></thead>
+          <thead><tr>{th('title', 'Work item')}{th('status', 'Status')}{th('priority', 'Priority')}{th('assignee', 'Assignees')}{th('due', 'Due')}{th('points', 'Pts')}{th('updated', 'Updated')}</tr></thead>
           <tbody>
             {rows.map((t) => {
               const owner = member(t.assigneeId);
@@ -59,7 +59,7 @@ export function ListView() {
                   <td><span className="list-name"><TypeIcon type={t.type} /><span><strong className={t.statusCategory === 'done' ? 'struck' : ''}>{t.title}</strong><br /><span className="subtle-key">{t.key}{t.labels.length ? ` · ${t.labels.join(', ')}` : ''}</span></span></span></td>
                   <td><StatusPill name={t.statusName} category={t.statusCategory} /></td>
                   <td><PriorityPill priority={t.priority} /></td>
-                  <td><span className="row-8 nowrap"><Avatar user={owner} />{owner ? owner.name.split(' ')[0] : <span className="subtle-key">Unassigned</span>}</span></td>
+                  <td><span className="row-8 nowrap"><AssigneeAvatars issue={t} />{owner ? `${owner.name.split(' ')[0]}${(t.assigneeIds?.length ?? 0) > 1 ? ` +${t.assigneeIds.length - 1}` : ''}` : <span className="subtle-key">Unassigned</span>}</span></td>
                   <td className={overdue ? 'overdue nowrap' : 'nowrap'}>{t.dueDate ? fmtDate(t.dueDate, locale) : '—'}</td>
                   <td>{t.storyPoints ?? '—'}</td>
                   <td className="nowrap">{timeAgo(t.updatedAt, locale)}</td>

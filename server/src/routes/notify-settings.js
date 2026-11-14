@@ -21,7 +21,7 @@ export function notifySettingsRoutes({ db, mailer, push, appUrl }) {
     const token = String(req.params.token).replace(/\.ics$/, '');
     const user = token.length >= 20 ? await db.get('SELECT id, name FROM users WHERE calendar_token = ?', token) : null;
     if (!user) throw new HttpError(404, 'This calendar link is no longer valid. Copy a fresh one from WorkMars → Settings.');
-    const items = await db.all(`${FEED_SELECT} WHERE i.assignee_id = ? AND i.due_date IS NOT NULL AND p.archived = 0
+    const items = await db.all(`${FEED_SELECT} WHERE EXISTS (SELECT 1 FROM issue_assignees ia WHERE ia.issue_id = i.id AND ia.user_id = ?) AND i.due_date IS NOT NULL AND p.archived = 0
         AND EXISTS (SELECT 1 FROM memberships m WHERE m.workspace_id = p.workspace_id AND m.user_id = ?)
         AND (s.category <> 'done' OR i.resolved_at >= ?) ORDER BY i.due_date LIMIT 1000`,
       user.id, user.id, new Date(Date.now() - 30 * 864e5).toISOString());

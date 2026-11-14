@@ -4,6 +4,7 @@ import { dirname } from 'node:path';
 import { recolorSql, recolorSqlV6, recolorSqlV9 } from './schema/recolor.js';
 import { removeSamplesSql } from './schema/remove-samples.js';
 import { v8Sqlite } from './schema/v8.js';
+import { v10Sqlite } from './schema/v10.js';
 
 /**
  * Schema is applied idempotently on boot. Each entry in MIGRATIONS runs once,
@@ -328,6 +329,8 @@ export const MIGRATIONS = [
   v8Sqlite(),
   // v9: default colours move to the Paddock palette.
   recolorSqlV9(),
+  // v10: managers, project resources, several assignees per item, to-do reminders.
+  v10Sqlite(),
 ];
 
 export function openDatabase(file = process.env.DATABASE_FILE || 'data/workmars.db') {

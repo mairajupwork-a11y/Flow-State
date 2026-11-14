@@ -50,7 +50,7 @@ export function extensionRoutes({ db, events }) {
   });
 
   r.post('/projects/:id/fields', async (req, res) => {
-    const p = await loadProject(db, req.user, req.params.id, 'member');
+    const p = await loadProject(db, req.user, req.params.id, 'manager');
     const body = parse(z.object({ name: z.string().trim().min(1, 'give the field a name').max(40), type: z.enum(FIELD_TYPES), options: options.default([]) }), req.body);
     if (['select', 'multiselect'].includes(body.type) && !body.options.length) throw new HttpError(400, 'Add at least one option to choose from.');
     if ((await db.get('SELECT COUNT(*) AS n FROM custom_fields WHERE project_id = ?', p.id)).n >= 30) throw new HttpError(400, 'A project can have up to 30 custom fields.');
@@ -62,7 +62,7 @@ export function extensionRoutes({ db, events }) {
     res.status(201).json(serializeField(await db.get('SELECT * FROM custom_fields WHERE id = ?', Number(lastInsertRowid))));
   });
 
-  const loadField = async (req, min = 'member') => {
+  const loadField = async (req, min = 'manager') => {
     const p = await loadProject(db, req.user, req.params.id, min);
     const f = await db.get('SELECT * FROM custom_fields WHERE id = ? AND project_id = ?', Number(req.params.fieldId), p.id);
     if (!f) throw notFound('Field');
@@ -127,7 +127,7 @@ export function extensionRoutes({ db, events }) {
   });
 
   r.post('/projects/:id/automations', async (req, res) => {
-    const p = await loadProject(db, req.user, req.params.id, 'member');
+    const p = await loadProject(db, req.user, req.params.id, 'manager');
     const body = parse(automationInput, req.body);
     await checkRefs(p, body);
     if ((await db.get('SELECT COUNT(*) AS n FROM automations WHERE project_id = ?', p.id)).n >= 50) throw new HttpError(400, 'A project can have up to 50 automations.');
@@ -138,7 +138,7 @@ export function extensionRoutes({ db, events }) {
   });
 
   r.patch('/projects/:id/automations/:ruleId', async (req, res) => {
-    const p = await loadProject(db, req.user, req.params.id, 'member');
+    const p = await loadProject(db, req.user, req.params.id, 'manager');
     const rule = await db.get('SELECT * FROM automations WHERE id = ? AND project_id = ?', Number(req.params.ruleId), p.id);
     if (!rule) throw notFound('Automation');
     const body = parse(automationInput.partial(), req.body);
@@ -152,7 +152,7 @@ export function extensionRoutes({ db, events }) {
   });
 
   r.delete('/projects/:id/automations/:ruleId', async (req, res) => {
-    const p = await loadProject(db, req.user, req.params.id, 'member');
+    const p = await loadProject(db, req.user, req.params.id, 'manager');
     await db.run('DELETE FROM automations WHERE id = ? AND project_id = ?', Number(req.params.ruleId), p.id);
     events.changed(p.workspace_id, [`project:${p.id}`, 'automations'], req.user.id);
     res.json({ ok: true });

@@ -16,7 +16,7 @@ async function testDatabase() {
   if (!url) return openDatabase(':memory:');
   const { openPostgres } = await import('../src/db-postgres.js');
   const db = await openPostgres(url, { migrate: false });
-  await db.exec(`DROP TABLE IF EXISTS automation_runs, automations, issue_field_values, custom_fields, attachments, password_resets, push_subscriptions, app_kv, measurements, entries, todos, notifications, activity, watchers, issue_links, comments, checklist_items,
+  await db.exec(`DROP TABLE IF EXISTS project_members, issue_assignees, automation_runs, automations, issue_field_values, custom_fields, attachments, password_resets, push_subscriptions, app_kv, measurements, entries, todos, notifications, activity, watchers, issue_links, comments, checklist_items,
     issues, phases, sprints, statuses, projects, invites, memberships, workspaces, users, workmars_meta, flowstate_meta CASCADE`);
   await db.close();
   return openPostgres(url);
@@ -170,7 +170,7 @@ test('workspace isolation: outsiders cannot read or edit', async () => {
 test('invites: unlimited members join with the right role; viewers are read-only', async () => {
   const admin = client();
   const { slug, ws } = await onboard(admin);
-  const [invite] = (await admin('POST', `/workspaces/${slug}/invites`, { emails: ['viewer@example.com'], role: 'viewer' })).data;
+  const [invite] = (await admin('POST', `/workspaces/${slug}/invites`, { emails: ['viewer@example.com'], role: 'viewer', projectIds: [ws.projects[0].id] })).data;
   const guest = client();
   await guest('POST', '/auth/signup', { name: 'Vic Viewer', email: 'viewer@example.com', password: 'longenough' });
   const preview = await guest('GET', `/invites/${invite.token}`);

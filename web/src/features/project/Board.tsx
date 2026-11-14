@@ -8,7 +8,7 @@ import { SortableContext, sortableKeyboardCoordinates, useSortable, verticalList
 import { CSS } from '@dnd-kit/utilities';
 import { useQueryClient } from '@tanstack/react-query';
 import { Icon } from '../../components/Icon';
-import { Avatar, Empty, PriorityPill } from '../../components/ui';
+import { AssigneeAvatars, Empty, PriorityPill } from '../../components/ui';
 import { announcements } from '../../lib/dnd';
 import { useMoveIssue, useUpdateIssue, invalidateWork } from '../../lib/queries';
 import { useWs } from '../../lib/workspace';
@@ -43,7 +43,7 @@ function buildColumns(statuses: Status[], lanes: Lane[], mode: LaneMode, issues:
 export function Board() {
   const { project, filtered, issues: allIssues } = useProjectCtx();
   const m = methodologyOf(project);
-  const { canEdit, members } = useWs();
+  const { canEdit, canContribute, members } = useWs();
   const activeSprint = m.features.sprints ? project.sprints.find((s) => s.state === 'active') : undefined;
   const activePhase = project.phases.find((p) => p.state === 'active' || p.state === 'review');
   const [scope, setScope] = useState<string>(m.features.sprints === 'required' ? 'sprint' : m.phases && activePhase ? `phase-${activePhase.id}` : 'all');
@@ -164,6 +164,10 @@ export function Board() {
     const status = project.statuses.find((s) => s.id === statusId)!;
     const targetLane = lanes.find((l) => l.key === lane);
     if (targetLane && lane !== laneOf(laneMode, issue)) {
+      if (!canEdit) {
+        toast('Only managers can change priority, assignees or epics. Move it within its own row instead.');
+        return setColumns(buildColumns(project.statuses, lanes, laneMode, cards));
+      }
       update.mutate({ issue, patch: targetLane.patch });
       toast(`${issue.key} moved to ${targetLane.label}.`);
     }
@@ -227,7 +231,7 @@ export function Board() {
               <div className={`kanban ${laneMode !== 'none' ? 'in-lane' : ''}`} aria-label={lane.label ? `${lane.label} lane` : 'Kanban board'}>
                 {project.statuses.map((s) => (
                   <Column key={s.id} laneKey={lane.key} status={s} ids={columns[colKey(lane.key, s.id)] ?? []} total={statusCount(s)} showTitle={laneMode === 'none' || li === 0}
-                    byId={byId} canEdit={canEdit} sprintId={sprintOnly ? activeSprint!.id : null} phaseId={phaseScope} lanePatch={lane.patch} projectId={project.id} compact={laneMode !== 'none'} />
+                    byId={byId} canEdit={canEdit} canMove={canContribute} sprintId={sprintOnly ? activeSprint!.id : null} phaseId={phaseScope} lanePatch={lane.patch} projectId={project.id} compact={laneMode !== 'none'} />
                 ))}
               </div>
             </div>
@@ -258,8 +262,8 @@ function ScrumbanTrigger({ statuses, issues }: { statuses: Status[]; issues: Iss
   );
 }
 
-function Column({ laneKey, status, ids, total, showTitle, byId, canEdit, sprintId, phaseId, lanePatch, projectId, compact }: {
-  laneKey: string; status: Status; ids: number[]; total: number; showTitle: boolean; byId: Map<number, Issue>; canEdit: boolean;
+function Column({ laneKey, status, ids, total, showTitle, byId, canEdit, canMove, sprintId, phaseId, lanePatch, projectId, compact }: {
+  laneKey: string; status: Status; ids: number[]; total: number; showTitle: boolean; byId: Map<number, Issue>; canEdit: boolean; canMove: boolean;
   sprintId: number | null; phaseId: number | null; lanePatch: Lane['patch']; projectId: number; compact: boolean;
 }) {
   const { setNodeRef, isOver } = useDroppable({ id: `col-${colKey(laneKey, status.id)}` });
@@ -279,7 +283,7 @@ function Column({ laneKey, status, ids, total, showTitle, byId, canEdit, sprintI
       <SortableContext items={ids} strategy={verticalListSortingStrategy}>
         {ids.map((id) => {
           const issue = byId.get(id);
-          return issue ? <SortableCard key={id} issue={issue} disabled={!canEdit} /> : null;
+          return issue ? <SortableCard key={id} issue={issue} disabled={!canMove} /> : null;
         })}
       </SortableContext>
       {!ids.length && !adding && !compact && <div className="col-empty">{status.category === 'done' ? 'Finished work lands here.' : 'Drop work here.'}</div>}
@@ -335,7 +339,7 @@ function SortableCard({ issue, disabled }: { issue: Issue; disabled: boolean }) 
 }
 
 export const CardBody = memo(function CardBody({ issue, overlay = false }: { issue: Issue; overlay?: boolean }) {
-  const { member, locale, projects } = useWs();
+  const { locale, projects } = useWs();
   const m = methodologyOf(projects.find((p) => p.id === issue.projectId));
   const overdue = issue.dueDate && issue.dueDate < todayISO() && issue.statusCategory !== 'done';
   return (
@@ -355,7 +359,7 @@ export const CardBody = memo(function CardBody({ issue, overlay = false }: { iss
           {issue.subtaskCount > 0 && <span title="Sub-tasks"><Icon name="list" size={13} />{issue.subtaskCount}</span>}
           {issue.storyPoints != null && <span className="points" title={estimateLabel(m)}>{issue.storyPoints}{m.features.estimation === 'hours' ? 'h' : ''}</span>}
         </div>
-        <Avatar user={member(issue.assigneeId)} size="card-avatar" />
+        <AssigneeAvatars issue={issue} size="card-avatar" />
       </div>
     </article>
   );

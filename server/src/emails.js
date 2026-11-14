@@ -2,7 +2,7 @@
 
 const esc = (s) => String(s).replace(/[&<>"']/g, (c) => ({ '&': '&amp;', '<': '&lt;', '>': '&gt;', '"': '&quot;', "'": '&#39;' })[c]);
 const oneLine = (s) => String(s).replace(/[\r\n]+/g, ' ').trim();
-const ROLE = { admin: 'an admin', member: 'a member', viewer: 'a viewer' };
+const ROLE = { admin: 'an admin', manager: 'a manager', member: 'a team member', viewer: 'a viewer' };
 
 export function inviteEmail({ to, inviter, workspace, role, designation = '', url }) {
   const as = designation ? designation : ROLE[role] ?? 'a member';

@@ -64,7 +64,7 @@ export function MyDay() {
 
   return (
     <>
-      <PageHeader eyebrow="Personal / My day" title="A little more focus. A lot less noise." subtitle="Your private daily to-do list, separate from team project work. Only you can see it." />
+      <PageHeader eyebrow="Personal / My day" title="A little more focus. A lot less noise." subtitle="Your private task list with reminders, separate from team project work. Only you can see it." />
       <div className="todo-grid">
         <div className="content-card">
           <div className="section-bar" style={{ marginTop: 0 }}>
@@ -98,6 +98,7 @@ export function MyDay() {
                 <div className="todo-block-head"><Icon name={icon} size={14} /> {label} <span className="col-count">{list.length}</span></div>
                 {list.map((t) => <TodoRow key={t.id} todo={t} day={day} onToggle={(v) => m.update.mutate({ id: t.id, patch: { done: v } })} onStar={() => m.update.mutate({ id: t.id, patch: { important: !t.important } })}
                   onMove={(tb) => m.update.mutate({ id: t.id, patch: { timeBlock: tb } })} onTomorrow={() => m.update.mutate({ id: t.id, patch: { day: addDays(todayISO(), 1) } })}
+                  onRemind={(remindAt) => m.update.mutate({ id: t.id, patch: { remindAt, reminded: false } })}
                   onRemove={() => m.remove.mutate(t.id)} onOpenIssue={() => t.issueKey && setParams({ issue: t.issueKey })} />)}
               </div>
             );
@@ -142,8 +143,44 @@ export function MyDay() {
   );
 }
 
-function TodoRow({ todo, day, onToggle, onStar, onMove, onTomorrow, onRemove, onOpenIssue }: {
-  todo: Todo; day: string; onToggle: (v: boolean) => void; onStar: () => void; onMove: (b: TimeBlock) => void; onTomorrow: () => void; onRemove: () => void; onOpenIssue: () => void;
+/** "2026-11-14T09:30" in the browser's own time zone, for a datetime-local input. */
+const localInput = (d: Date) => new Date(d.getTime() - d.getTimezoneOffset() * 60_000).toISOString().slice(0, 16);
+const at = (days: number, hour: number) => { const d = new Date(); d.setDate(d.getDate() + days); d.setHours(hour, 0, 0, 0); return d; };
+
+/** Reminder for one personal to-do: quick picks or an exact time. Sent in the app, and by push/email if turned on in Settings. */
+function ReminderMenu({ todo, onRemind }: { todo: Todo; onRemind: (iso: string | null) => void }) {
+  const { locale } = useWs();
+  const [custom, setCustom] = useState(() => localInput(todo.remindAt ? new Date(todo.remindAt) : at(0, new Date().getHours() + 1)));
+  const close = (el: HTMLElement) => { (el.closest('details') as HTMLDetailsElement).open = false; };
+  const pick = (el: HTMLElement, d: Date | null) => { close(el); onRemind(d ? d.toISOString() : null); };
+  const when = todo.remindAt ? new Date(todo.remindAt) : null;
+  const label = when ? when.toLocaleString(locale, { weekday: 'short', hour: 'numeric', minute: '2-digit' }) : '';
+  const later = new Date(Date.now() + 60 * 60_000);
+  return (
+    <details className="row-menu remind">
+      <summary className={`icon-btn tiny bell ${when ? (todo.reminded ? 'sent' : 'on') : ''}`} aria-label={when ? `Reminder ${label}` : 'Set a reminder'} title={when ? `${todo.reminded ? 'Reminded' : 'Reminder'}: ${label}` : 'Remind me'}>
+        <Icon name="bell" size={15} />{when && <span className="remind-time">{label}</span>}
+      </summary>
+      <div className="menu remind-menu">
+        <div className="menu-title">Remind me</div>
+        <button className="menu-item" onClick={(e) => pick(e.currentTarget, later)}><Icon name="clock" size={14} /> In 1 hour</button>
+        {new Date().getHours() < 17 && <button className="menu-item" onClick={(e) => pick(e.currentTarget, at(0, 17))}><Icon name="sun" size={14} /> This evening (5 pm)</button>}
+        <button className="menu-item" onClick={(e) => pick(e.currentTarget, at(1, 9))}><Icon name="right" size={14} /> Tomorrow morning (9 am)</button>
+        <button className="menu-item" onClick={(e) => pick(e.currentTarget, at(((8 - new Date().getDay()) % 7) || 7, 9))}><Icon name="calendar" size={14} /> Next Monday (9 am)</button>
+        <div className="menu-sep" />
+        <form className="remind-custom" onSubmit={(e) => { e.preventDefault(); const d = new Date(custom); if (!Number.isNaN(d.getTime())) pick(e.currentTarget, d); }}>
+          <input type="datetime-local" className="text-input slim" value={custom} onChange={(e) => setCustom(e.target.value)} aria-label="Reminder date and time" />
+          <button className="btn btn-primary btn-sm">Set</button>
+        </form>
+        {when && <><div className="menu-sep" /><button className="menu-item danger" onClick={(e) => pick(e.currentTarget, null)}><Icon name="close" size={14} /> Remove reminder</button></>}
+        <p className="menu-hint">You’ll get it in WorkMars, and on your phone or email if notifications are on in Settings.</p>
+      </div>
+    </details>
+  );
+}
+
+function TodoRow({ todo, day, onToggle, onStar, onMove, onTomorrow, onRemind, onRemove, onOpenIssue }: {
+  todo: Todo; day: string; onToggle: (v: boolean) => void; onStar: () => void; onMove: (b: TimeBlock) => void; onTomorrow: () => void; onRemind: (iso: string | null) => void; onRemove: () => void; onOpenIssue: () => void;
 }) {
   const rolled = !todo.done && todo.day < day;
   // Local mirror so the tick responds instantly, before the optimistic cache write lands.
@@ -159,6 +196,7 @@ function TodoRow({ todo, day, onToggle, onStar, onMove, onTomorrow, onRemove, on
           {todo.issueKey && <> · <button className="link-btn" onClick={onOpenIssue}>{todo.issueKey}</button></>}
         </small>
       </div>
+      {!todo.done && <ReminderMenu todo={todo} onRemind={onRemind} />}
       <button className={`icon-btn tiny star ${todo.important ? 'on' : ''}`} onClick={onStar} aria-pressed={todo.important} aria-label="Important"><Icon name="star" size={15} /></button>
       <details className="row-menu">
         <summary className="icon-btn tiny" aria-label="More options"><Icon name="ellipsis" size={15} /></summary>

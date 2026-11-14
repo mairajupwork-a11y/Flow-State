@@ -2,7 +2,7 @@ import { useState } from 'react';
 import { useSearchParams } from 'react-router-dom';
 import { useMutation, useQueryClient } from '@tanstack/react-query';
 import { Icon } from '../../components/Icon';
-import { Avatar, Empty, StatusPill } from '../../components/ui';
+import { AssigneeAvatars, Empty, StatusPill } from '../../components/ui';
 import { api } from '../../lib/api';
 import { invalidateWork } from '../../lib/queries';
 import { useWs } from '../../lib/workspace';
@@ -119,7 +119,7 @@ function PhaseDetail({ phase, index, total, items, prevComplete, canEdit, isAdmi
 }) {
   const { project } = useProjectCtx();
   const m = methodologyOf(project);
-  const { member, locale } = useWs();
+  const { locale } = useWs();
   const [, setParams] = useSearchParams();
   const [decision, setDecision] = useState('');
   const [gateText, setGateText] = useState(phase.gate);
@@ -186,7 +186,7 @@ function PhaseDetail({ phase, index, total, items, prevComplete, canEdit, isAdmi
                 <span className="ellipsis phase-item-title">{i.title}</span>
                 {i.dueDate && <small className={i.dueDate < today && i.statusCategory !== 'done' ? 'overdue' : ''}>{fmtDate(i.dueDate, locale)}</small>}
                 <StatusPill name={i.statusName} category={i.statusCategory} />
-                <Avatar user={member(i.assigneeId)} size="sm" />
+                <AssigneeAvatars issue={i} />
               </button>
             ))}
             {!items.length && <p className="muted">Nothing planned here yet. Add the deliverables and activities needed to meet the {gate} criteria.</p>}

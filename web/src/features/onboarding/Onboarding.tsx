@@ -11,22 +11,43 @@ import { MethodologyPicker } from '../../components/MethodologyPicker';
 import { METHODOLOGIES } from '../../lib/methodology';
 import { accentTitle } from '../../components/ui';
 import { DesignationSelect } from '../team/DesignationSelect';
+import { accessForDesignation } from '../../../../shared/designations.js';
 
-const ROLES = [
-  ['Engineering', 'bolt'], ['Product', 'target'], ['Design', 'sparkles'], ['Marketing', 'trend'],
-  ['Operations', 'settings'], ['People & HR', 'people'], ['Finance', 'chart'], ['Founder / Leadership', 'flag'], ['Something else', 'lightbulb'],
-] as const;
+/** Tech-industry niches, grouped. Each suggests a way of working; the picker's questions refine it. */
+const NICHE_GROUPS: [string, [string, string, MethodologyId][]][] = [
+  ['Build & ship', [
+    ['Software development', 'keyboard', 'scrumban'], ['Web development', 'globe', 'kanban'], ['Mobile apps', 'phone', 'scrum'],
+    ['SaaS & product', 'layers', 'scrum'], ['AI & machine learning', 'sparkles', 'scrumban'], ['Data & analytics', 'chart', 'kanban'],
+    ['Game development', 'play', 'scrum'], ['Blockchain & Web3', 'diamond', 'scrum'],
+  ]],
+  ['Run & secure', [
+    ['DevOps & cloud', 'settings', 'kanban'], ['Cybersecurity', 'shield', 'kanban'], ['QA & testing', 'checkcircle', 'kanban'],
+    ['IT services & consulting', 'folder', 'scrumban'], ['IT support & operations', 'sliders', 'kanban'],
+  ]],
+  ['Tech industries', [
+    ['E-commerce', 'inbox', 'kanban'], ['FinTech', 'trend', 'scrum'], ['HealthTech', 'heart', 'waterfall'], ['EdTech', 'lightbulb', 'scrum'],
+  ]],
+  ['Teams', [
+    ['UI/UX & product design', 'image', 'kanban'], ['Digital marketing & growth', 'zap', 'kanban'], ['Content & media production', 'file', 'kanban'],
+    ['Project & program management (PMO)', 'target', 'prince2'], ['People & HR', 'people', 'business'], ['Finance', 'list', 'waterfall'],
+    ['Founder / Leadership', 'flag', 'lean'], ['Something else', 'grid', 'scrum'],
+  ]],
+];
 const SIZES = ['Just me', '2–10', '11–50', '51–200', '201–1,000', '1,000+'];
-const REGIONS = [
-  { id: 'uk', label: 'United Kingdom', sample: '14 Oct 2026 · weeks start Monday', flag: '🇬🇧' },
-  { id: 'us', label: 'United States', sample: 'Oct 14, 2026 · weeks start Sunday', flag: '🇺🇸' },
-  { id: 'asia', label: 'Asia-Pacific', sample: '14 Oct 2026 · weeks start Monday', flag: '🌏' },
-  { id: 'other', label: 'Somewhere else', sample: '14 Oct 2026 · weeks start Monday', flag: '🌍' },
-] as const;
-/** A sensible starting point per role; the picker's questions refine it. */
-const RECOMMENDED: Record<string, MethodologyId> = {
-  Engineering: 'scrumban', Product: 'scrum', Design: 'kanban', Operations: 'kanban', Marketing: 'kanban', 'People & HR': 'business', Finance: 'waterfall', 'Founder / Leadership': 'lean',
-};
+const RECOMMENDED: Record<string, MethodologyId> = Object.fromEntries(NICHE_GROUPS.flatMap(([, list]) => list.map(([n, , m]) => [n, m])));
+const LOCALES = ['en-GB', 'en-US', 'en-IN', 'en-SG', 'en-AU'] as const;
+/** Date format and first day of the week come from the browser — no need to ask. */
+function browserRegion() {
+  const lang = navigator.language || 'en-GB';
+  const locale = ((LOCALES as readonly string[]).includes(lang) ? lang : 'en-GB') as (typeof LOCALES)[number];
+  let firstDay: number | undefined;
+  try {
+    const loc = new Intl.Locale(lang) as Intl.Locale & { getWeekInfo?: () => { firstDay: number }; weekInfo?: { firstDay: number } };
+    firstDay = (loc.getWeekInfo?.() ?? loc.weekInfo)?.firstDay;
+  } catch { /* older browsers */ }
+  const weekStart = firstDay ? (firstDay === 7 ? 0 : 1) : locale === 'en-US' ? 0 : 1;
+  return { locale, weekStart };
+}
 
 function suggestKey(name: string) {
   const words = name.toUpperCase().replace(/[^A-Z0-9 ]/g, ' ').split(/\s+/).filter(Boolean);
@@ -43,7 +64,8 @@ export function Onboarding() {
   const qc = useQueryClient();
   const [step, setStep] = useState(0);
   const [role, setRole] = useState('');
-  const [ws, setWs] = useState({ name: '', region: 'uk', teamSize: '' });
+  const [ws, setWs] = useState({ name: '', teamSize: '' });
+  const [myTitle, setMyTitle] = useState('');
   const [project, setProject] = useState({ name: '', key: '', keyTouched: false, methodology: '' as MethodologyId | '' });
   const [emails, setEmails] = useState<string[]>([]);
   const [draft, setDraft] = useState('');
@@ -81,7 +103,7 @@ export function Onboarding() {
     setError('');
     try {
       const res = await api.post<Session & { workspace: Workspace; invites?: { email: string; emailed: boolean }[] }>('/workspaces', {
-        name: ws.name.trim(), region: ws.region, teamSize: ws.teamSize, useCase: role, jobTitle: role === 'Something else' ? undefined : role,
+        name: ws.name.trim(), ...browserRegion(), teamSize: ws.teamSize, useCase: role, jobTitle: myTitle.trim() || undefined,
         project: { name: project.name.trim(), key, methodology },
         invites: draft.trim() ? [...emails, ...draft.split(/[\s,;]+/).filter((s) => s.includes('@'))] : emails,
         inviteDesignation: inviteDesignation.trim(),
@@ -129,13 +151,22 @@ export function Onboarding() {
             <div className="eyebrow"><span className="line" />Welcome, {first}</div>
             <h1 className="page-title">{accentTitle('What kind of work do you do?')}</h1>
             <p className="page-subtitle">We’ll tailor your first project and the Mars guide’s suggestions. You can change everything later.</p>
-            <div className="chip-grid" role="radiogroup" aria-label="Your role">
-              {ROLES.map(([r, icon]) => (
-                <button type="button" key={r} role="radio" aria-checked={role === r} className={`choice-chip ${role === r ? 'selected' : ''}`} onClick={() => setRole(r)}>
-                  <Icon name={icon} size={17} /> {r}
-                </button>
+            <div className="niche-groups" role="radiogroup" aria-label="Your field">
+              {NICHE_GROUPS.map(([group, list]) => (
+                <div key={group} className="niche-group">
+                  <div className="niche-title">{group}</div>
+                  <div className="chip-grid niche-grid">
+                    {list.map(([r, icon]) => (
+                      <button type="button" key={r} role="radio" aria-checked={role === r} className={`choice-chip ${role === r ? 'selected' : ''}`} onClick={() => setRole(r)}>
+                        <Icon name={icon} size={17} /> {r}
+                      </button>
+                    ))}
+                  </div>
+                </div>
               ))}
             </div>
+            <DesignationSelect value={myTitle} onChange={setMyTitle} label="Your designation"
+              hint="You’re the admin of this workspace. Your designation is shown to your team — change it anytime." />
           </section>
         )}
 
@@ -148,18 +179,6 @@ export function Onboarding() {
               <span>Workspace name</span>
               <input className="text-input text-input-lg" autoFocus maxLength={60} value={ws.name} onChange={(e) => setWs({ ...ws, name: e.target.value })} placeholder="e.g. Studio North" />
             </label>
-            <fieldset className="form-field plain">
-              <legend>Where is most of your team?</legend>
-              <div className="region-grid">
-                {REGIONS.map((r) => (
-                  <button type="button" key={r.id} className={`region-card ${ws.region === r.id ? 'selected' : ''}`} aria-pressed={ws.region === r.id} onClick={() => setWs({ ...ws, region: r.id })}>
-                    <span className="flag" aria-hidden="true">{r.flag}</span>
-                    <b>{r.label}</b>
-                    <small>{r.sample}</small>
-                  </button>
-                ))}
-              </div>
-            </fieldset>
             <fieldset className="form-field plain">
               <legend>How many people will use WorkMars? <small className="muted-inline">(it’s free at any size)</small></legend>
               <div className="chip-row">
@@ -204,7 +223,7 @@ export function Onboarding() {
                   onPaste={(e) => { e.preventDefault(); addEmails(e.clipboardData.getData('text')); }} placeholder={emails.length ? 'Add another…' : 'name@company.com, teammate@company.com'} autoFocus aria-labelledby="invite-emails-label" />
               </div>
             </div>
-            {(emails.length > 0 || !!draft.trim()) && <DesignationSelect value={inviteDesignation} onChange={setInviteDesignation} label="Their designation" hint="Applies to everyone above. You can invite people with different designations later from the Team page." />}
+            {(emails.length > 0 || !!draft.trim()) && <DesignationSelect value={inviteDesignation} onChange={setInviteDesignation} label="Their designation" hint={`Applies to everyone above, and they join your first project. ${inviteDesignation ? `As ${inviteDesignation}, they’ll be ${accessForDesignation(inviteDesignation) === 'manager' ? 'managers — able to create cards, set dates and assign people' : 'team members — able to comment, upload files, add links and move cards'}.` : 'Managers (PMs, team leads…) plan and assign work; team members do it.'} You can change this on the Team page.`} />}
             <div className="tip-box"><Icon name="lightbulb" size={18} /><span>Any email address works — Gmail, Outlook/Hotmail, Yahoo or company email. If invitation emails are switched on they’re sent straight away; you can always copy each person’s link from the Team page too.</span></div>
             {error && <div className="form-error" role="alert" style={{ marginTop: 14 }}>{error}</div>}
           </section>

@@ -6,6 +6,7 @@ import { Avatar, Modal, PriorityPill, RichText, Spinner, StatusPill, TypeIcon } 
 import { api } from '../../lib/api';
 import { invalidateWork, keys, useIssue, useIssues, useProject } from '../../lib/queries';
 import { useWs } from '../../lib/workspace';
+import { AssigneePicker } from '../../components/AssigneePicker';
 import { askConfirm, copyText, openCreate, toast, toastError } from '../../lib/store';
 import { PRIORITIES, PRIORITY_LABEL, fmtDate, timeAgo, todayISO } from '../../lib/format';
 import { estimateLabel, methodologyOf, term, typeLabel } from '../../lib/methodology';
@@ -26,7 +27,7 @@ export function IssueModal({ issueRef, onClose }: { issueRef: string; onClose: (
 }
 
 function IssueDetailView({ issue, onClose }: { issue: IssueDetail; onClose: () => void }) {
-  const { member, members, me, canEdit, locale, workspace } = useWs();
+  const { member, members, me, canEdit, canContribute, locale, workspace } = useWs();
   const project = useProject(issue.projectId).data;
   const siblings = useIssues(issue.projectId).data ?? [];
   const qc = useQueryClient();
@@ -123,7 +124,7 @@ function IssueDetailView({ issue, onClose }: { issue: IssueDetail; onClose: () =
               )}
             </div>
 
-            <Checklist issue={issue} canEdit={canEdit} onAdd={(text) => post.mutate({ path: '/checklist', body: { text } })}
+            <Checklist issue={issue} canEdit={canContribute} onAdd={(text) => post.mutate({ path: '/checklist', body: { text } })}
               onToggle={(id, done) => edit.mutate({ path: `/checklist/${id}`, body: { done } })} onRemove={(id) => remove.mutate(`/checklist/${id}`)} />
 
             {issue.type !== 'subtask' && issue.type !== 'epic' && (
@@ -144,9 +145,9 @@ function IssueDetailView({ issue, onClose }: { issue: IssueDetail; onClose: () =
               </div>
             )}
 
-            <Attachments issue={issue} canEdit={canEdit} />
+            <Attachments issue={issue} canEdit={canContribute} />
 
-            <Links issue={issue} canEdit={canEdit} onOpen={openOther} onAdd={(target, kind) => post.mutateAsync({ path: '/links', body: { target, kind } })} onRemove={(id) => remove.mutate(`/links/${id}`)} />
+            <Links issue={issue} canEdit={canContribute} onOpen={openOther} onAdd={(target, kind) => post.mutateAsync({ path: '/links', body: { target, kind } })} onRemove={(id) => remove.mutate(`/links/${id}`)} />
 
             <div className="detail-section">
               <div className="tabs" role="tablist" style={{ marginBottom: 6 }}>
@@ -154,26 +155,29 @@ function IssueDetailView({ issue, onClose }: { issue: IssueDetail; onClose: () =
                 <button role="tab" aria-selected={tab === 'activity'} className={`tab ${tab === 'activity' ? 'active' : ''}`} onClick={() => setTab('activity')}><Icon name="clock" size={13} /> History</button>
               </div>
               {tab === 'comments'
-                ? <Comments issue={issue} canEdit={canEdit} onPost={(body) => post.mutateAsync({ path: '/comments', body: { body } })}
+                ? <Comments issue={issue} canEdit={canContribute} onPost={(body) => post.mutateAsync({ path: '/comments', body: { body } })}
                     onEdit={(id, body) => edit.mutate({ path: `/comments/${id}`, body: { body } })} onDelete={(id) => remove.mutate(`/comments/${id}`)} />
                 : <History activity={issue.activity} />}
             </div>
           </div>
 
           <aside className="detail-aside">
-            <fieldset disabled={!canEdit} className="plain">
+            {canContribute && !canEdit && (
+              <p className="role-note"><Icon name="lock" size={13} /> You can move this card, comment, upload files and add links. Dates, assignees and details are set by managers.</p>
+            )}
+            <fieldset disabled={!canContribute} className="plain">
               <label className="form-field"><span>Status</span>
                 <select className="field-select" value={issue.statusId} onChange={(e) => patch.mutate({ statusId: Number(e.target.value) })}>
                   {project?.statuses.map((s) => <option key={s.id} value={s.id}>{s.name}</option>)}
                 </select>
               </label>
-              <label className="form-field"><span>Assignee</span>
-                <select className="field-select" value={issue.assigneeId ?? ''} onChange={(e) => patch.mutate({ assigneeId: e.target.value ? Number(e.target.value) : null })}>
-                  <option value="">Unassigned</option>
-                  {members.filter((m) => m.role !== 'viewer').map((m) => <option key={m.id} value={m.id}>{m.name}</option>)}
-                </select>
-                {canEdit && issue.assigneeId !== me.id && <button type="button" className="link-btn" onClick={() => patch.mutate({ assigneeId: me.id })}>Assign to me</button>}
-              </label>
+            </fieldset>
+            <fieldset disabled={!canEdit} className="plain">
+              <div className="form-field"><span>Assignees</span>
+                <AssigneePicker value={issue.assigneeIds ?? (issue.assigneeId ? [issue.assigneeId] : [])} members={members} projectMemberIds={project?.memberIds} meId={me.id}
+                  disabled={!canEdit} onChange={(ids) => patch.mutate({ assigneeIds: ids, assigneeId: ids[0] ?? null })} />
+                {canEdit && !(issue.assigneeIds ?? []).includes(me.id) && <button type="button" className="link-btn" onClick={() => patch.mutate({ assigneeIds: [...(issue.assigneeIds ?? []), me.id], assigneeId: issue.assigneeId ?? me.id })}>Add me</button>}
+              </div>
               <label className="form-field"><span>Priority</span>
                 <select className="field-select" value={issue.priority} onChange={(e) => patch.mutate({ priority: e.target.value as Priority })}>
                   {PRIORITIES.map((x) => <option key={x} value={x}>{PRIORITY_LABEL[x]}</option>)}
@@ -219,7 +223,7 @@ function IssueDetailView({ issue, onClose }: { issue: IssueDetail; onClose: () =
               </label>
               <Labels labels={issue.labels} onChange={(labels) => patch.mutate({ labels })} canEdit={canEdit} />
             </fieldset>
-            <CustomFields issue={issue} fields={project?.fields ?? []} canEdit={canEdit} />
+            <CustomFields issue={issue} fields={project?.fields ?? []} canEdit={canContribute} />
             <div className="aside-meta">
               <div><span>Reporter</span><span className="row-8"><Avatar user={member(issue.reporterId)} size="sm" />{member(issue.reporterId)?.name ?? 'Former member'}</span></div>
               <div><span>Created</span><span>{fmtDate(issue.createdAt.slice(0, 10), locale, true)}</span></div>
@@ -313,7 +317,7 @@ function Links({ issue, canEdit, onOpen, onAdd, onRemove }: { issue: IssueDetail
 }
 
 function Comments({ issue, canEdit, onPost, onEdit, onDelete }: { issue: IssueDetail; canEdit: boolean; onPost: (b: string) => Promise<unknown>; onEdit: (id: number, b: string) => void; onDelete: (id: number) => void }) {
-  const { me, members, isAdmin, locale } = useWs();
+  const { me, members, canEdit: isAdmin, locale } = useWs();
   const [body, setBody] = useState('');
   const [editing, setEditing] = useState<{ id: number; body: string } | null>(null);
   const mention = body.match(/@(\w*)$/)?.[1];

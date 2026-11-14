@@ -27,8 +27,28 @@ export function projectRoutes({ db, events }) {
     res.json(await projectPayload(db, p));
   });
 
+  // ---- Resources: the people who work on this project ----
+  r.put('/:id/members', async (req, res) => {
+    const p = await loadProject(db, req.user, req.params.id, 'manager');
+    const { userIds } = parse(z.object({ userIds: z.array(z.number().int().positive()).max(500) }), req.body);
+    const valid = new Set((await db.all('SELECT user_id FROM memberships WHERE workspace_id = ?', p.workspace_id)).map((m) => m.user_id));
+    const wanted = [...new Set(userIds)].filter((id) => valid.has(id));
+    await db.tx(async () => {
+      const before = (await db.all('SELECT user_id FROM project_members WHERE project_id = ?', p.id)).map((r) => r.user_id);
+      for (const id of before) if (!wanted.includes(id)) await db.run('DELETE FROM project_members WHERE project_id = ? AND user_id = ?', p.id, id);
+      for (const id of wanted) await db.run('INSERT OR IGNORE INTO project_members (project_id, user_id) VALUES (?, ?)', p.id, id);
+      const added = wanted.filter((id) => !before.includes(id));
+      if (added.length) {
+        await events.notify({ workspaceId: p.workspace_id, actorId: req.user.id, kind: 'assigned', recipients: added, text: `${req.user.name} added you to the project ${p.name}` });
+      }
+      await events.record({ workspaceId: p.workspace_id, projectId: p.id, actorId: req.user.id, verb: 'resources_updated', data: { name: p.name, count: wanted.length } });
+    });
+    events.changed(p.workspace_id, ['workspace', `project:${p.id}`], req.user.id);
+    res.json(await projectPayload(db, p));
+  });
+
   r.patch('/:id', async (req, res) => {
-    const p = await loadProject(db, req.user, req.params.id, 'member');
+    const p = await loadProject(db, req.user, req.params.id, 'manager');
     const body = parse(z.object({
       name: z.string().trim().min(1).max(80).optional(),
       description: z.string().trim().max(500).optional(),
@@ -67,7 +87,7 @@ export function projectRoutes({ db, events }) {
 
   // ---- Workflow (board columns) ----
   r.post('/:id/statuses', async (req, res) => {
-    const p = await loadProject(db, req.user, req.params.id, 'member');
+    const p = await loadProject(db, req.user, req.params.id, 'manager');
     const body = parse(z.object({
       name: z.string().trim().min(1).max(40),
       category: z.enum(['todo', 'progress', 'done']).default('progress'),
@@ -85,7 +105,7 @@ export function projectRoutes({ db, events }) {
   });
 
   r.patch('/:id/statuses/:statusId', async (req, res) => {
-    const p = await loadProject(db, req.user, req.params.id, 'member');
+    const p = await loadProject(db, req.user, req.params.id, 'manager');
     const status = await db.get('SELECT * FROM statuses WHERE id = ? AND project_id = ?', Number(req.params.statusId), p.id);
     if (!status) throw notFound('Column');
     const body = parse(z.object({
@@ -111,7 +131,7 @@ export function projectRoutes({ db, events }) {
   });
 
   r.delete('/:id/statuses/:statusId', async (req, res) => {
-    const p = await loadProject(db, req.user, req.params.id, 'member');
+    const p = await loadProject(db, req.user, req.params.id, 'manager');
     const status = await db.get('SELECT * FROM statuses WHERE id = ? AND project_id = ?', Number(req.params.statusId), p.id);
     if (!status) throw notFound('Column');
     const others = await db.all('SELECT * FROM statuses WHERE project_id = ? AND id <> ? ORDER BY position', p.id, status.id);
@@ -135,7 +155,7 @@ export function projectRoutes({ db, events }) {
   });
 
   r.post('/:id/issues', async (req, res) => {
-    const p = await loadProject(db, req.user, req.params.id, 'member');
+    const p = await loadProject(db, req.user, req.params.id, 'manager');
     const input = parse(issueInput.extend({ title: z.string().trim().min(1, 'give the work item a title').max(200) }), req.body);
     const row = await createIssue(db, { projectId: p.id, actor: req.user, input, events });
     res.status(201).json(serializeIssue(row));
@@ -143,7 +163,7 @@ export function projectRoutes({ db, events }) {
 
   // ---- Sprints ----
   r.post('/:id/sprints', async (req, res) => {
-    const p = await loadProject(db, req.user, req.params.id, 'member');
+    const p = await loadProject(db, req.user, req.params.id, 'manager');
     const body = parse(z.object({ name: z.string().trim().max(60).optional(), goal: z.string().trim().max(240).default('') }), req.body ?? {});
     const n = (await db.get('SELECT COUNT(*) AS n FROM sprints WHERE project_id = ?', p.id)).n + 1;
     const { lastInsertRowid } = await db.run('INSERT INTO sprints (project_id, name, goal) VALUES (?, ?, ?)', p.id, body.name || `${p.key} ${term(p.methodology, 'sprint')} ${n}`, body.goal);
@@ -158,7 +178,7 @@ export function projectRoutes({ db, events }) {
   };
 
   r.patch('/:id/sprints/:sprintId', async (req, res) => {
-    const p = await loadProject(db, req.user, req.params.id, 'member');
+    const p = await loadProject(db, req.user, req.params.id, 'manager');
     const s = await loadSprint(p, req.params.sprintId);
     const body = parse(z.object({ name: z.string().trim().min(1).max(60).optional(), goal: z.string().trim().max(240).optional(), startDate: isoDate.optional(), endDate: isoDate.optional() }), req.body);
     if (body.name !== undefined) await db.run('UPDATE sprints SET name = ? WHERE id = ?', body.name, s.id);
@@ -170,7 +190,7 @@ export function projectRoutes({ db, events }) {
   });
 
   r.post('/:id/sprints/:sprintId/start', async (req, res) => {
-    const p = await loadProject(db, req.user, req.params.id, 'member');
+    const p = await loadProject(db, req.user, req.params.id, 'manager');
     const s = await loadSprint(p, req.params.sprintId);
     const body = parse(z.object({ goal: z.string().trim().max(240).optional(), weeks: z.number().int().min(1).max(8).default(2) }), req.body ?? {});
     if (!methodology(p.methodology).features.sprints) throw new HttpError(400, `${methodology(p.methodology).name} projects flow continuously and don't use sprints. Switch the methodology in project settings to plan in sprints.`);
@@ -188,7 +208,7 @@ export function projectRoutes({ db, events }) {
   });
 
   r.post('/:id/sprints/:sprintId/complete', async (req, res) => {
-    const p = await loadProject(db, req.user, req.params.id, 'member');
+    const p = await loadProject(db, req.user, req.params.id, 'manager');
     const s = await loadSprint(p, req.params.sprintId);
     const body = parse(z.object({ moveTo: z.union([z.literal('backlog'), z.literal('new'), z.number().int()]).default('backlog') }), req.body ?? {});
     const result = await db.tx(async () => {
@@ -216,7 +236,7 @@ export function projectRoutes({ db, events }) {
   });
 
   r.delete('/:id/sprints/:sprintId', async (req, res) => {
-    const p = await loadProject(db, req.user, req.params.id, 'member');
+    const p = await loadProject(db, req.user, req.params.id, 'manager');
     const s = await loadSprint(p, req.params.sprintId);
     if (s.state === 'active') throw new HttpError(400, 'Complete the sprint instead of deleting it.');
     await db.run('DELETE FROM sprints WHERE id = ?', s.id);
@@ -233,7 +253,7 @@ export function projectRoutes({ db, events }) {
   const phasesOf = async (p) => (await db.all('SELECT * FROM phases WHERE project_id = ? ORDER BY position', p.id)).map(serializePhase);
 
   r.post('/:id/phases', async (req, res) => {
-    const p = await loadProject(db, req.user, req.params.id, 'member');
+    const p = await loadProject(db, req.user, req.params.id, 'manager');
     const body = parse(z.object({ name: z.string().trim().min(1).max(60), gate: z.string().trim().max(240).default(''), startDate: isoDate.nullable().optional(), endDate: isoDate.nullable().optional() }), req.body);
     const position = (await db.get('SELECT COALESCE(MAX(position) + 1, 0) AS pos FROM phases WHERE project_id = ?', p.id)).pos;
     const state = await db.get("SELECT 1 FROM phases WHERE project_id = ? AND state IN ('active','review')", p.id) || position > 0 ? 'pending' : 'active';
@@ -244,7 +264,7 @@ export function projectRoutes({ db, events }) {
   });
 
   r.patch('/:id/phases/:phaseId', async (req, res) => {
-    const p = await loadProject(db, req.user, req.params.id, 'member');
+    const p = await loadProject(db, req.user, req.params.id, 'manager');
     const ph = await loadPhase(p, req.params.phaseId);
     const body = parse(z.object({ name: z.string().trim().min(1).max(60).optional(), gate: z.string().trim().max(240).optional(), startDate: isoDate.nullable().optional(), endDate: isoDate.nullable().optional() }), req.body);
     const start = body.startDate !== undefined ? body.startDate : ph.start_date;
@@ -273,7 +293,7 @@ export function projectRoutes({ db, events }) {
    * one has passed its gate. Approving a gate opens the next phase.
    */
   r.post('/:id/phases/:phaseId/transition', async (req, res) => {
-    const p = await loadProject(db, req.user, req.params.id, 'member');
+    const p = await loadProject(db, req.user, req.params.id, 'manager');
     const ph = await loadPhase(p, req.params.phaseId);
     const body = parse(z.object({ action: z.enum(['start', 'submit', 'approve', 'reject', 'reopen']), decision: z.string().trim().max(1000).default('') }), req.body);
     const label = term(p.methodology, 'phase');
@@ -341,7 +361,7 @@ export function projectRoutes({ db, events }) {
   };
 
   r.post('/:id/entries', async (req, res) => {
-    const p = await loadProject(db, req.user, req.params.id, 'member');
+    const p = await loadProject(db, req.user, req.params.id, 'manager');
     const body = parse(entryInput, req.body);
     await checkOwner(p, body.ownerId);
     checkStatus(body.kind, body.status);
@@ -359,7 +379,7 @@ export function projectRoutes({ db, events }) {
   };
 
   r.patch('/:id/entries/:entryId', async (req, res) => {
-    const p = await loadProject(db, req.user, req.params.id, 'member');
+    const p = await loadProject(db, req.user, req.params.id, 'manager');
     const e = await loadEntry(p, req.params.entryId);
     const body = parse(entryInput.omit({ kind: true }).partial(), req.body);
     await checkOwner(p, body.ownerId);
@@ -374,7 +394,7 @@ export function projectRoutes({ db, events }) {
   });
 
   r.delete('/:id/entries/:entryId', async (req, res) => {
-    const p = await loadProject(db, req.user, req.params.id, 'member');
+    const p = await loadProject(db, req.user, req.params.id, 'manager');
     const e = await loadEntry(p, req.params.entryId);
     await db.run('DELETE FROM entries WHERE id = ?', e.id);
     events.changed(p.workspace_id, [`project:${p.id}`, `entries:${p.id}`], req.user.id);
@@ -383,7 +403,7 @@ export function projectRoutes({ db, events }) {
 
   // ---- Measurements (Six Sigma CTQ data / any tracked metric) ----
   r.post('/:id/measurements', async (req, res) => {
-    const p = await loadProject(db, req.user, req.params.id, 'member');
+    const p = await loadProject(db, req.user, req.params.id, 'manager');
     const body = parse(z.object({ day: isoDate.default(isoDay()), value: z.number().finite(), note: z.string().trim().max(200).default('') }), req.body);
     const { lastInsertRowid } = await db.run('INSERT INTO measurements (project_id, day, value, note) VALUES (?, ?, ?, ?)', p.id, body.day, body.value, body.note);
     events.changed(p.workspace_id, [`project:${p.id}`], req.user.id);
@@ -391,7 +411,7 @@ export function projectRoutes({ db, events }) {
   });
 
   r.delete('/:id/measurements/:mId', async (req, res) => {
-    const p = await loadProject(db, req.user, req.params.id, 'member');
+    const p = await loadProject(db, req.user, req.params.id, 'manager');
     const m = await db.get('SELECT id FROM measurements WHERE id = ? AND project_id = ?', Number(req.params.mId), p.id);
     if (!m) throw notFound('Measurement');
     await db.run('DELETE FROM measurements WHERE id = ?', m.id);
@@ -412,7 +432,8 @@ export async function projectPayload(db, p) {
   const sprints = (await db.all("SELECT * FROM sprints WHERE project_id = ? ORDER BY CASE state WHEN 'active' THEN 0 WHEN 'planned' THEN 1 ELSE 2 END, id", p.id)).map(serializeSprint);
   const phases = (await db.all('SELECT * FROM phases WHERE project_id = ? ORDER BY position', p.id)).map(serializePhase);
   const fields = (await db.all('SELECT * FROM custom_fields WHERE project_id = ? ORDER BY position, id', p.id)).map(serializeField);
-  return { ...serializeProject(p), statuses, sprints, phases, fields };
+  const memberIds = (await db.all('SELECT user_id FROM project_members WHERE project_id = ? ORDER BY added_at, user_id', p.id)).map((r) => r.user_id);
+  return { ...serializeProject(p), statuses, sprints, phases, fields, memberIds, myRole: p.viewerRole ?? null };
 }
 
 /**
@@ -462,7 +483,7 @@ async function reports(db, p) {
 
   const members = await db.all('SELECT u.id, u.name FROM users u JOIN memberships m ON m.user_id = u.id WHERE m.workspace_id = ?', p.workspace_id);
   const workload = [...members.map((m) => ({ userId: m.id, name: m.name })), { userId: null, name: 'Unassigned' }].map((m) => {
-    const open = issues.filter((i) => i.assigneeId === m.userId && i.statusCategory !== 'done');
+    const open = issues.filter((i) => (i.assigneeIds ?? []).includes(m.userId) && i.statusCategory !== 'done');
     return { ...m, open: open.length, points: open.reduce((a, i) => a + (i.storyPoints ?? 0), 0), overdue: open.filter((i) => i.dueDate && i.dueDate < today).length };
   }).filter((w) => w.open > 0 || w.userId);
 

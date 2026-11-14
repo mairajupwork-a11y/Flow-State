@@ -23,7 +23,7 @@ function NavItem({ to, icon, label, end, counter }: { to: string; icon: string; 
 }
 
 export function Sidebar({ activeKey }: { activeKey?: string }) {
-  const { workspace, projects, me, base, canEdit } = useWs();
+  const { workspace, projects, me, base, canEdit, isAdmin } = useWs();
   const current = useCurrentProject(activeKey);
   const open = useUi((s) => s.sidebarOpen);
   const todos = useTodos(todayISO());
@@ -86,7 +86,7 @@ export function Sidebar({ activeKey }: { activeKey?: string }) {
           <span className="mini-label">FREE. NO SEAT LIMITS.</span>
           <strong>Make room for everyone.</strong>
           <p>Invite your whole team — every feature is free for unlimited users.</p>
-          {canEdit && <button className="btn btn-soft btn-sm" style={{ marginTop: 10, position: 'relative', zIndex: 1 }} onClick={() => ui.set({ inviteOpen: true, sidebarOpen: false })}><Icon name="plus" size={13} /> Invite people</button>}
+          {isAdmin && <button className="btn btn-soft btn-sm" style={{ marginTop: 10, position: 'relative', zIndex: 1 }} onClick={() => ui.set({ inviteOpen: true, sidebarOpen: false })}><Icon name="plus" size={13} /> Invite people</button>}
         </div>
         <UserBox />
       </div>
