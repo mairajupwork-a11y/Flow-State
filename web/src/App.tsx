@@ -16,6 +16,7 @@ import { ListView } from './features/project/ListView';
 import { MyTasks } from './features/personal/MyTasks';
 import { MyDay } from './features/personal/MyDay';
 const Timesheets = lazy(() => import('./features/personal/Timesheets'));
+const Integrations = lazy(() => import('./features/settings/Integrations'));
 import { NotFound } from './features/home/NotFound';
 
 // Heavier, less-visited screens load on demand.
@@ -106,6 +107,7 @@ export function App() {
         <Route path="my-tasks" element={<MyTasks />} />
         <Route path="my-day" element={<MyDay />} />
         <Route path="timesheets" element={lazyEl(<Timesheets />)} />
+        <Route path="integrations" element={lazyEl(<Integrations />)} />
         <Route path="team" element={lazyEl(<Team />)} />
         <Route path="settings" element={lazyEl(<Settings />)} />
         <Route path="*" element={<NotFound />} />

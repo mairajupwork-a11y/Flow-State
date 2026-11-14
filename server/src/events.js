@@ -1,11 +1,13 @@
 /** Activity log + notifications, recorded alongside every meaningful change. */
 /** `deliver` (optional) sends each notification on by email / push once committed. */
-export function createEvents(db, hub, deliver = null) {
+export function createEvents(db, hub, deliver = null, relay = null) {
   async function record({ workspaceId, projectId = null, issueId = null, actorId, verb, data = {} }) {
     await db.run(
       'INSERT INTO activity (workspace_id, project_id, issue_id, actor_id, verb, data) VALUES (?, ?, ?, ?, ?, ?)',
       workspaceId, projectId, issueId, actorId, verb, JSON.stringify(data),
     );
+    // Chat channels (Slack, Teams…) hear about it once it is committed.
+    if (relay) db.afterCommit(() => { relay({ workspaceId, projectId, issueId, actorId, verb, data }); });
   }
 
   /** Notifies each recipient except the actor, and pings their browser. */

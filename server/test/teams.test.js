@@ -100,3 +100,78 @@ test('time: start and stop a timer, log time by hand, and see it on the card and
   assert.equal((await db.get('SELECT COUNT(*) AS n FROM time_entries WHERE ended_at IS NULL')).n >= 1, true);
   assert.equal((await db.get('SELECT COUNT(*) AS n FROM time_entries WHERE ended_at IS NULL AND user_id = (SELECT id FROM users WHERE email = ?)', `dev${seq}@example.com`)).n, 1);
 });
+
+import { createHmac } from 'node:crypto';
+const settle = () => new Promise((r) => setTimeout(r, 60));
+
+test('github: signed deliveries link branches, commits and PRs, and move cards; bad signatures are refused', async () => {
+  const { admin, dev, ws, web, card } = await org();
+  assert.equal((await dev('POST', `/workspaces/${ws.slug}/integrations`, { kind: 'github' })).status, 403, 'only managers connect tools');
+  const gh = (await admin('POST', `/workspaces/${ws.slug}/integrations`, { kind: 'github' })).data;
+  assert.match(gh.hookUrl, /\/api\/hooks\/\d+$/);
+  assert.equal(gh.secret.length, 48);
+  const send = (event, payload, secret = gh.secret) => {
+    const raw = JSON.stringify(payload);
+    return fetch(`${base}/api/hooks/${gh.id}`, { method: 'POST', headers: { 'Content-Type': 'application/json', 'X-GitHub-Event': event, 'X-Hub-Signature-256': 'sha256=' + createHmac('sha256', secret).update(raw).digest('hex') }, body: raw });
+  };
+  assert.equal((await send('ping', { zen: 'hi' })).status, 200);
+  assert.equal((await send('push', {}, 'wrong-secret')).status, 401);
+  const lower = card.key.toLowerCase();
+  const push = await send('push', { ref: `refs/heads/feature/${lower}-login`, repository: { html_url: 'https://github.com/acme/web' }, pusher: { name: 'dan' },
+    commits: [{ id: 'abc123', message: `${card.key} add login form\n\nmore`, url: 'https://github.com/acme/web/commit/abc123', author: { name: 'Dan' } }] });
+  assert.equal((await push.json()).linked, 2);
+  const project = (await admin('GET', `/projects/${web.id}`)).data;
+  const open = await send('pull_request', { action: 'opened', pull_request: { number: 7, title: `Login form (${card.key})`, html_url: 'https://github.com/acme/web/pull/7', state: 'open', merged: false, user: { login: 'dan' }, head: { ref: 'feature/x' } } });
+  assert.equal(open.status, 200);
+  let issue = (await admin('GET', `/issues/${card.key}`)).data;
+  assert.equal(project.statuses.find((s) => s.id === issue.statusId).category, 'progress', 'PR opened → in progress');
+  await send('pull_request', { action: 'closed', pull_request: { number: 7, title: `Login form (${card.key})`, html_url: 'https://github.com/acme/web/pull/7', state: 'closed', merged: true, user: { login: 'dan' }, head: { ref: 'feature/x' } } });
+  issue = (await admin('GET', `/issues/${card.key}`)).data;
+  assert.equal(issue.statusCategory, 'done', 'PR merged → done');
+  const devLinks = (await dev('GET', `/issues/${card.key}/dev`)).data;
+  assert.deepEqual(devLinks.map((l) => l.kind).sort(), ['branch', 'commit', 'pr']);
+  assert.equal(devLinks.find((l) => l.kind === 'pr').state, 'merged');
+  const list = (await admin('GET', `/workspaces/${ws.slug}/integrations`)).data;
+  assert.match(list[0].lastStatus, /^ok/);
+});
+
+test('gitlab: token-checked merge requests link and close work', async () => {
+  const { admin, ws, card } = await org();
+  const gl = (await admin('POST', `/workspaces/${ws.slug}/integrations`, { kind: 'gitlab', settings: { progressOnPr: false } })).data;
+  const send = (body, token = gl.secret) => fetch(`${base}/api/hooks/${gl.id}`, { method: 'POST', headers: { 'Content-Type': 'application/json', 'X-Gitlab-Event': 'Merge Request Hook', 'X-Gitlab-Token': token }, body: JSON.stringify(body) });
+  assert.equal((await send({}, 'nope')).status, 401);
+  const res = await send({ object_kind: 'merge_request', user: { username: 'dan' }, object_attributes: { iid: 3, title: `Fix ${card.key}`, url: 'https://gitlab.com/acme/web/-/merge_requests/3', state: 'merged', action: 'merge', source_branch: 'fix' } });
+  assert.equal((await res.json()).linked, 1);
+  assert.equal((await admin('GET', `/issues/${card.key}`)).data.statusCategory, 'done');
+});
+
+test('chat channels: only real webhook hosts, a test message, and messages on new, finished and commented work', async () => {
+  const { admin, ws, web } = await org();
+  assert.equal((await admin('POST', `/workspaces/${ws.slug}/integrations`, { kind: 'slack', url: 'https://evil.example.com/x' })).status, 400);
+  assert.equal((await admin('POST', `/workspaces/${ws.slug}/integrations`, { kind: 'slack', url: 'http://hooks.slack.com/services/A/B/C' })).status, 400);
+  const slack = (await admin('POST', `/workspaces/${ws.slug}/integrations`, { kind: 'slack', url: 'https://hooks.slack.com/services/T0/B0/xyz', settings: { events: ['created', 'done', 'comment'] } })).data;
+  const teams = (await admin('POST', `/workspaces/${ws.slug}/integrations`, { kind: 'teams', url: 'https://acme.webhook.office.com/webhookb2/abc', settings: { events: ['done'] } })).data;
+  assert.ok(!JSON.stringify(slack).includes('xyz'), 'the webhook secret is never shown again');
+  posted.length = 0;
+  assert.equal((await admin('POST', `/integrations/${slack.id}/test`, {})).status, 200);
+  assert.equal(posted.length, 1);
+  assert.match(posted[0].body.text, /WorkMars is connected/);
+  posted.length = 0;
+  const item = (await admin('POST', `/projects/${web.id}/issues`, { title: 'Ship the invoice page' })).data;
+  await settle();
+  assert.equal(posted.length, 1, 'Slack hears about new work; Teams only wants finished work');
+  assert.match(posted[0].body.text, /created .*Ship the invoice page/);
+  assert.match(posted[0].body.text, /<https:\/\/work\.example\.com\/w\/.*\|Open>/);
+  posted.length = 0;
+  const done = (await admin('GET', `/projects/${web.id}`)).data.statuses.find((s) => s.category === 'done');
+  await admin('PATCH', `/issues/${item.key}`, { statusId: done.id });
+  await settle();
+  assert.equal(posted.length, 2);
+  assert.ok(posted.every((p) => /finished/.test(p.body.text)));
+  posted.length = 0;
+  await admin('POST', `/issues/${item.key}/comments`, { body: 'Looks great' });
+  await settle();
+  assert.equal(posted.length, 1);
+  assert.match(posted[0].body.text, /commented .*Looks great/);
+  assert.equal((await admin('DELETE', `/integrations/${teams.id}`)).status, 200);
+});

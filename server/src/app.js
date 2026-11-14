@@ -18,6 +18,8 @@ import { fileRoutes } from './routes/files.js';
 import { extensionRoutes } from './routes/extensions.js';
 import { notifySettingsRoutes } from './routes/notify-settings.js';
 import { timeRoutes } from './routes/time.js';
+import { integrationRoutes, hookReceiver } from './routes/integrations.js';
+import { createChatRelay } from './services/integrations.js';
 import { createDelivery } from './delivery.js';
 
 /** Value of the X-Requested-With header our web app sends ('flowstate' from tabs opened before the rename). */
@@ -27,13 +29,13 @@ const CLIENT_HEADERS = ['workmars', 'flowstate'];
  * Builds the HTTP app. Kept free of side effects (no listen, no env reads
  * beyond defaults) so tests can spin up isolated instances.
  */
-export function createApp({ db, secret, production = false, staticDir = null, ollama = null, google = null, mailer = null, push = null, appUrl = null, trustProxy = production ? 1 : false, log = console }) {
+export function createApp({ db, secret, production = false, staticDir = null, ollama = null, google = null, mailer = null, push = null, appUrl = null, trustProxy = production ? 1 : false, log = console, fetcher = globalThis.fetch }) {
   const app = express();
   const hub = createHub();
-  const events = createEvents(db, hub, createDelivery({ db, mailer, push, appUrl, log }));
+  const events = createEvents(db, hub, createDelivery({ db, mailer, push, appUrl, log }), createChatRelay({ db, fetcher, appUrl, log }));
   const guide = createGuide({ db, llm: ollama?.url ? createOllama(ollama) : null });
   const signer = createSigner(secret);
-  const ctx = { db, events, hub, guide, signer, production, google, mailer, push, appUrl, log };
+  const ctx = { db, events, hub, guide, signer, production, google, mailer, push, appUrl, log, fetcher };
 
   app.disable('x-powered-by');
   // Hops of reverse proxy in front of us (Render, nginx…). Off when Node faces the
@@ -49,6 +51,8 @@ export function createApp({ db, secret, production = false, staticDir = null, ol
   });
   // File uploads carry the raw file as the body (whatever its type, even .json); every other route takes JSON.
   const json = express.json({ limit: '256kb' });
+  // GitHub / GitLab webhooks: public, signed, read as raw bytes so the signature can be checked.
+  app.post('/api/hooks/:id', express.raw({ type: () => true, limit: '5mb' }), (req, res, next) => hookReceiver(ctx)(req, res).catch(next));
   app.use((req, res, next) => (/^\/api\/issues\/[^/]+\/attachments$/.test(req.path) ? next() : json(req, res, next)));
   app.use(cookieParser());
 
@@ -78,6 +82,7 @@ export function createApp({ db, secret, production = false, staticDir = null, ol
   app.use('/api', extensionRoutes(ctx));
   app.use('/api', notifySettingsRoutes(ctx));
   app.use('/api', timeRoutes(ctx));
+  app.use('/api', integrationRoutes(ctx));
   app.use('/api', (_req, _res, next) => next(new HttpError(404, 'Unknown API route.')));
 
   if (staticDir && existsSync(staticDir)) {

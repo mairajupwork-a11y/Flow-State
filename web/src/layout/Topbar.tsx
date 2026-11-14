@@ -15,7 +15,7 @@ import { methodologyOf, viewMeta } from '../lib/methodology';
 
 const VIEW_LABEL: Record<string, string> = {
   board: 'Board', backlog: 'Backlog', list: 'List', timeline: 'Timeline', calendar: 'Calendar', reports: 'Reports', settings: 'Settings',
-  phases: 'Phases', registers: 'Registers', charter: 'Charter', 'my-tasks': 'My tasks', 'my-day': 'My day', team: 'Team', timesheets: 'Timesheets',
+  phases: 'Phases', registers: 'Registers', charter: 'Charter', 'my-tasks': 'My tasks', 'my-day': 'My day', team: 'Team', timesheets: 'Timesheets', integrations: 'Integrations',
 };
 
 export function Topbar({ activeKey }: { activeKey?: string }) {
@@ -24,7 +24,7 @@ export function Topbar({ activeKey }: { activeKey?: string }) {
   const [, setTheme, dark] = useTheme();
   const project = projects.find((p) => p.key === activeKey);
   const last = location.pathname.split('/').filter(Boolean).pop() ?? '';
-  const view = project && VIEW_LABEL[last] && !['my-tasks', 'my-day', 'team', 'timesheets'].includes(last) ? viewMeta(methodologyOf(project), last).label : VIEW_LABEL[last];
+  const view = project && VIEW_LABEL[last] && !['my-tasks', 'my-day', 'team', 'timesheets', 'integrations'].includes(last) ? viewMeta(methodologyOf(project), last).label : VIEW_LABEL[last];
   const isMac = typeof navigator !== 'undefined' && /Mac|iPhone|iPad/.test(navigator.platform);
 
   return (
