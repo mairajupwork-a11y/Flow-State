@@ -13,6 +13,8 @@ import { LogoUploader } from '../../components/WorkspaceAvatar';
 import { DesignationSelect } from '../team/DesignationSelect';
 import { accessForDesignation } from '../../../../shared/designations.js';
 
+const EMAIL_RE = /^[^\s@]+@[^\s@]+\.[^\s@]+$/;
+
 /** Tech-industry niches, grouped. Each suggests a way of working; the picker's questions refine it. */
 const NICHE_GROUPS: [string, [string, string, MethodologyId][]][] = [
   ['Build & ship', [
@@ -72,6 +74,7 @@ export function Onboarding() {
   const [inviteDesignation, setInviteDesignation] = useState('');
   const [error, setError] = useState('');
   const [busy, setBusy] = useState(false);
+  const [emailError, setEmailError] = useState('');
   const [created, setCreated] = useState<Workspace | null>(null);
   const [emailed, setEmailed] = useState(0);
 
@@ -86,10 +89,16 @@ export function Onboarding() {
     true,
   ][step] ?? true, [step, role, ws.name, project.name, key]);
 
+  /** Valid addresses become chips; anything else stays in the box with a message, never silently dropped. */
   function addEmails(raw: string) {
-    const found = raw.split(/[\s,;]+/).map((s) => s.trim().toLowerCase()).filter((s) => /^[^\s@]+@[^\s@]+\.[^\s@]+$/.test(s));
-    if (found.length) setEmails((prev) => [...new Set([...prev, ...found])]);
-    setDraft('');
+    const parts = raw.split(/[\s,;]+/).map((s) => s.trim()).filter(Boolean);
+    const found = parts.map((s) => s.toLowerCase()).filter((s) => EMAIL_RE.test(s));
+    const bad = parts.filter((s) => !EMAIL_RE.test(s.toLowerCase()));
+    const merged = [...new Set([...emails, ...found])];
+    if (found.length) setEmails(merged);
+    setDraft(bad.join(', '));
+    setEmailError(bad.length ? `“${bad[0]}” isn’t an email address — check it or remove it.` : '');
+    return bad.length ? null : merged;
   }
   const onEmailKey = (e: KeyboardEvent<HTMLInputElement>) => {
     if (['Enter', ',', ' ', 'Tab'].includes(e.key) && draft.trim()) {
@@ -98,14 +107,14 @@ export function Onboarding() {
     } else if (e.key === 'Backspace' && !draft && emails.length) setEmails(emails.slice(0, -1));
   };
 
-  async function finish() {
+  async function finish(invites: string[] = emails) {
     setBusy(true);
     setError('');
     try {
       const res = await api.post<Session & { workspace: Workspace; invites?: { email: string; emailed: boolean }[] }>('/workspaces', {
         name: ws.name.trim(), ...browserRegion(), teamSize: ws.teamSize, useCase: role, jobTitle: myTitle.trim() || undefined,
         project: { name: project.name.trim(), key, methodology },
-        invites: draft.trim() ? [...emails, ...draft.split(/[\s,;]+/).filter((s) => s.includes('@'))] : emails,
+        invites,
         inviteDesignation: inviteDesignation.trim(),
       });
       qc.setQueryData(keys.session, { user: res.user, workspaces: res.workspaces });
@@ -128,7 +137,11 @@ export function Onboarding() {
   function next(e?: FormEvent) {
     e?.preventDefault();
     if (!canNext) return;
-    if (step === 3) finish();
+    if (step === 3) {
+      const invites = draft.trim() ? addEmails(draft) : emails;
+      if (invites) finish(invites);
+      return;
+    }
     else setStep(step + 1);
   }
 
@@ -219,10 +232,11 @@ export function Onboarding() {
                 {emails.map((em) => (
                   <span className="email-chip" key={em}>{em}<button type="button" aria-label={`Remove ${em}`} onClick={() => setEmails(emails.filter((x) => x !== em))}><Icon name="close" size={11} /></button></span>
                 ))}
-                <input value={draft} onChange={(e) => setDraft(e.target.value)} onKeyDown={onEmailKey} onBlur={() => draft && addEmails(draft)}
+                <input value={draft} onChange={(e) => { setDraft(e.target.value); setEmailError(''); }} aria-invalid={!!emailError} aria-describedby={emailError ? 'invite-emails-error' : undefined} onKeyDown={onEmailKey} onBlur={() => draft && addEmails(draft)}
                   onPaste={(e) => { e.preventDefault(); addEmails(e.clipboardData.getData('text')); }} placeholder={emails.length ? 'Add another…' : 'name@company.com, teammate@company.com'} autoFocus aria-labelledby="invite-emails-label" />
               </div>
             </div>
+            {emailError && <div className="form-error" id="invite-emails-error" role="alert">{emailError}</div>}
             {(emails.length > 0 || !!draft.trim()) && <DesignationSelect value={inviteDesignation} onChange={setInviteDesignation} label="Their designation" hint={`Applies to everyone above, and they join your first project. ${inviteDesignation ? `As ${inviteDesignation}, they’ll be ${accessForDesignation(inviteDesignation) === 'manager' ? 'managers — able to create cards, set dates and assign people' : 'team members — able to comment, upload files, add links and move cards'}.` : 'Managers (PMs, team leads…) plan and assign work; team members do it.'} You can change this on the Team page.`} />}
             <div className="tip-box"><Icon name="lightbulb" size={18} /><span>Any email address works — Gmail, Outlook/Hotmail, Yahoo or company email. If invitation emails are switched on they’re sent straight away; you can always copy each person’s link from the Team page too.</span></div>
             {error && <div className="form-error" role="alert" style={{ marginTop: 14 }}>{error}</div>}

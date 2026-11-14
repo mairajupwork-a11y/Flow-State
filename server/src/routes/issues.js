@@ -6,10 +6,10 @@ import { loadIssue, isManager } from '../access.js';
 import { issue as serializeIssue } from '../serialize.js';
 import { updateIssue, moveIssue, issueDetail, issueKey } from '../services/issues.js';
 import { runAutomations } from '../services/automations.js';
-import { ISO_DATE } from '../dates.js';
+import { isRealDate } from '../dates.js';
 
 const nullableId = z.number().int().positive().nullable();
-const nullableDate = z.string().regex(ISO_DATE, 'use a YYYY-MM-DD date').nullable();
+const nullableDate = z.string().refine(isRealDate, 'use a real date as YYYY-MM-DD').nullable();
 
 export const issueInput = z.object({
   title: z.string().trim().min(1).max(200),

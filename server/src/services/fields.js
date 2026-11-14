@@ -1,5 +1,5 @@
 import { HttpError } from '../http.js';
-import { ISO_DATE } from '../dates.js';
+import { isRealDate } from '../dates.js';
 
 /** Custom field types and how their values are checked and stored (always as text). */
 export const FIELD_TYPES = ['text', 'number', 'date', 'select', 'multiselect', 'checkbox', 'url', 'person'];
@@ -27,7 +27,7 @@ export async function writeFieldValue(db, field, value, workspaceId) {
       if (!Number.isFinite(n)) bad('enter a number');
       return String(n);
     }
-    case 'date': if (typeof value !== 'string' || !ISO_DATE.test(value)) bad('use a YYYY-MM-DD date'); return value;
+    case 'date': if (!isRealDate(value)) bad('use a YYYY-MM-DD date'); return value;
     case 'select': if (!field.options.includes(value)) bad(`choose one of: ${field.options.join(', ')}`); return value;
     case 'multiselect': {
       const list = Array.isArray(value) ? [...new Set(value)] : bad('choose from the list');

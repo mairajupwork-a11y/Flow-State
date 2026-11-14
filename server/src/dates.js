@@ -12,3 +12,9 @@ export function daysBetween(a, b) {
 }
 
 export const ISO_DATE = /^\d{4}-\d{2}-\d{2}$/;
+/** True only for a YYYY-MM-DD string that is a real calendar day (no 2026-02-31 or 2026-13-01). */
+export function isRealDate(value) {
+  if (typeof value !== 'string' || !ISO_DATE.test(value)) return false;
+  const d = new Date(`${value}T00:00:00Z`);
+  return !Number.isNaN(d.getTime()) && d.toISOString().slice(0, 10) === value;
+}

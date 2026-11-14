@@ -13,9 +13,9 @@ import { createPhases } from '../services/projects.js';
 import { flowMetrics, phaseMetrics, controlChart } from '../services/metrics.js';
 import { METHODOLOGY_IDS, REGISTERS, methodology, term, legacyTemplate } from '../../../shared/methodologies.js';
 import { issueInput } from './issues.js';
-import { isoDay, dayOffset, daysBetween, ISO_DATE } from '../dates.js';
+import { isoDay, dayOffset, daysBetween, isRealDate } from '../dates.js';
 
-const isoDate = z.string().regex(ISO_DATE, 'use a YYYY-MM-DD date');
+const isoDate = z.string().refine(isRealDate, 'use a real date as YYYY-MM-DD');
 const fieldValue = z.union([z.string().max(4000), z.number(), z.null()]);
 const fieldData = z.record(z.string().max(40), fieldValue).refine((d) => Object.keys(d).length <= 40, 'too many fields');
 const settingsOf = (p) => { try { return JSON.parse(p.settings || '{}'); } catch { return {}; } };

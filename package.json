@@ -2,7 +2,7 @@
   "name": "workmars",
   "private": true,
   "version": "1.0.0",
-  "description": "WorkMars — free, unlimited-user project management with boards, sprints, a personal to-do list and a free built-in AI guide.",
+  "description": "WorkMars \u2014 free, unlimited-user project management with boards, sprints, time tracking and a personal to-do list.",
   "workspaces": [
     "server",
     "web"
@@ -14,7 +14,9 @@
     "test": "npm test -w server",
     "typecheck": "npm run typecheck -w web",
     "check": "npm run typecheck && npm test && npm run build",
-    "db:copy-to-postgres": "node --disable-warning=ExperimentalWarning scripts/copy-to-postgres.mjs"
+    "db:copy-to-postgres": "node --disable-warning=ExperimentalWarning scripts/copy-to-postgres.mjs",
+    "e2e:server": "node --disable-warning=ExperimentalWarning qa/e2e/server.mjs",
+    "e2e": "node --disable-warning=ExperimentalWarning qa/e2e/uat.mjs"
   },
   "devDependencies": {
     "concurrently": "^9.1.0"

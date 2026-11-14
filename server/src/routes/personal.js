@@ -4,7 +4,7 @@ import { requireUser } from '../auth.js';
 import { parse, notFound } from '../http.js';
 import { loadWorkspace, loadIssue } from '../access.js';
 import { todo as serializeTodo, notification as serializeNotification } from '../serialize.js';
-import { ISO_DATE, isoDay, dayOffset } from '../dates.js';
+import { isRealDate, isoDay, dayOffset } from '../dates.js';
 
 const TODO_SELECT = `SELECT t.*, p.key || '-' || i.number AS issue_key FROM todos t
   LEFT JOIN issues i ON i.id = t.issue_id LEFT JOIN projects p ON p.id = i.project_id`;
@@ -13,7 +13,7 @@ const TODO_SELECT = `SELECT t.*, p.key || '-' || i.number AS issue_key FROM todo
 export function todoRoutes({ db }) {
   const r = Router();
   r.use(requireUser);
-  const day = z.string().regex(ISO_DATE);
+  const day = z.string().refine(isRealDate, 'use a real date as YYYY-MM-DD');
   const block = z.enum(['morning', 'afternoon', 'evening', 'anytime']);
   /** When to be reminded, as a UTC ISO timestamp (e.g. 2026-11-14T09:30:00.000Z); null clears it. */
   const remindAt = z.string().datetime({ message: 'choose a valid reminder time' }).transform((v) => new Date(v).toISOString()).nullable();

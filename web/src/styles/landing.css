@@ -523,3 +523,11 @@ html { zoom: var(--ui-zoom); }
   .pd-chrome .wm-logo { height: 38px !important; }
   .auth-mobile-brand .wm-logo, .onboard-top .wm-logo { height: 40px !important; }
 }
+
+/* ---------- Keyboard focus on dark surfaces ----------
+   The default ring is dark olive, invisible on the dark sidebar and dark sections. */
+.sidebar :focus-visible, [data-ground="dark"] :focus-visible, .pd-footer :focus-visible, .auth-aside :focus-visible,
+[data-theme="dark"] :focus-visible { outline: 2px solid var(--lime, #d4ff1f) !important; outline-offset: 2px; }
+
+/* Empty states sit inside cards whose own h3 is a left-aligned flex row; keep the message centred. */
+.empty h3 { display: block; text-align: center; justify-content: center; }

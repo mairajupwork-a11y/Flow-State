@@ -1,6 +1,7 @@
 import express from 'express';
 import cookieParser from 'cookie-parser';
-import { existsSync } from 'node:fs';
+import { existsSync, readFileSync } from 'node:fs';
+import { createHash } from 'node:crypto';
 import { join } from 'node:path';
 import { createSigner, sessionMiddleware } from './auth.js';
 import { errorHandler, HttpError } from './http.js';
@@ -21,6 +22,27 @@ import { createChatRelay } from './services/integrations.js';
 import { teamToolRoutes } from './routes/team-tools.js';
 import { createDelivery } from './delivery.js';
 
+/**
+ * Content-Security-Policy. API responses (JSON, files, calendar feeds) never need to run anything.
+ * The web app may run only its own scripts plus the inline scripts in index.html, allowed by hash.
+ */
+const API_CSP = "default-src 'none'; frame-ancestors 'none'; base-uri 'none'; form-action 'none'";
+export function pageCsp(html = '') {
+  const hashes = [...html.matchAll(/<script(?![^>]*\bsrc=)[^>]*>([\s\S]*?)<\/script>/g)]
+    .map((m) => `'sha256-${createHash('sha256').update(m[1]).digest('base64')}'`);
+  return [
+    "default-src 'self'",
+    `script-src 'self' ${hashes.join(' ')}`.trim(),
+    "style-src 'self' 'unsafe-inline' https://fonts.googleapis.com",
+    "font-src 'self' https://fonts.gstatic.com data:",
+    "img-src 'self' data: blob: https:",
+    "connect-src 'self'",
+    "worker-src 'self'", "manifest-src 'self'",
+    "object-src 'none'", "base-uri 'self'", "frame-ancestors 'none'",
+    "form-action 'self' https://accounts.google.com",
+  ].join('; ');
+}
+
 /** Value of the X-Requested-With header our web app sends ('flowstate' from tabs opened before the rename). */
 const CLIENT_HEADERS = ['workmars', 'flowstate'];
 
@@ -36,6 +58,9 @@ export function createApp({ db, secret, production = false, staticDir = null, go
   const ctx = { db, events, hub, signer, production, google, mailer, push, appUrl, log, fetcher };
 
   app.disable('x-powered-by');
+  // Hash the inline scripts of every page we serve (the app shell and the offline page).
+  const pages = staticDir ? ['index.html', 'offline.html'].map((f) => join(staticDir, f)).filter((f) => existsSync(f)) : [];
+  const pageHeader = pageCsp(pages.map((f) => readFileSync(f, 'utf8')).join('\n'));
   // Hops of reverse proxy in front of us (Render, nginx…). Off when Node faces the
   // internet directly, so clients can't fake their IP via X-Forwarded-For.
   app.set('trust proxy', trustProxy);
@@ -44,6 +69,7 @@ export function createApp({ db, secret, production = false, staticDir = null, go
     res.setHeader('Referrer-Policy', 'strict-origin-when-cross-origin');
     res.setHeader('X-Frame-Options', 'DENY');
     res.setHeader('Permissions-Policy', 'camera=(), microphone=(), geolocation=()');
+    res.setHeader('Content-Security-Policy', req.path.startsWith('/api/') ? API_CSP : pageHeader);
     if (production) res.setHeader('Strict-Transport-Security', 'max-age=31536000; includeSubDomains');
     next();
   });
