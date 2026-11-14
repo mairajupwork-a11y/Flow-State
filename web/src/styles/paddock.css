@@ -588,7 +588,7 @@ body::before { opacity: .55; }
 .task-card { border-radius: var(--r-inner) !important; box-shadow: 0 0 0 1px var(--glass-line), 0 6px 16px -12px rgba(40, 44, 32, .28) !important; border: 1px solid var(--glass-edge) !important; }
 .task-card:hover { box-shadow: 0 0 0 1px rgba(40, 44, 32, .14), 0 14px 26px -14px rgba(40, 44, 32, .35) !important; }
 .rule-row, .field-row, .workflow-row, .attach-row, .attach-thumb, .pref-option, .region-card, .method-card, .reset-sent, .form-note, .mini-row, .choice-card, .role-card, .resource, .access-option { border-radius: var(--r-inner) !important; }
-.modal { border-radius: 22px !important; overflow: hidden; box-shadow: 0 30px 70px -24px rgba(17, 17, 18, .45) !important; }
+.modal { border-radius: 22px !important; overflow-x: hidden; overflow-y: auto; overscroll-behavior: contain; box-shadow: 0 30px 70px -24px rgba(17, 17, 18, .45) !important; }
 .menu, .dropdown, .popover, .cmdk, .palette, .mention-menu, .assignee-pop { border-radius: 16px !important; box-shadow: 0 18px 40px -16px rgba(17, 17, 18, .3) !important; }
 .btn { border-radius: 10px; }
 .text-input, .field-select, .filter-select, .search-box { border-radius: 10px !important; }
