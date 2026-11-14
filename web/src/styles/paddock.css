@@ -513,3 +513,10 @@ html.reduce-motion .page > * { animation: none; }
 .detail-aside .assignee-pop { left: auto; right: 0; }
 .assignee-name b, .assignee-name small, .resource-name b, .resource-name small { display: block; }
 .modal .assignee-pop { max-width: min(340px, calc(100vw - 48px)); }
+
+/* ---------- Long words and links wrap instead of pushing panels wider ---------- */
+.desc-view, .desc-view p, .comment, .comment p, .comment-body, .detail-section, .checklist-item, .checklist label,
+.task-title, .todo-copy, .title-btn, .modal-header h2, .ai-answer, .ai-content, .notification, .mini-row, .attach-row, .link-row,
+.content-card p, .list-name strong, .backlog-row, .issue-head { overflow-wrap: anywhere; word-break: break-word; min-width: 0; }
+.detail-layout > * { min-width: 0; }
+.modal-body { overflow-x: hidden; }
